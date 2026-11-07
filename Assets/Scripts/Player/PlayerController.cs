@@ -41,7 +41,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField] Vector2 knockback = new Vector2(5f, 4f);
     [SerializeField] float hurtDuration = 0.25f;
 
+    [Header("Parry FX (T, placeholder)")]
+    [SerializeField] float hitStopTime = 0.06f;
+    [SerializeField] float parryFlashTime = 0.1f;
+    [SerializeField] int sparkCount = 6;
+    [SerializeField] float sparkLife = 0.2f;
+    [SerializeField] float sparkSpeed = 6f;
+    [SerializeField] float sparkSize = 0.15f;
+
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
+    float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
+    float parryFlashUntil;
 
     Rigidbody2D rb;
     PlayerInputReader input;
@@ -73,8 +83,22 @@ public class PlayerController : MonoBehaviour
         rb.gravityScale = gravityScale;
     }
 
+    void OnDisable() { EndHitStop(); }
+
+    void EndHitStop()
+    {
+        if (hitStopEndsAt < 0f) return;
+        hitStopEndsAt = -1f;
+        Time.timeScale = 1f;
+    }
+
     void Update()
     {
+        if (hitStopEndsAt >= 0f)
+        {
+            if (Time.unscaledTime >= hitStopEndsAt) EndHitStop();
+            else return; // frozen
+        }
         float now = Time.time;
         float elapsed = now - stateEnteredAt;
 
@@ -211,7 +235,15 @@ public class PlayerController : MonoBehaviour
         bool fromFront = Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
         if (ParryActive && fromFront)
         {
+            // No knockback for either side. Hit-stop + flash + sparks (placeholder FX).
             EnterState(State.Locomotion);
+            parryFlashUntil = Time.time + parryFlashTime;
+            ParryFx.SpawnSparks((Vector2)transform.position + new Vector2(Facing * 0.8f, 0f), sparkCount, sparkLife, sparkSpeed, sparkSize);
+            if (hitStopTime > 0f)
+            {
+                hitStopEndsAt = Time.unscaledTime + hitStopTime;
+                Time.timeScale = 0f;
+            }
             return HitResult.Parried;
         }
 
@@ -231,6 +263,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
         else if (state == State.Dead) c = Color.gray;
         else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
+        if (now < parryFlashUntil) c = Color.white;
         visual.color = c;
     }
 

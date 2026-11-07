@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyNumber))]
 public class TestEnemy : MonoBehaviour
 {
-    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned }
+    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge }
 
     [SerializeField] LayerMask playerMask;
     [SerializeField] SpriteRenderer visual; // optional; found in children if empty
@@ -22,6 +22,8 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] Vector2 attackOffset = new Vector2(1.0f, 0f);
     [SerializeField] Vector2 attackSize = new Vector2(1.8f, 1.4f);
     [SerializeField] float flashTime = 0.1f;
+    [SerializeField] float chargeSpeed = 14f;
+    [SerializeField] float chargeMaxTime = 0.6f;
 
     static readonly Color WindupColor = new Color(1f, 0.8f, 0.5f);
     static readonly Color StaggerColor = new Color(0.7f, 0.7f, 0.75f);
@@ -73,6 +75,7 @@ public class TestEnemy : MonoBehaviour
         if ((state == State.Approach || state == State.Recover) && player != null &&
             (player.transform.position.x - transform.position.x) * facing > attackRangeX)
             vx = facing * moveSpeed; // stop under a jumping player instead of jittering
+        if (state == State.Charge) vx = facing * chargeSpeed;
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
     }
 
@@ -95,6 +98,12 @@ public class TestEnemy : MonoBehaviour
                 break;
             case State.Recover:
                 if (t >= recoverTime) NextAfterChain();
+                break;
+            case State.Charge:
+                Vector2 cd = player.transform.position - transform.position;
+                if (Mathf.Abs(cd.x) <= attackRangeX && Mathf.Abs(cd.y) <= attackRangeY) EnterState(State.Strike);
+                else if ((cd.x * facing < 0f)) EnterState(State.Turn); // player slipped behind mid-charge
+                else if (t >= chargeMaxTime) EnterState(State.Recover);
                 break;
             case State.Turn:
                 if (t >= turnTime) { FacePlayer(); NextAfterChain(); }
@@ -152,7 +161,15 @@ public class TestEnemy : MonoBehaviour
             return;
         }
         // Same x counts as in front (Mathf.Sign(0) is 1, which wrongly flagged "behind" when facing left).
-        bool playerBehind = (player.transform.position.x - transform.position.x) * facing < 0f;
+        float dx = (player.transform.position.x - transform.position.x) * facing;
+        bool playerBehind = dx < 0f;
+        // Player dashed away out of range (nothing was hit, not a dash-through): charge after them.
+        if (!playerBehind && col == null && dx > attackRangeX && number.Value > 0)
+        {
+            EnterState(State.Charge);
+            return;
+        }
+        if (result == HitResult.Parried) Flash(Color.white);
         EnterState(playerBehind ? State.Turn : State.Recover);
     }
 
@@ -164,6 +181,9 @@ public class TestEnemy : MonoBehaviour
         {
             case State.Windup:
                 number.SetPulse(true, number.Value == 1);
+                break;
+            case State.Charge:
+                number.SetPulse(true, false);
                 break;
             case State.Stunned:
                 number.Hide();
