@@ -68,7 +68,8 @@ public class TestEnemy : MonoBehaviour
     void FixedUpdate()
     {
         float vx = 0f;
-        if (state == State.Approach && player != null &&
+        // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
+        if ((state == State.Approach || state == State.Recover) && player != null &&
             Mathf.Abs(player.transform.position.x - transform.position.x) > attackRangeX)
             vx = facing * moveSpeed; // stop under a jumping player instead of jittering
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
@@ -120,7 +121,8 @@ public class TestEnemy : MonoBehaviour
     void DoStrike()
     {
         bool special = number.Value == 1;
-        HitResult result = HitResult.Dodged; // a whiff counts as dodged
+        HitResult result = HitResult.Dodged; // a whiff counts as dodged for the number...
+        bool hitPlayer = false;
 
         Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         Collider2D col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
@@ -129,6 +131,7 @@ public class TestEnemy : MonoBehaviour
             PlayerController pc = col.GetComponentInParent<PlayerController>();
             if (pc != null)
             {
+                hitPlayer = true;
                 result = pc.ReceiveEnemyHit(new HitInfo
                 {
                     Damage = 1,
@@ -140,7 +143,8 @@ public class TestEnemy : MonoBehaviour
         number.Decrement();
         number.SetPulse(false, false);
 
-        if (special && result == HitResult.Dodged)
+        // ...but only a real dash-through (player was inside the hitbox) staggers; a plain whiff does not.
+        if (special && hitPlayer && result == HitResult.Dodged)
         {
             EnterState(State.Staggered);
             return;

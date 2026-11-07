@@ -23,7 +23,10 @@ public static class PrototypeSceneBuilder
     [MenuItem("NUMBER/Build Prototype Scene")]
     public static void Build()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        // The Prototype scene is regenerated below anyway, so save it silently (no modal when run via MCP).
+        var open = EditorSceneManager.GetActiveScene();
+        if (open.path == ScenePath && open.isDirty) EditorSceneManager.SaveScene(open);
+        else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         SetupLayers();
         ImportTmpIfNeeded();
 
@@ -39,7 +42,7 @@ public static class PrototypeSceneBuilder
         BuildLight();
         BuildGround();
         BuildPlayer();
-        // ---- ENEMY SECTION (Task C): TestEnemy prefab + placement goes here. Player part above is owned by Task A. ----
+        BuildEnemy();
         new GameObject("Debug").AddComponent<PrototypeDebug>();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
@@ -146,6 +149,48 @@ public static class PrototypeSceneBuilder
         visual.layer = PlayerLayer;
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, PrefabDir + "/Player.prefab", InteractionMode.AutomatedAction);
+    }
+
+    static void BuildEnemy()
+    {
+        var root = new GameObject("TestEnemy") { layer = EnemyLayer };
+        root.transform.position = new Vector3(6f, -5f, 0f);
+
+        var rb = root.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        rb.gravityScale = 4f;
+        rb.freezeRotation = true;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+        root.AddComponent<BoxCollider2D>().size = new Vector2(0.9f, 2f);
+
+        var number = root.AddComponent<EnemyNumber>();
+        var enemy = root.AddComponent<TestEnemy>();
+
+        var visual = BuildSquare("Visual", new Color32(0xFF, 0x8C, 0x42, 0xFF), new Vector2(1f, 2f), 10);
+        visual.transform.SetParent(root.transform, false);
+        visual.layer = EnemyLayer;
+
+        var numGo = new GameObject("Number") { layer = EnemyLayer };
+        numGo.transform.SetParent(root.transform, false);
+        numGo.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+        var tmp = numGo.AddComponent<TextMeshPro>();
+        tmp.text = "3";
+        tmp.fontSize = 6f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.sortingOrder = 20;
+
+        var so = new SerializedObject(number);
+        so.FindProperty("label").objectReferenceValue = tmp;
+        so.ApplyModifiedProperties();
+
+        so = new SerializedObject(enemy);
+        so.FindProperty("playerMask").intValue = 1 << PlayerLayer;
+        so.FindProperty("visual").objectReferenceValue = visual.GetComponent<SpriteRenderer>();
+        so.ApplyModifiedProperties();
+
+        PrefabUtility.SaveAsPrefabAssetAndConnect(root, PrefabDir + "/TestEnemy.prefab", InteractionMode.AutomatedAction);
     }
 
     static void SetBuildScene()
