@@ -14,9 +14,10 @@
 
 | 역할 | 담당 | 하는 일 | 주로 건드리는 곳 |
 |---|---|---|---|
-| 코딩 | **Claude Sonnet** (Claude Code) | 게임 로직, 시스템, UI 코드 구현 | `Assets/Scripts/`, 씬, 프리팹 |
+| 설계 (어려운 작업) | **Claude Fable** (Claude Code) | 아키텍처·핵심 시스템 설계, 원인 불명 버그 | `Assets/Scripts/`, `Assets/Editor/` |
+| 코딩 | **Claude Sonnet** (Claude Code) | 게임 로직, 시스템, UI 코드 구현 | `Assets/Scripts/`, `Assets/Editor/`, 씬, 프리팹 |
 | 코드 검수 | **Claude Opus** (Claude Code) | Sonnet이 작성한 변경사항 리뷰, 버그·구조 문제 지적·수정 | 리뷰 대상 파일 (필요할 때만 수정) |
-| 에셋 | **Codex CLI** (OpenAI) | 스프라이트, 사운드, 머티리얼·셰이더, 폰트, 에셋 임포트 설정, 데이터(ScriptableObject 등) | `Assets/Art/`, `Assets/Audio/`, `Assets/Materials/`, `Assets/Data/` |
+| 에셋 | **Codex CLI** (OpenAI GPT, **Claude가 호출할 때만**) | 스프라이트, 사운드, 머티리얼·셰이더, 폰트, 에셋 임포트 설정, 데이터(ScriptableObject 등) | `Assets/Art/`, `Assets/Audio/`, `Assets/Materials/`, `Assets/Data/` |
 | QA | **Antigravity CLI** (Google) | 플레이 테스트 시나리오, 버그 찾기·재현, 테스트 코드, 빌드 점검, 제출 체크리스트 확인 | `Assets/Tests/`, `docs/qa/` |
 
 - **자기 영역 밖의 파일은 고치지 않는다.** 다른 영역에 수정이 필요하면 고치지 말고 기록으로 남긴다.

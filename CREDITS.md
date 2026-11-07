@@ -14,7 +14,8 @@
 |---|---|---|
 
 ## Generative AI disclosure (draft)
+- Claude Fable (Anthropic, via Claude Code) — architecture and system design
 - Claude Sonnet (Anthropic, via Claude Code) — gameplay code implementation
 - Claude Opus (Anthropic, via Claude Code) — code review and planning
-- Codex CLI (OpenAI) — asset creation and asset setup
+- Codex CLI (OpenAI GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna) — asset creation and asset setup
 - Antigravity CLI (Google) — QA, testing and bug reports

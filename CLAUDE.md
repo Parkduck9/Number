@@ -1,7 +1,26 @@
 @AGENTS.md
 
 ## Claude 전용
-- 코딩은 Sonnet, 검수는 Opus가 맡는다 (AGENTS.md 역할 표 참고).
-  - Opus 세션에서 구현을 맡길 때는 Sonnet 서브에이전트에 맡기고, 결과 diff를 Opus가 직접 검수한다.
+
+### Claude 모델 라우팅
+작업 난이도에 따라 모델을 고른다. 서브에이전트(`.claude/agents/`)를 쓸 때나 **병렬 세션(카드)을 여러 개 만들 때 모두** 적용한다.
+
+| 등급 | 모델 | 서브에이전트 | 맡는 일 |
+|---|---|---|---|
+| 최상 | **Fable** | `game-architect` | 아키텍처·핵심 시스템 설계, 여러 파일에 걸친 리팩터링, 한 번 시도해도 원인을 모르는 버그 |
+| 상 | **Opus** | `code-reviewer` | 코드 검수, 기획 판단, 중간 난이도 설계 |
+| 중 | **Sonnet** | `game-coder` | 일반 구현 (기본값) |
+
+- 코드 흐름: (필요하면 Fable 설계) → **Sonnet 구현 → Opus 검수** → 커밋.
+- 병렬 세션을 만들 때는 각 카드의 작업 난이도에 맞춰 `model`을 지정한다. 서로 같은 파일을 건드리는 작업은 병렬로 돌리지 않는다.
+- **모델이 부족하면 한 단계 낮춘다:** 사용량 한도, 오류, 사용 불가일 때 Fable → Opus → Sonnet → Haiku 순서로 내려간다. 낮춘 사실은 사용자에게 알린다.
+
+### GPT(Codex) 호출
+- GPT는 **Claude가 `codex` 스킬로 호출할 때만** 쓴다. 주로 에셋 작업에 쓴다.
+- 난이도별로 라우팅한다: 어려움 `gpt-6-astra` / 보통 `gpt-6.1-sol` (기본값) / 쉬움 `gpt-6-luna`. 실패하면 한 단계씩 낮춘다.
+- 자세한 방법: `.claude/skills/codex/SKILL.md`
+
+### 기타
 - Unity 에디터 GUI는 직접 조작할 수 없다. 씬·프리팹 구성이 필요하면 에디터 스크립트(`Assets/Editor/`)로 자동화하거나 사용자에게 단계를 안내한다.
-- git은 GitHub Desktop 내장 git을 쓴다 (시스템 PATH에 git 없음).
+- git은 GitHub Desktop 내장 git을 쓴다 (시스템 PATH에 git 없음):
+  `C:\Users\qwer0\AppData\Local\GitHubDesktop\app-<버전>\resources\app\git\cmd\git.exe`
