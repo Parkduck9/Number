@@ -32,6 +32,12 @@ public class PlayerInputReader : MonoBehaviour
 
     void Update()
     {
+        if (GameFlow.InputLocked) // blocking dialogue: no input
+        {
+            MoveX = 0f;
+            JumpPressed = JumpHeld = AttackPressed = ParryPressed = DashPressed = false;
+            return;
+        }
         MoveX = move.ReadValue<Vector2>().x;
         JumpPressed = jump.WasPressedThisFrame();
         JumpHeld = jump.IsPressed();

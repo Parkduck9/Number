@@ -266,3 +266,9 @@ MonoBehaviour:
   dashCooldown: 2
   knockback: {x: 5, y: 4}
   hurtDuration: 0.25
+  hitStopTime: 0.06
+  parryFlashTime: 0.1
+  sparkCount: 6
+  sparkLife: 0.2
+  sparkSpeed: 6
+  sparkSize: 0.15

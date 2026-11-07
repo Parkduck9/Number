@@ -317,7 +317,11 @@ MonoBehaviour:
   - 40
   pulseSpeed: 2.5
   pulseScale: 1.3
-  specialPulseScale: 1.6
+  flameCount: 4
+  flameSize: 0.12
+  flameHeight: 0.6
+  flameSpread: 0.3
+  flameFlicker: 12
 --- !u!114 &4091592498481781644
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -339,13 +343,16 @@ MonoBehaviour:
   attackRangeX: 1.8
   attackRangeY: 1.5
   windupTime: 0.5
-  recoverTime: 0.35
+  chainWindupTime: 0.15
+  recoverTime: 0.15
   turnTime: 0.35
   staggerTime: 1
   openTime: 1
   attackOffset: {x: 1, y: 0}
   attackSize: {x: 1.8, y: 1.4}
   flashTime: 0.1
+  chargeSpeed: 14
+  chargeMaxTime: 0.6
 --- !u!1 &6711471289357908216
 GameObject:
   m_ObjectHideFlags: 0

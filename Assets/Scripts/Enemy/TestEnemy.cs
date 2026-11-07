@@ -67,12 +67,19 @@ public class TestEnemy : MonoBehaviour
 
     void Update()
     {
+        if (GameFlow.InputLocked) // blocking dialogue: freeze the AI and push its state timer forward
+        {
+            stateEnteredAt += Time.deltaTime;
+            flashUntil += Time.deltaTime;
+            return;
+        }
         if (player != null && state != State.Stunned) UpdateState();
         ApplyVisual();
     }
 
     void FixedUpdate()
     {
+        if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
         float vx = 0f;
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
         // Only toward a player in front: Recover does not re-face, so never walk away from one who got behind.

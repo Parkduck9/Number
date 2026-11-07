@@ -1,0 +1,6 @@
+# SAMPLE talk file (blocking story scene; advance with left click or E)
+# format:  speakerId | Korean | English
+@mode talk
+yudo | 0이요? 그럼 숨 0번 쉬면 최고의 하루겠네요? | Zero? So zero breaths makes the luckiest day, huh?
+citizen | [샘플] ……. | [SAMPLE] ...
+yudo | [샘플] 이건 테스트 대사입니다. | [SAMPLE] This is a test line.

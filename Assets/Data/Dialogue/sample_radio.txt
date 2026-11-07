@@ -1,0 +1,5 @@
+# SAMPLE radio file (non-blocking, corner subtitle, lines auto-advance)
+# format:  speakerId | Korean | English | optional seconds
+@mode radio
+broadcast | 오늘의 행운의 숫자는… 0입니다. | Today's lucky number is... zero.
+broadcast | [샘플] 시민 여러분은 침착하게 이동해 주세요. | [SAMPLE] Citizens, please remain calm and move along. | 3.5

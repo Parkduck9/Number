@@ -44,6 +44,7 @@ public static class PrototypeSceneBuilder
         BuildPlayer();
         BuildEnemy();
         new GameObject("Debug").AddComponent<PrototypeDebug>();
+        DialogueSetup.BuildInScene(); // DialoguePlayer + two sample triggers
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         SetBuildScene();
