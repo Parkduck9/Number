@@ -97,7 +97,7 @@ public class PlayerController : MonoBehaviour
         if (hitStopEndsAt >= 0f)
         {
             if (Time.unscaledTime >= hitStopEndsAt) EndHitStop();
-            else return; // frozen
+            else { UpdateVisual(Time.time); return; } // frozen; still show the parry flash
         }
         float now = Time.time;
         float elapsed = now - stateEnteredAt;

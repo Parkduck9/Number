@@ -183,7 +183,7 @@ public class TestEnemy : MonoBehaviour
                 number.SetPulse(true, number.Value == 1);
                 break;
             case State.Charge:
-                number.SetPulse(true, false);
+                number.SetPulse(true, number.Value == 1); // charge strike at 1 is the special strike too
                 break;
             case State.Stunned:
                 number.Hide();
