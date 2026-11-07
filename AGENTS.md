@@ -31,7 +31,9 @@
 - 커밋 메시지 앞에 담당을 붙인다: `[code]`, `[review]`, `[asset]`, `[qa]`, `[docs]`(기획서·문서)
 - `Library/`, `Temp/`, `Build/` 등 Unity 생성 폴더는 커밋하지 않는다 (.gitignore 참고).
 - 큰 바이너리 파일(이미지, 사운드, 모델, 폰트)은 Git LFS로 관리된다 (.gitattributes 참고).
-- **무료로만 작업한다.** 돈이 드는 API·서비스·에셋(유료 영상·이미지 생성 API, 유료 에셋 스토어 등)은 쓰지 않는다. 이미 쓰고 있는 도구(Claude Code, Codex CLI, Antigravity CLI)와 무료 라이선스 에셋만 쓴다.
+- **무료로만 작업한다.** 새로 돈이 드는 API·서비스·에셋(유료 영상·이미지 생성 API, 새 에셋 구매 등)은 쓰지 않는다. 쓸 수 있는 것: 이미 쓰고 있는 도구(Claude Code, Codex CLI, Antigravity CLI), 무료 라이선스 에셋, **사용자가 이미 가지고 있는 Unity Asset Store 에셋**.
+  - Asset Store 에셋은 게임 빌드에 넣는 건 되지만, 원본 파일을 공개 저장소에 올리면 재배포가 된다. **이 저장소는 비공개로 유지**하고, 공개로 바꾸기 전에 Asset Store 에셋 폴더를 빼야 한다.
+  - 쓴 에셋은 이름·제작자·Asset Store 링크를 CREDITS.md에 기록한다.
 
 ## 작업 원칙 (모든 AI 공통)
 
