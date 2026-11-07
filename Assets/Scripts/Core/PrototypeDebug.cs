@@ -25,7 +25,7 @@ public class PrototypeDebug : MonoBehaviour
         if (player != null)
             text += $"HP {health.Hp}/{health.MaxHp} / State {player.CurrentState} / Dash CD {player.DashCooldownRemaining:0.0}\n";
         if (enemy != null)
-            text += $"Enemy {enemy.Current} / Number {enemy.Number.Value} / HP {enemy.Hp}\n";
+            text += $"Enemy {enemy.Current} / Number {enemy.Number.Value} / StrikesLeft {enemy.StrikesLeft} / HP {enemy.Hp}\n";
         text += "A/D move  W jump  LMB attack  RMB parry  Shift dash  R restart";
         GUI.Label(new Rect(10, 10, 1200, 120), text);
     }

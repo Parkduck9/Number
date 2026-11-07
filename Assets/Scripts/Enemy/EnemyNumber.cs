@@ -1,7 +1,8 @@
 using TMPro;
 using UnityEngine;
 
-// Personal number (2-5) shown above an enemy. See docs/design/PROTOTYPE_ARCH.md section 4.
+// Personal number (2-5) shown above an enemy. It never changes during a chain.
+// See docs/design/PROTOTYPE_ARCH.md section 4 and 7 ("추가 확정 3").
 public class EnemyNumber : MonoBehaviour
 {
     [SerializeField] TMP_Text label;
@@ -11,34 +12,37 @@ public class EnemyNumber : MonoBehaviour
     [SerializeField] float[] earlyWeights = { 40f, 40f, 15f, 5f };
     [SerializeField] float[] lateWeights = { 5f, 15f, 40f, 40f };
 
-    [SerializeField] float pulseSpeed = 2.5f;       // (T) pulses per second
-    [SerializeField] float pulseScale = 1.3f;       // (T)
-    [SerializeField] float specialPulseScale = 1.6f; // (T)
+    [SerializeField] float pulseSpeed = 2.5f; // (T) pulses per second
+    [SerializeField] float pulseScale = 1.3f; // (T)
+
+    [Header("Last-strike flame (T, placeholder)")]
+    [SerializeField] int flameCount = 4;
+    [SerializeField] float flameSize = 0.12f;
+    [SerializeField] float flameHeight = 0.6f; // above label center (enemy-local units)
+    [SerializeField] float flameSpread = 0.3f;
+    [SerializeField] float flameFlicker = 12f;
 
     static readonly Color Red = new Color(1f, 0.1647f, 0.1647f); // #FF2A2A
-    static readonly Color Yellow = new Color(1f, 0.9f, 0.1f);
-    static readonly Color White = Color.white;
+    static readonly Color DarkRed = new Color(0.55f, 0.05f, 0.05f);
 
     public int Value { get; private set; }
 
     bool pulsing;
-    bool special;
+    bool flameOn;
+    Transform[] flame;
+    SpriteRenderer[] flameSr;
 
-    void Start()
+    void Awake()
     {
-        Reroll();
+        Reroll(); // before TestEnemy.Start reads Value
     }
 
     void Update()
     {
         if (label == null) return;
-        float s = 1f;
-        if (pulsing)
-        {
-            float max = special ? specialPulseScale : pulseScale;
-            s = Mathf.Lerp(1f, max, Mathf.PingPong(Time.time * pulseSpeed, 1f));
-        }
+        float s = pulsing ? Mathf.Lerp(1f, pulseScale, Mathf.PingPong(Time.time * pulseSpeed, 1f)) : 1f;
         label.transform.localScale = new Vector3(s, s, 1f);
+        if (flameOn) UpdateFlame();
     }
 
     public void SetProgress(float p) { progress = Mathf.Clamp01(p); }
@@ -60,19 +64,15 @@ public class EnemyNumber : MonoBehaviour
             r -= w[i];
         }
         Value = pick + 2;
-        SetPulse(false, false);
-        Refresh();
-    }
-
-    public void Decrement()
-    {
-        if (Value > 0) Value--;
+        SetPulse(false);
+        SetFlame(false);
         Refresh();
     }
 
     public void Hide()
     {
         pulsing = false;
+        SetFlame(false);
         if (label != null)
         {
             label.gameObject.SetActive(false);
@@ -80,11 +80,53 @@ public class EnemyNumber : MonoBehaviour
         }
     }
 
-    public void SetPulse(bool on, bool isSpecial)
+    public void SetPulse(bool on)
     {
         pulsing = on;
-        special = on && isSpecial;
         Refresh();
+    }
+
+    // Faint red pixel flame above the number = "next strike is the last one".
+    public void SetFlame(bool on)
+    {
+        if (on == flameOn) return;
+        flameOn = on;
+        if (on && flame == null && label != null) BuildFlame();
+        if (flame != null)
+            foreach (Transform t in flame) t.gameObject.SetActive(on);
+    }
+
+    void BuildFlame()
+    {
+        flame = new Transform[flameCount];
+        flameSr = new SpriteRenderer[flameCount];
+        for (int i = 0; i < flameCount; i++)
+        {
+            GameObject go = new GameObject("Flame");
+            go.transform.SetParent(label.transform.parent, false); // sibling of the label: unaffected by its scale
+            go.transform.localScale = new Vector3(flameSize, flameSize, 1f);
+            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = ParryFx.Square;
+            sr.sortingOrder = 21;
+            flame[i] = go.transform;
+            flameSr[i] = sr;
+        }
+    }
+
+    void UpdateFlame()
+    {
+        if (flame == null) return;
+        float step = Mathf.Floor(Time.time * flameFlicker); // jumpy pixel flicker, not smooth
+        for (int i = 0; i < flame.Length; i++)
+        {
+            float h = Mathf.Abs(Mathf.Sin((step + i * 3.1f) * 12.9898f) * 43758.5453f) % 1f;
+            float h2 = Mathf.Abs(Mathf.Sin((step + i * 7.7f) * 78.233f) * 12345.678f) % 1f;
+            float x = (i - (flame.Length - 1) * 0.5f) / Mathf.Max(1, flame.Length - 1) * 2f * flameSpread;
+            flame[i].localPosition = label.transform.localPosition + new Vector3(x, flameHeight + h * flameSize * 4f, 0f);
+            Color c = h2 > 0.5f ? Red : DarkRed;
+            c.a = 0.55f;
+            flameSr[i].color = c;
+        }
     }
 
     void Refresh()
@@ -92,7 +134,7 @@ public class EnemyNumber : MonoBehaviour
         if (label == null) return;
         label.gameObject.SetActive(true);
         label.text = Value.ToString();
-        label.color = Value <= 0 ? White : (special ? Yellow : Red);
+        label.color = Red;
         if (!pulsing) label.transform.localScale = Vector3.one;
     }
 }

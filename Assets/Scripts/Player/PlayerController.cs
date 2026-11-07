@@ -215,6 +215,7 @@ public class PlayerController : MonoBehaviour
     void DoAttackHit()
     {
         attackHitDone = true;
+        ParryFx.Swing(AttackCenter(), attackSize, Color.white, visual != null ? visual.transform : null, Facing);
         Collider2D col = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyMask);
         if (col == null) return;
         TestEnemy enemy = col.GetComponentInParent<TestEnemy>();

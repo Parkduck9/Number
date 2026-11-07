@@ -14,8 +14,9 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] float moveSpeed = 3f;
     [SerializeField] float attackRangeX = 1.8f;
     [SerializeField] float attackRangeY = 1.5f;
-    [SerializeField] float windupTime = 0.5f;
-    [SerializeField] float recoverTime = 0.35f;
+    [SerializeField] float windupTime = 0.5f;       // first strike of a chain only
+    [SerializeField] float chainWindupTime = 0.15f; // later strikes
+    [SerializeField] float recoverTime = 0.15f;
     [SerializeField] float turnTime = 0.35f;
     [SerializeField] float staggerTime = 1f;
     [SerializeField] float openTime = 1f;
@@ -32,6 +33,7 @@ public class TestEnemy : MonoBehaviour
     public State Current => state;
     public int Hp => hp;
     public EnemyNumber Number => number;
+    public int StrikesLeft => strikesLeft;
 
     Rigidbody2D rb;
     EnemyNumber number;
@@ -39,6 +41,8 @@ public class TestEnemy : MonoBehaviour
     State state;
     float stateEnteredAt;
     int hp;
+    int strikesLeft;      // the displayed number never changes; this counts the chain down
+    bool chainStarted;    // first strike of a chain gets the long windup
     int facing = -1;
     Color baseColor = Color.white;
     Color flashColor;
@@ -91,7 +95,7 @@ public class TestEnemy : MonoBehaviour
                     EnterState(State.Windup);
                 break;
             case State.Windup:
-                if (t >= windupTime) EnterState(State.Strike);
+                if (t >= (chainStarted ? chainWindupTime : windupTime)) EnterState(State.Strike);
                 break;
             case State.Strike:
                 DoStrike();
@@ -119,7 +123,7 @@ public class TestEnemy : MonoBehaviour
 
     void NextAfterChain()
     {
-        EnterState(number.Value > 0 ? State.Windup : State.Open);
+        EnterState(strikesLeft > 0 ? State.Windup : State.Open);
     }
 
     void FinishReset()
@@ -130,11 +134,12 @@ public class TestEnemy : MonoBehaviour
 
     void DoStrike()
     {
-        bool special = number.Value == 1;
+        bool special = strikesLeft == 1; // last strike of the chain
         HitResult result = HitResult.Dodged; // a whiff counts as dodged for the number...
         bool dashedThrough = false;
 
         Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
+        ParryFx.Swing(center, attackSize, Color.red, visual != null ? visual.transform : null, facing);
         Collider2D col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
         if (col != null)
         {
@@ -151,8 +156,10 @@ public class TestEnemy : MonoBehaviour
                 });
             }
         }
-        number.Decrement();
-        number.SetPulse(false, false);
+        strikesLeft--;
+        chainStarted = true;
+        number.SetPulse(false);
+        number.SetFlame(strikesLeft == 1); // tell: next strike is the last one
 
         // ...but only a real dash-through (player was inside the hitbox) staggers; a plain whiff does not.
         if (special && dashedThrough && result == HitResult.Dodged)
@@ -164,7 +171,7 @@ public class TestEnemy : MonoBehaviour
         float dx = (player.transform.position.x - transform.position.x) * facing;
         bool playerBehind = dx < 0f;
         // Player dashed away out of range (nothing was hit, not a dash-through): charge after them.
-        if (!playerBehind && col == null && dx > attackRangeX && number.Value > 0)
+        if (!playerBehind && col == null && dx > attackRangeX && strikesLeft > 0)
         {
             EnterState(State.Charge);
             return;
@@ -179,11 +186,20 @@ public class TestEnemy : MonoBehaviour
         stateEnteredAt = Time.time;
         switch (next)
         {
+            case State.Approach:
+                strikesLeft = number.Value; // new chain
+                chainStarted = false;
+                break;
             case State.Windup:
-                number.SetPulse(true, number.Value == 1);
+                number.SetPulse(true);
+                number.SetFlame(strikesLeft == 1); // single-strike chain: tell during its windup
                 break;
             case State.Charge:
-                number.SetPulse(true, number.Value == 1); // charge strike at 1 is the special strike too
+                number.SetPulse(true);
+                break;
+            case State.Open:
+            case State.Staggered:
+                number.SetFlame(false);
                 break;
             case State.Stunned:
                 number.Hide();
@@ -204,7 +220,7 @@ public class TestEnemy : MonoBehaviour
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (number.Value > 0 && state != State.Turn)
+        if (strikesLeft > 0 && state != State.Turn)
         {
             Flash(Color.white);
             return false;
