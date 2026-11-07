@@ -50,7 +50,7 @@
 - [ ] **크레딧 (Credits)** — 모든 외부 에셋의 출처
 - [ ] **팀원 이름 (Team Members)**
 - [ ] **생성형 AI 공개 (Generative AI disclosure)** — 사용한 도구와 사용 방식. 빠뜨리면 상 후보에서 제외.
-  - 예: `Claude (Anthropic) — used to write C# gameplay code and assist with design/planning.` (실제 사용 내역에 맞게 수정)
+  - 초안: [CREDITS.md](CREDITS.md)의 "Generative AI disclosure" (Claude Sonnet/Opus, Codex CLI, Antigravity CLI). 실제 사용 내역에 맞게 수정할 것.
   - AI 도구 이용약관상 필요한 권리도 갖출 것
 - [ ] 잼 페이지의 추가 요구사항
 
