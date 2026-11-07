@@ -30,5 +30,6 @@
 - Unity 에디터 GUI는 직접 조작할 수 없다. 씬·프리팹 구성이 필요하면 에디터 스크립트(`Assets/Editor/`)로 자동화하거나 사용자에게 단계를 안내한다.
 - **Unity MCP**(MCP for Unity, CoplayDev, 무료 MIT): 에디터가 켜져 있고 `Window → MCP for Unity`에서 서버가 실행 중이면 `.mcp.json`의 `unityMCP`(http://127.0.0.1:8080/mcp)로 에디터를 조작할 수 있다. 씬·프리팹은 한 번에 한 AI만 수정 규칙을 그대로 지킨다.
 - **Unity CLI**: 에디터 `C:\Program Files\Unity\Hub\Editor\6000.3.28f1\Editor\Unity.exe`를 `-batchmode -quit -projectPath`로 실행해 컴파일 확인·에디터 스크립트 실행·빌드를 한다. 에디터가 이 프로젝트를 열고 있으면 배치 모드는 실패하므로 MCP를 쓴다.
+- **pixelfx 스킬**(patch-gg/pixelfx, MIT): 픽셀 이펙트 제작용. 체크아웃은 저장소 밖 `D:\Git\pixelfx`에 두고 거기서 `node tools/*.mjs`를 실행한다 (Node 18+ 필요). Unity에는 JS 코드를 넣지 않고 `--sheet`로 내보낸 PNG 스프라이트 시트만 `Assets/Art/`에 넣는다 (Point 필터, 압축 끔). 이펙트도 보이는 것이므로 시안을 먼저 보여 준다. 쓴 이펙트는 CREDITS.md에 pixelfx(MIT, Patch / Hugo Duprez)로 기록한다.
 - git은 GitHub Desktop 내장 git을 쓴다 (시스템 PATH에 git 없음):
   `C:\Users\qwer0\AppData\Local\GitHubDesktop\app-<버전>\resources\app\git\cmd\git.exe`
