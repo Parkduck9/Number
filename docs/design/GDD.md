@@ -307,6 +307,8 @@
 | TASK-06 | 주인공·적·군중 스프라이트 | Codex | ART-03~05 | ☐ |
 | TASK-07 | 효과음·BGM | Codex | SFX-* | ☐ |
 | TASK-08 | 플레이 테스트 시나리오 | Antigravity (QA) | STG-* | ☐ |
+| TASK-09 | 대화 시스템 (무전 자막 + 멈추는 대화), 대사 파일 형식 | Sonnet (툴) / 사용자 (대사) | 9장 | ☐ |
+| TASK-10 | 대화 중 연출 애니메이션 (캐릭터 동작·카메라) — **맨 마지막에** | Codex + Sonnet | 9장 | ☐ |
 | TASK-xx | | | | |
 
 ## 16. 콘텐츠 안전 체크 (JAM_RULES.md 기준)
