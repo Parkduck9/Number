@@ -64,7 +64,7 @@ public enum HitResult { Hit, Parried, Dodged }
 
 ## 2. 플레이어 상태 머신 (PlayerController)
 
-**물리 구성**: `Rigidbody2D` Dynamic, gravityScale 4 (T), Freeze Rotation Z, Interpolate, Continuous. `BoxCollider2D` 0.9×2.0. 레이어 Player. 단위: **PPU 16, 플레이어 1×2 유닛(16×32px)** — ART-11 `[확정]` 캐릭터 키 28~34px에 맞춤.
+**물리 구성**: `Rigidbody2D` Dynamic, gravityScale 4 (T), Freeze Rotation Z, Interpolate, Continuous. `BoxCollider2D` 0.9×2.0. 레이어 Player. 단위: **PPU 32, 플레이어 1×2 유닛(32×64px)** — ART-00·ART-11 `[확정]` 960×540, 주인공 64px에 맞춤 (2026-11-08 변경, 유닛 크기는 그대로).
 
 **틱 분리**: `Update()` = 입력 읽기 → 버퍼 갱신 → 상태 전이·타이머·히트 판정. `FixedUpdate()` = 현재 상태에 맞게 `linearVelocity` 쓰기. 상태는 `enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead }` 하나 + `stateEnteredAt`(Time.time). 클래스 분리 없음.
 
@@ -146,7 +146,7 @@ public enum HitResult { Hit, Parried, Dodged }
 2. **충돌 매트릭스**: `Physics2D.IgnoreLayerCollision(7, 8, true)` (Player×Enemy 끔). 저장이 안 되면 Project Settings > Physics 2D에서 수동 — 설계 문서에 남긴다.
 3. **TMP**: `Assets/TextMesh Pro/Resources/TMP Settings.asset` 없으면 `TMP_PackageResourceImporter.ImportResources(true, false, false)`. (Assets/TextMesh Pro 폴더가 생김 — 커밋 대상, LFS 아님.)
 4. **씬** `Assets/Scenes/Prototype.unity` 새로 생성:
-   - Main Camera: Orthographic, size **8.4375** (=270/16/2, 480×270 기준 뷰), 배경 `#0B0F1E`, 위치 (0,0,-10). Pixel Perfect Camera는 이번에 안 붙임 (아트 들어올 때).
+   - Main Camera: Orthographic, size **8.4375** (=540/32/2, 960×540·PPU 32 기준 뷰 — 이전 480×270·PPU 16과 월드 크기가 같아 게임 수치는 그대로), 배경 `#0B0F1E`, 위치 (0,0,-10). Pixel Perfect Camera는 이번에 안 붙임 (아트 들어올 때).
    - Global Light 2D (Light2D, Global, intensity 1) — URP 2D 템플릿과 동일.
    - `Ground`: Square 스프라이트 색 `#3A3F4B`, scale (60, 2), 위치 (0, -7), BoxCollider2D, 레이어 Ground.
    - `Player` (-5, -5): 루트 = Rigidbody2D + BoxCollider2D(0.9×2) + PlayerInputReader(asset 연결) + PlayerHealth + PlayerController(groundMask=Ground, enemyMask=Enemy), 레이어 Player. 자식 `Visual` = Square 시안 `#4CE0FF`, scale (1, 2), order 10. → 프리팹 저장.

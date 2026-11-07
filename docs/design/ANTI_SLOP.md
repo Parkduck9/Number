@@ -14,9 +14,9 @@
 
 | 슬롭 징후 | 우리 규칙 |
 |---|---|
-| 픽셀 크기가 들쭉날쭉, 모서리가 뭉개짐, 선이 1.5픽셀처럼 번짐 | 모든 에셋은 한 격자(PPU 16, 480×270 기준)에 맞춘다. 정수 배율·Point 필터만 |
+| 픽셀 크기가 들쭉날쭉, 모서리가 뭉개짐, 선이 1.5픽셀처럼 번짐 | 모든 에셋은 한 격자(PPU 32, 960×540 기준)에 맞춘다. 정수 배율·Point 필터만 |
 | 가장자리에 흐릿한 후광(안티앨리어싱·반투명 테두리) | 외곽선 알파는 0 또는 255. 반투명 픽셀은 이펙트에만 의도해서 |
-| 크기에 비해 디테일이 너무 많음, 초점이 없음 | 28~34px 캐릭터는 실루엣으로 읽혀야 한다. 디테일보다 형태·색 덩어리 |
+| 크기에 비해 디테일이 너무 많음, 초점이 없음 | 약 64px 캐릭터는 실루엣으로 읽혀야 한다. 디테일보다 형태·색 덩어리 |
 | 색이 수십~수백 개, 부드러운 그라데이션 | 에셋마다 제한된 팔레트(캐릭터 16색 이하 권장). 그라데이션 대신 단계 음영(디더링은 의도적으로만) |
 | 빛 방향이 에셋마다 다름 | 광원 방향을 하나로 정하고 모든 에셋이 따른다 |
 | 그림 속 글자가 뭉개진 가짜 문자 (가짜 한글·한자·영어) | 그림 안에 글자를 AI로 그리지 않는다. 간판·숫자는 폰트나 손으로 찍은 픽셀로 따로 올린다 |
@@ -44,7 +44,7 @@
 ## 5. 확인 방법
 
 - 원본 크기와 4배 확대 둘 다로 본다.
-- 실제 게임 화면(480×270, 배경 위)에 놓고 본다 — 따로 볼 때 괜찮아도 같이 놓으면 튄다.
+- 실제 게임 화면(960×540, 배경 위)에 놓고 본다 — 따로 볼 때 괜찮아도 같이 놓으면 튄다.
 - "이게 AI가 만든 것처럼 보이나?"를 위 표 기준으로 하나씩 대답한다. 하나라도 걸리면 고친다.
 
 참고 (2026-11 조사): [7 Tells that a UI is AI-Generated](https://pages.thefountaininstitute.com/posts/7-tells-that-a-ui-is-ai-generated) · [AI Slop Fonts and Gradients](https://www.925studios.co/blog/ai-slop-design-tells) · [The visible tells of AI design](https://impeccable.style/slop?cb=30) · [Spotting AI in pixel art and sprites](https://discover.oreateai.com/discover/the-grid-never-lies-how-to-spot-ai-in-pixel-art-and-digital-sprites) · [10 Ways to Spot Generative AI Art](https://blog.unvale.io/10-ways-to-spot-generative-ai-art)
