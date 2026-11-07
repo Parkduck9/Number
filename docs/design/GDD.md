@@ -223,11 +223,20 @@
 | SFX-02 | 숨 멈춤 | 도시 소음이 한순간에 끊김 | Codex | `[제안]` |
 | SFX-03 | BGM | 국악기 + 저음 신스. 방송 숫자가 바뀌면 박자 변화 | Codex | `[제안]` |
 
-참고 컨셉 이미지 (AI 생성 · Codex, 참고용) — **주의: 탑다운·비조선풍 시절 이미지라 현재 방향과 다름. 분위기 참고만.**
+**현재 기준 컨셉 이미지** (AI 생성 · Codex, 참고용 — 픽셀 크기가 고르지 않아 게임 에셋으로 직접 쓰지 않는다. 실제 스프라이트는 ART-00 해상도에 맞춰 따로 만든다)
+- [concept/10_style_frame.jpg](concept/10_style_frame.jpg) — 스타일 프레임: 저잣거리 전투 화면, 숫자 색·HUD 배치 기준
+- [concept/11_character_lineup.jpg](concept/11_character_lineup.jpg) — 캐릭터 라인업: 안유도·시민·AI 벌레·안드로이드 크기·의상 기준
+- [concept/12_face_health.jpg](concept/12_face_health.jpg) — 얼굴 체력 6단계 (ART-08 기준)
+
+이미지에서 고칠 점 (에셋 제작 시 반영):
+- `[확정]` 스타일 프레임의 **하트 체력바는 쓰지 않는다.** 체력은 얼굴 초상화 하나로만 표시한다.
+- `[제안]` 배경 지붕이 중국식 다층 누각(탑)처럼 보인다. **한옥의 완만한 처마 곡선·기와·단청**으로 조선 느낌을 분명히 한다.
+
+**이전 컨셉 이미지** — 탑다운·비조선풍 시절. 분위기 참고만.
 - [concept/01_breath_zero.jpg](concept/01_breath_zero.jpg) — 오프닝, 숫자 0에 도시가 숨을 멈춘 순간 (STG-00)
 - [concept/02_street_gameplay.jpg](concept/02_street_gameplay.jpg) — 거리 (탑다운, 폐기된 스텔스 방향)
-- [concept/03_hack_choice.jpg](concept/03_hack_choice.jpg) — 전광판 해킹 선택
-- [concept/04_luckcorp_hq.jpg](concept/04_luckcorp_hq.jpg) — 회사 본사
+- [concept/03_hack_choice.jpg](concept/03_hack_choice.jpg) — 전광판 해킹 선택 (다이얼 UI 참고)
+- [concept/04_luckcorp_hq.jpg](concept/04_luckcorp_hq.jpg) — 회사 본사 (이미지 속 'LUCKCORP'는 옛 이름, 현재는 Embector)
 
 ## 12. UI / HUD
 
@@ -327,3 +336,4 @@
 | 2026-11-07 | 사용자 | 해킹 = 다이얼, 바꾼 숫자는 AI 역해킹이 끝날 때까지만 유지 확정. Claude가 세부 규칙 제안 추가, Q-09 추가 |
 | 2026-11-07 | 사용자 | 세뇌된 시민도 적으로 확정. Claude가 기절 처리·적 구성 제안 추가 |
 | 2026-11-08 | 사용자 | 개인 숫자 규칙(연속 공격 횟수, 패링·대시, 원거리 1·근접 2~5·강적 1~7, 7번째 일격은 대시만, 색 황금/빨강, 0.5초 늦은 마지막 일격), 픽셀 아트, 조작(A/D·W·Shift·E), 적 3종, 엔딩 2개 + 업그레이드 확정. Claude가 Q-10~14 추가 |
+| 2026-11-08 | Claude | 픽셀 아트 컨셉 이미지 3장 추가 (스타일 프레임·캐릭터 라인업·얼굴 체력). 하트 체력바 미사용, 한옥 지붕 보정 메모 |
