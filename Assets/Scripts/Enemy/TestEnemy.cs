@@ -69,8 +69,9 @@ public class TestEnemy : MonoBehaviour
     {
         float vx = 0f;
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
+        // Only toward a player in front: Recover does not re-face, so never walk away from one who got behind.
         if ((state == State.Approach || state == State.Recover) && player != null &&
-            Mathf.Abs(player.transform.position.x - transform.position.x) > attackRangeX)
+            (player.transform.position.x - transform.position.x) * facing > attackRangeX)
             vx = facing * moveSpeed; // stop under a jumping player instead of jittering
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
     }
@@ -122,7 +123,7 @@ public class TestEnemy : MonoBehaviour
     {
         bool special = number.Value == 1;
         HitResult result = HitResult.Dodged; // a whiff counts as dodged for the number...
-        bool hitPlayer = false;
+        bool dashedThrough = false;
 
         Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         Collider2D col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
@@ -131,7 +132,8 @@ public class TestEnemy : MonoBehaviour
             PlayerController pc = col.GetComponentInParent<PlayerController>();
             if (pc != null)
             {
-                hitPlayer = true;
+                // Dodged also covers post-hit invulnerability/Dead; only an actual dash counts for the stagger.
+                dashedThrough = pc.CurrentState == PlayerController.State.Dash;
                 result = pc.ReceiveEnemyHit(new HitInfo
                 {
                     Damage = 1,
@@ -144,7 +146,7 @@ public class TestEnemy : MonoBehaviour
         number.SetPulse(false, false);
 
         // ...but only a real dash-through (player was inside the hitbox) staggers; a plain whiff does not.
-        if (special && hitPlayer && result == HitResult.Dodged)
+        if (special && dashedThrough && result == HitResult.Dodged)
         {
             EnterState(State.Staggered);
             return;
