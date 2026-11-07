@@ -9,6 +9,7 @@
 | 에셋 | 제작자 | 출처 URL | 라이선스 | 사용 위치 |
 |---|---|---|---|---|
 | Galmuri9 / Galmuri11 / Galmuri14 (pixel font, EN+KO) v2.40.4 | quiple | https://github.com/quiple/galmuri | SIL OFL 1.1 | UI text (Assets/Fonts/Galmuri/) |
+| Mulmaru (물마루, pixel font, EN+KO) v1.0 | mushsooni | https://github.com/mushsooni/mulmaru | SIL OFL 1.1 | UI text (Assets/Fonts/Mulmaru/) |
 
 ## AI-generated assets
 | 에셋 | 도구 | 사용 위치 |
