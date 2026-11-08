@@ -5,10 +5,10 @@ using UnityEngine.UI;
 
 // Scene singleton: top-center broadcast display ((( N ))), "press E" prompt, and the hack dial.
 // The game is NOT paused while the dial is open ([proposal] GDD ch.6): enemies keep coming and the player stays controllable.
-// Dial keys: 0-9 pick directly, Up/Down arrows or mouse wheel step, E confirms, Esc cancels.
+// The dial panel and its keys (0-9 / Up Down / wheel / E / Esc) live in NumberDial, shared with the END-02 ending choice.
 // (Left/Right arrows are bound to Move and Enter to Attack in InputSystem_Actions, so they are not used here.)
 // E is read straight from Keyboard (same as DialoguePlayer) so PlayerInputReader is untouched.
-// The UI is built from code. ALL placeholder styling lives in the constants below.
+// The UI is built from code. ALL placeholder styling lives in the constants below (dial colors: NumberDial).
 public class BroadcastHackUi : MonoBehaviour
 {
     [SerializeField] TMP_FontAsset font;
@@ -17,29 +17,21 @@ public class BroadcastHackUi : MonoBehaviour
 
     // ---- Style (placeholder; restyle here) ----
     static readonly Vector2 RefResolution = new Vector2(960f, 540f);
-    static readonly Color BoxColor = new Color32(0x0B, 0x0F, 0x1E, 0xE6);
     static readonly Color BorderColor = new Color32(0x3A, 0x3F, 0x4B, 0xFF);
     static readonly Color BroadcastGold = new Color32(0xFF, 0xD2, 0x4A, 0xFF); // AI's number
     static readonly Color HackedCyan = new Color32(0x4C, 0xE0, 0xFF, 0xFF);    // number set by the player's hack
-    static readonly Color WarnRed = new Color32(0xFF, 0x2A, 0x2A, 0xFF);
-    static readonly Color Dim = new Color32(0x8A, 0x90, 0xA0, 0xFF);
-    const int HudSize = 48, DialNumberSize = 96, DigitSize = 24, TextSize = 24; // multiples of 12 at 960x540
-
-    static readonly Key[] DigitKeys =
-    {
-        Key.Digit0, Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9
-    };
+    const int HudSize = 48, TextSize = 24; // multiples of 12 at 960x540
 
     PlayerController player;
     BroadcastBoard dialBoard; // non-null = dial open
-    int selected;
+    NumberDial dial;
     bool lockedLastFrame; // the E that closes a Talk line must not also open the dial
     int shownNumber = -1, shownHacked = -1; // HUD cache: rebuild the string only when it changes
     bool hudWasShown;
     float punchAt = -10f; // unscaled time of the last number punch
 
-    TMP_Text titleText, hudText, promptText, dialNumber, dialDigits, dialHint, dialWarn;
-    GameObject dialRoot, barRoot, promptRoot;
+    TMP_Text hudText, promptText;
+    GameObject barRoot, promptRoot;
     RectTransform barFill;
 
     void Awake() { BuildUi(); }
@@ -51,15 +43,12 @@ public class BroadcastHackUi : MonoBehaviour
 
     bool PlayerDead() { return GameFlow.IsPlayerDead(player); }
 
-    // Language switch: re-apply the code-built static texts; the HUD string has no words, the dial digits are language-free.
+    // Language switch: re-apply the code-built static texts; the HUD string has no words.
     void RefreshTexts()
     {
         if (promptText == null) return;
         promptText.text = T("[E] HACK", "[E] 해킹");
-        titleText.text = T("BROADCAST HACK", "방송 해킹");
-        dialHint.text = T("0-9 / UP DOWN / wheel: pick    E: confirm    Esc: cancel",
-                          "0-9 / 위 아래 / 휠: 선택    E: 확정    Esc: 취소");
-        if (dialBoard != null) RefreshDial();
+        dial.RefreshTexts();
     }
 
     void Update()
@@ -123,51 +112,22 @@ public class BroadcastHackUi : MonoBehaviour
     void Open(BroadcastBoard b)
     {
         dialBoard = b;
-        selected = b.Number;
-        dialRoot.SetActive(true);
-        RefreshDial();
+        dial.Open(b.Number);
     }
 
     void Close()
     {
         dialBoard = null;
-        dialRoot.SetActive(false);
+        dial.Close();
     }
 
     void UpdateDial()
     {
-        Keyboard kb = Keyboard.current;
-        if (kb == null) return;
-        if (kb.escapeKey.wasPressedThisFrame) { GameFlow.EscConsumedFrame = Time.frameCount; Close(); return; }
-        if (kb.eKey.wasPressedThisFrame)
+        switch (dial.Read())
         {
-            dialBoard.Hack(selected);
-            Close();
-            return;
+            case NumberDial.Input.Cancel: Close(); break;
+            case NumberDial.Input.Confirm: dialBoard.Hack(dial.Selected); Close(); break;
         }
-        int before = selected;
-        for (int i = 0; i < DigitKeys.Length; i++)
-            if (kb[DigitKeys[i]].wasPressedThisFrame) selected = i;
-        if (kb.upArrowKey.wasPressedThisFrame) selected = (selected + 1) % 10;
-        if (kb.downArrowKey.wasPressedThisFrame) selected = (selected + 9) % 10;
-        if (Mouse.current != null)
-        {
-            float wheel = Mouse.current.scroll.ReadValue().y;
-            if (wheel > 0f) selected = (selected + 1) % 10;
-            else if (wheel < 0f) selected = (selected + 9) % 10;
-        }
-        if (selected != before) RefreshDial();
-    }
-
-    void RefreshDial()
-    {
-        dialNumber.text = "<  " + selected + "  >";
-        dialNumber.color = selected == 0 ? WarnRed : HackedCyan;
-        string digits = "";
-        for (int i = 0; i < 10; i++)
-            digits += i == selected ? "<color=#4CE0FF>" + i + "</color>" : "<color=#8A90A0>" + i + "</color>";
-        dialDigits.text = digits.Replace("</color><color", "</color> <color");
-        dialWarn.text = selected == 0 ? T("EVERYONE STOPS BREATHING", "모두 숨을 멈춘다") : "";
     }
 
     static string T(string en, string ko) { return DialogueLanguage.Korean ? ko : en; }
@@ -210,34 +170,8 @@ public class BroadcastHackUi : MonoBehaviour
         promptRoot = prompt;
         promptRoot.SetActive(false);
 
-        // Dial panel: center
-        dialRoot = NewRect("Dial", root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(480f, 260f));
-        dialRoot.AddComponent<Image>().color = BorderColor;
-        GameObject panel = NewRect("Fill", dialRoot.transform, Vector2.zero, Vector2.zero, Vector2.zero);
-        Stretch((RectTransform)panel.transform, 2f, 2f, 2f, 2f);
-        panel.AddComponent<Image>().color = BoxColor;
-
-        TMP_Text title = titleText = NewText("Title", panel.transform, TextSize, TextAlignmentOptions.Top);
-        Stretch((RectTransform)title.transform, 12f, 12f, 12f, 12f);
-        title.text = T("BROADCAST HACK", "방송 해킹");
-        title.color = Dim;
-        dialNumber = NewText("Number", panel.transform, DialNumberSize, TextAlignmentOptions.Center);
-        // panel is 476x256 inside the border: title 12-36, number 40-136, digits 140-170, warn 174-204, hint at the bottom
-        Stretch((RectTransform)dialNumber.transform, 12f, 40f, 12f, 120f);
-        dialNumber.richText = false; // "<  N  >" must not be parsed as a tag
-        dialDigits = NewText("Digits", panel.transform, DigitSize, TextAlignmentOptions.Center);
-        Stretch((RectTransform)dialDigits.transform, 12f, 140f, 12f, 86f);
-        dialDigits.richText = true;
-        dialWarn = NewText("Warn", panel.transform, TextSize, TextAlignmentOptions.Center);
-        Stretch((RectTransform)dialWarn.transform, 12f, 174f, 12f, 52f);
-        dialWarn.color = WarnRed;
-        dialHint = NewText("Hint", panel.transform, 12, TextAlignmentOptions.Bottom);
-        Stretch((RectTransform)dialHint.transform, 12f, 8f, 12f, 8f);
-        dialHint.richText = false;
-        dialHint.text = T("0-9 / UP DOWN / wheel: pick    E: confirm    Esc: cancel",
-                          "0-9 / 위 아래 / 휠: 선택    E: 확정    Esc: 취소");
-        dialHint.color = Dim;
-        dialRoot.SetActive(false);
+        // Dial panel: center (shared look, see NumberDial)
+        dial = new NumberDial(root, font, "BROADCAST HACK", "방송 해킹");
     }
 
     TMP_Text NewText(string name, Transform parent, int size, TextAlignmentOptions align)
