@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
 // Menu NUMBER/Build STG-01 -> Assets/Scenes/STG01.unity. Idempotent: regenerates the scene each run.
 // Data source: docs/design/LEVEL_STG01.md section 6. Tweak the tables below, then re-run the menu.
@@ -98,9 +101,13 @@ public static class Stg01Builder
     [MenuItem("NUMBER/Build STG-01")]
     public static void Build()
     {
-        var open = EditorSceneManager.GetActiveScene();
-        if (open.path == ScenePath && open.isDirty) EditorSceneManager.SaveScene(open); // regenerated anyway
-        else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        // Never raise a modal (this runs via MCP too): only STG01 itself is discarded silently, any other unsaved scene aborts.
+        foreach (var s in Enumerable.Range(0, EditorSceneManager.sceneCount).Select(EditorSceneManager.GetSceneAt))
+            if (s.isDirty && s.path != ScenePath)
+            {
+                Debug.LogError($"[Stg01Builder] Scene '{s.name}' has unsaved changes. Save or discard it, then run NUMBER/Build STG-01 again.");
+                return;
+            }
 
         Todo.Clear();
         SetupLayers();
@@ -147,8 +154,11 @@ public static class Stg01Builder
         BuildLight();
         var cam = BuildCamera(playerGo.transform, roots);
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
+        BuildHud();
+        // Broadcast boards are NOT placed (broadcast "3" timing is undecided, D3). BroadcastHackUi alone shows nothing without a board.
 
         EditorSceneManager.SaveScene(scene, ScenePath);
+        SetBuildScene();
         AssetDatabase.SaveAssets();
         Debug.Log("[Stg01Builder] Built " + ScenePath + (Todo.Count == 0 ? "" : "\nTODO / skipped:\n - " + string.Join("\n - ", Todo)));
     }
@@ -303,6 +313,57 @@ public static class Stg01Builder
         if (HasProp(te, "activationRange")) SetFloat(te, "activationRange", f.detect);
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
+    }
+
+    // STG01 goes first in Build Settings (it is the game's first level); other scenes (Prototype, tests) keep their order after it.
+    static void SetBuildScene()
+    {
+        var list = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(ScenePath, true) };
+        foreach (var s in EditorBuildSettings.scenes)
+            if (s.path != ScenePath) list.Add(s);
+        EditorBuildSettings.scenes = list.ToArray();
+    }
+
+    // Face-portrait health HUD (Card A, top-left) + broadcast display UI (Card B, builds its own UI at runtime).
+    static void BuildHud()
+    {
+        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/Mulmaru/Mulmaru SDF.asset");
+        if (font == null) Todo.Add("Mulmaru SDF font missing - HUD uses the default TMP font (run the dialogue setup menu first)");
+
+        var canvasGo = new GameObject("HUD Canvas");
+        var canvas = canvasGo.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var scaler = canvasGo.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(960f, 540f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        var faceGo = new GameObject("Face", typeof(RectTransform), typeof(Image));
+        faceGo.transform.SetParent(canvasGo.transform, false);
+        var fr = (RectTransform)faceGo.transform;
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0f, 1f);
+        fr.anchoredPosition = new Vector2(16f, -16f);
+        fr.sizeDelta = new Vector2(64f, 64f);
+        var img = faceGo.GetComponent<Image>();
+        img.raycastTarget = false;
+
+        var labelGo = new GameObject("StageName", typeof(RectTransform));
+        labelGo.transform.SetParent(canvasGo.transform, false);
+        var lr = (RectTransform)labelGo.transform;
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 1f);
+        lr.anchoredPosition = new Vector2(88f, -16f);
+        lr.sizeDelta = new Vector2(200f, 24f);
+        var label = labelGo.AddComponent<TextMeshProUGUI>();
+        label.fontSize = 18f;
+        label.raycastTarget = false;
+        if (font != null) label.font = font;
+
+        var hud = canvasGo.AddComponent<FaceHealthHud>();
+        SetObj(hud, "face", img);
+        SetObj(hud, "label", label);
+
+        var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
+        if (font != null) SetObj(ui, "font", font);
     }
 
     static void BuildLight()
