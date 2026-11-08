@@ -25,9 +25,12 @@ public static class Stg01Builder
 
     // ------------------------------------------------------------------ DATA (segment-local coordinates, units)
 
-    const float SegWidth = 50.625f, SegHeight = 16.875f;
+    // DECISIONS 12-C: 1.5x wide (75.9375u). The old layout stays at x 0~45, a new group with mid platforms fills x 46~70,
+    // the door/goal moved by +25.3125 (= where the right-aligned background puts the gate art).
+    const float SegWidth = StageBuildKit.WideWidth, SegHeight = 16.875f;
 
-    // Segments: A at world x 0, B at world x 60. Background = concept image placed bottom-left, scaled to SegWidth.
+    // Segments: A at world x 0, B at world x 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of a segment).
+    // Background = image at native scale, right-aligned + mirrored fill (StageBuildKit.BuildWideBackground).
     // PLACEHOLDER art: replace with the clean 1620x540 backgrounds from Codex (same path or swap the sprite in the scene).
     class Seg
     {
@@ -39,7 +42,7 @@ public static class Stg01Builder
         // 14 pixel-native is 810x270: PPU 16 -> exactly 50.625u wide.
         new Seg { id = "SEG-A", worldX = 0f,  srcImage = "docs/design/concept/14_bg_stg01_pixel_native.png", dstName = "PLACEHOLDER_stg01_segA_bg.png", ppu = 16f, filter = FilterMode.Point },
         // SEG-B: no background yet (the 13_style_frame_v2 concept had a fake HUD / fake enemies drawn in; final art pending). null = none.
-        new Seg { id = "SEG-B", worldX = 60f, srcImage = null, dstName = null, ppu = 32f, filter = FilterMode.Point },
+        new Seg { id = "SEG-B", worldX = 110f, srcImage = null, dstName = null, ppu = 32f, filter = FilterMode.Point },
     };
 
     enum Kind { Solid, OneWay }
@@ -54,12 +57,12 @@ public static class Stg01Builder
     // 6.1 colliders (layer Ground, invisible). OneWay = PlatformEffector2D, y2 is the top surface.
     static readonly Box[] Boxes =
     {
-        new Box("GROUND-A",  A, Kind.Solid, 0f,      50.625f, 0f,    2.25f),
+        new Box("GROUND-A",  A, Kind.Solid, 0f,      SegWidth, 0f,   2.25f),
         new Box("WALL-A-L",  A, Kind.Solid, -1f,     0f,      0f,    16.875f),
-        new Box("WALL-A-R",  A, Kind.Solid, 50.625f, 51.625f, 0f,    16.875f),
-        new Box("GROUND-B",  B, Kind.Solid, 0f,      50.625f, 0f,    1.0f),
+        new Box("WALL-A-R",  A, Kind.Solid, SegWidth, SegWidth + 1f, 0f, 16.875f),
+        new Box("GROUND-B",  B, Kind.Solid, 0f,      SegWidth, 0f,   1.0f),
         new Box("WALL-B-L",  B, Kind.Solid, -1f,     0f,      0f,    16.875f),
-        new Box("WALL-B-R",  B, Kind.Solid, 50.625f, 51.625f, 0f,    16.875f),
+        new Box("WALL-B-R",  B, Kind.Solid, SegWidth, SegWidth + 1f, 0f, 16.875f),
         new Box("BARREL-B",  B, Kind.OneWay, 10.0f,  10.9f,   2.2f,  2.45f),
         new Box("CRATE-B",   B, Kind.OneWay, 10.0f,  11.0f,   3.2f,  3.45f), // extra crate sprite on the barrel [proposal]
         new Box("AW-B1",     B, Kind.OneWay, 0f,     7.3f,    4.95f, 5.2f),
@@ -71,6 +74,11 @@ public static class Stg01Builder
         // Low solid step for the first ranged 1: 0.6u above the floor so its horizontal shot (TestEnemy needs |dy| <= 1.5 and fires at centre+0.3) still hits a standing player.
         // Solid (not one-way) so the player is not popped onto it and the enemy's back-off stays on top; 12u wide so one back-off (<= 1s) does not walk off the right end.
         new Box("LEDGE-A1",  A, Kind.Solid,  14f,    26f,     2.25f, 2.85f),
+        // DECISIONS 12-C mid platforms (+1.3 step, then +2.6) for diagonal lunges. Ranged enemies stay on the ground (shot at feet + 1.3 passes under +2.6).
+        new Box("PLAT-A1",   A, Kind.OneWay, 48f,    52f,     3.3f,  3.55f),
+        new Box("PLAT-A2",   A, Kind.OneWay, 53f,    59f,     4.6f,  4.85f),
+        new Box("PLAT-B1",   B, Kind.OneWay, 44f,    48f,     2.05f, 2.3f),
+        new Box("PLAT-B2",   B, Kind.OneWay, 49f,    55f,     3.35f, 3.6f),
     };
 
     // 6.2 player start, checkpoints (touch = heal), enemies. y = feet position.
@@ -91,15 +99,22 @@ public static class Stg01Builder
         new Foe("E-A2", A, 37f, 2.25f, 2, 0f, 6f),        // tutorial melee 1:1, fixed 2; wakes at player x 31, outside E-A1's range
         new Foe("E-A3", A, 40f, 2.25f, 3, 0f, 9f),        // fixed 3 melee; detect 9 = wakes with E-A2 at player x 31 -> 2+3 pair (auto-approach makes a 1:1 a single click; review 06 #4)
         new Foe("E-A4", A, 42f, 2.25f, 1, 0f, 8f, true),
+        new Foe("E-A5", A, 56f, 2.25f, 0, 0.15f, 8f, false, 4), // new group (wakes at x 48): ground + PLAT-A2 + ranged
+        new Foe("E-A6", A, 57f, 4.85f, 0, 0.15f, 8f, false, 4), // on PLAT-A2 (+2.6): diagonal lunge target
+        new Foe("E-A7", A, 64f, 2.25f, 1, 0f,    12f, true),
         new Foe("E-B3", B, 22f, 7.5f,  0, 0.3f, 8f, false, 4), // on the roof (D2 roof-edge rule)
         new Foe("E-B1", B, 30f, 1.0f,  0, 0.3f, 8f, false, 4), // pincer pair with E-B2 + ranged E-B4 behind
         new Foe("E-B2", B, 33f, 1.0f,  0, 0.3f, 8f, false, 4),
         new Foe("E-B4", B, 38f, 1.0f,  1, 0f,   12f, true),
+        new Foe("E-B5", B, 52f, 1.0f,  0, 0.3f, 8f, false, 4), // new group of 4 (wakes at x 44): ground + PLAT-B2 + ground + ranged
+        new Foe("E-B6", B, 53f, 3.6f,  0, 0.3f, 8f, false, 4),
+        new Foe("E-B7", B, 57f, 1.0f,  0, 0.3f, 8f, false, 4),
+        new Foe("E-B8", B, 62f, 1.0f,  1, 0f,   12f, true),
     };
 
     // Trigger boxes (segment-local x1..x2, y1..y2).
-    static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 43.2f, 46.8f, 2.25f, 5f);
-    static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 42f, 47f, 1.0f, 5f);
+    static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 68.5125f, 72.1125f, 2.25f, 5f); // gate door art (old 43.2~46.8) + 25.3125
+    static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 67.3125f, 72.3125f, 1.0f, 5f);  // old 42~47 + 25.3125
     // Control hint (review 06 #5): one radio line just after the start, before E-A1 wakes at player x 8.
     static readonly Box HintA = new Box("TR-A-HINT", A, Kind.Solid, 7f, 8f, 2.25f, 5f);
     const string HintLines = "Assets/Data/Dialogue/stg01_hint_combat.txt";
@@ -235,13 +250,7 @@ public static class Stg01Builder
     static void BuildBackground(Transform root, Seg s, Sprite sprite)
     {
         if (sprite == null) return;
-        var go = new GameObject("Background (PLACEHOLDER concept image)");
-        go.transform.SetParent(root, false);
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.sortingOrder = -100;
-        float k = SegWidth / sprite.bounds.size.x; // 1.0 for A, 1.0125 for B
-        go.transform.localScale = new Vector3(k, k, 1f);
+        StageBuildKit.BuildWideBackground(root, sprite, SegWidth); // native scale (810 px @ PPU 16 = 50.625u), right-aligned + mirrored fill
     }
 
     static GameObject BuildCollider(Transform root, Box b)
@@ -260,9 +269,9 @@ public static class Stg01Builder
             eff.useSideFriction = false;
             eff.useSideBounce = false;
         }
-        if (b.id == "LEDGE-A1") // visible stage so the ranged enemy has something to stand on
+        if (b.id == "LEDGE-A1" || b.id.StartsWith("PLAT-")) // visible stage / mid platforms (not in the background art)
         {
-            var vis = new GameObject("LEDGE-A1 sprite (PLACEHOLDER)");
+            var vis = new GameObject(b.id + " sprite (PLACEHOLDER)");
             vis.transform.SetParent(go.transform, false);
             vis.transform.localScale = new Vector3(col.size.x, col.size.y, 1f) / square.bounds.size.x;
             var sr = vis.AddComponent<SpriteRenderer>();

@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyNumber))]
 public class TestEnemy : MonoBehaviour
 {
-    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special, Overload }
+    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special, Overload, RushWindup } // new states go last (BugSwarmVisual switches on them)
 
     [SerializeField] LayerMask playerMask;
     [SerializeField] SpriteRenderer visual; // optional; found in children if empty
@@ -54,6 +54,7 @@ public class TestEnemy : MonoBehaviour
     public int Hp => hp;
     public EnemyNumber Number => number;
     public int StrikesLeft => strikesLeft;
+    public bool BlocksHits => kind == Kind.Android && state != State.Overload; // player lunge stops in front instead of passing through
 
     Rigidbody2D rb;
     EnemyNumber number;
@@ -76,6 +77,8 @@ public class TestEnemy : MonoBehaviour
     float nextSpecialAt;      // Android fan cooldown
     float openDuration;       // length of the current Open state
     float nextSparkAt;        // Overload: next spark burst
+    bool rushing;             // DECISIONS 12: the current Charge is a rush (RushSpeed, RushMaxDistance)
+    float nextRushAt;         // no new rush tell before this
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -126,6 +129,7 @@ public class TestEnemy : MonoBehaviour
             if (backoffSince >= 0f) backoffSince += Time.deltaTime;
             nextSpecialAt += Time.deltaTime;
             nextSparkAt += Time.deltaTime;
+            nextRushAt += Time.deltaTime;
             return;
         }
         if (state == State.Stunned && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
@@ -156,7 +160,7 @@ public class TestEnemy : MonoBehaviour
         }
         else if (state == State.Approach && ranged && IsBackingOff())
             vx = -facing * Speed;
-        if (state == State.Charge) { vx = facing * chargeSpeed; chasing = true; }
+        if (state == State.Charge) { vx = facing * (rushing ? DashRules.RushSpeed : chargeSpeed); chasing = true; }
         if (vx != 0f && !chasing && EdgeAhead(vx > 0f ? 1 : -1)) vx = 0f;
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
     }
@@ -230,6 +234,16 @@ public class TestEnemy : MonoBehaviour
                 Vector2 d = player.transform.position - transform.position;
                 if (Mathf.Abs(d.x) <= attackRangeX && Mathf.Abs(d.y) <= attackRangeY && !(ranged && IsBackingOff()))
                     EnterState(State.Windup);
+                else if (Normal && !ranged && Mathf.Abs(d.y) <= attackRangeY && Mathf.Abs(d.x) <= DashRules.RushRange && Time.time >= nextRushAt)
+                    EnterState(State.RushWindup); // DECISIONS 12: short tell, then rush at the player
+                break;
+            case State.RushWindup:
+                if (t >= (Doped ? DashRules.RushWindup / BroadcastRules.Num7SpeedMul : DashRules.RushWindup))
+                {
+                    FacePlayer();
+                    rushing = true; // kept by EnterState(Charge)
+                    EnterState(State.Charge);
+                }
                 break;
             case State.Windup:
                 float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
@@ -249,7 +263,14 @@ public class TestEnemy : MonoBehaviour
                 if (Mathf.Abs(cd.x) <= attackRangeX && Mathf.Abs(cd.y) <= attackRangeY)
                     EnterState(strikesLeft == 1 && lastStrikeDelay > 0f ? State.Windup : State.Strike); // keep the late last strike
                 else if ((cd.x * facing < 0f)) EnterState(State.Turn); // player slipped behind mid-charge
-                else if (t >= chargeMaxTime) EnterState(State.Recover);
+                else if (rushing && t >= DashRules.RushMaxDistance / DashRules.RushSpeed)
+                {
+                    nextRushAt = Time.time + DashRules.RushCooldown; // missed: walk again, no instant re-rush
+                    number.SetPulse(false); // RushWindup/Charge turned them on; only a Strike would turn them off
+                    number.SetFlame(false);
+                    EnterState(State.Approach);
+                }
+                else if (!rushing && t >= chargeMaxTime) EnterState(State.Recover);
                 break;
             case State.Turn:
                 if (t >= turnTime) { FacePlayer(); NextAfterChain(); }
@@ -386,6 +407,7 @@ public class TestEnemy : MonoBehaviour
     {
         state = next;
         stateEnteredAt = Time.time;
+        if (next != State.Charge) rushing = false;
         switch (next)
         {
             case State.Approach:
@@ -394,6 +416,7 @@ public class TestEnemy : MonoBehaviour
                 backoffSince = -1f; // each new chain may back off again
                 break;
             case State.Windup:
+            case State.RushWindup:
                 number.SetPulse(true);
                 number.SetFlame(strikesLeft == 1); // single-strike chain: tell during its windup
                 Sfx.Play(strikesLeft == 1 ? SfxId.LastTell : SfxId.EnemyTell);
@@ -439,6 +462,15 @@ public class TestEnemy : MonoBehaviour
         if (Mathf.Abs(dx) > 0.01f) facing = dx > 0f ? 1 : -1;
     }
 
+    // LMB parry merge (DECISIONS 12-B): a parryable melee strike is winding up / landing and its box overlaps a player (0.9 x 2) centred at playerPos.
+    public bool MeleeThreatens(Vector2 playerPos)
+    {
+        if (ranged || (state != State.Windup && state != State.Strike) || !gameObject.activeInHierarchy) return false;
+        if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
+        Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
+        return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;
+    }
+
     // true = damage applied
     public bool ReceivePlayerHit(HitInfo info)
     {
@@ -481,7 +513,7 @@ public class TestEnemy : MonoBehaviour
         if ((state == State.Stunned || (state == State.Overload && kind == Kind.Android)) && draftStunned != null) return draftStunned[0];
         if (state == State.Approach && draftWalk != null)
             return draftWalk[Mathf.Abs(rb.linearVelocity.x) > 0.1f ? Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length : 0];
-        return draftFrames[state == State.Windup || state == State.Special ? 0 : state == State.Strike ? 1 : 2];
+        return draftFrames[state == State.Windup || state == State.Special || state == State.RushWindup ? 0 : state == State.Strike ? 1 : 2];
     }
 
     void ApplyVisual()
@@ -492,7 +524,8 @@ public class TestEnemy : MonoBehaviour
         Color c = baseColor;
         switch (state)
         {
-            case State.Windup: c = WindupColor; break;
+            case State.Windup:
+            case State.RushWindup: c = WindupColor; break;
             case State.Staggered: c = Mathf.PingPong(Time.time * 10f, 1f) > 0.5f ? StaggerColor : baseColor; break;
             case State.Stunned: c = StunnedColor; break;
             case State.Frozen: c = FrozenColor; break;

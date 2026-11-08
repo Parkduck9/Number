@@ -23,6 +23,8 @@ public static class StageBuildKit
     const int GroundLayer = 6, PlayerLayer = 7, EnemyLayer = 8;
 
     public const float SegWidth = 50.625f, SegHeight = 16.875f;
+    // DECISIONS 12-C: STG-01/02/04 segments are 1.5x wide (2430 px). The 1620 px background is tiled pixel-exact (BuildWideBackground).
+    public const float WideWidth = SegWidth * 1.5f; // 75.9375
     public static readonly Color GroundColor = new Color32(0x4A, 0x40, 0x38, 0xFF);
     public static readonly Color OneWayColor = new Color32(0x7A, 0x6A, 0x55, 0xFF);
 
@@ -68,10 +70,10 @@ public static class StageBuildKit
     }
 
     // Left/right walls of a segment (full height).
-    public static Box[] Walls(string name, int seg) => new[]
+    public static Box[] Walls(string name, int seg, float width = SegWidth) => new[]
     {
         new Box("WALL-" + name + "-L", seg, Kind.Solid, -1f, 0f, 0f, SegHeight),
-        new Box("WALL-" + name + "-R", seg, Kind.Solid, SegWidth, SegWidth + 1f, 0f, SegHeight),
+        new Box("WALL-" + name + "-R", seg, Kind.Solid, width, width + 1f, 0f, SegHeight),
     };
 
     // ------------------------------------------------------------------ session state
@@ -283,7 +285,7 @@ public static class StageBuildKit
         l.color = color;
     }
 
-    public static Rect SegRect(float worldX) => new Rect(worldX, 0f, SegWidth, SegHeight);
+    public static Rect SegRect(float worldX, float width = SegWidth) => new Rect(worldX, 0f, width, SegHeight);
 
     public static GameObject BuildCamera(Transform player, Rect[] segments, Color background)
     {
@@ -409,7 +411,28 @@ public static class StageBuildKit
             BuildSolidBackground(root, width, height, fallback);
             return;
         }
-        BuildSpriteBackground(root, sprite, width);
+        if (width > sprite.bounds.size.x + 0.01f) BuildWideBackground(root, sprite, width);
+        else BuildSpriteBackground(root, sprite, width);
+    }
+
+    // Segment wider than the image (DECISIONS 12-C), native scale only (never a non-integer stretch):
+    // the image is right-aligned so its right edge (gate / door art) ends the segment, and the strip to its left is a mirrored copy
+    // (scale.x -1 around the shared edge = pixel-continuous seam). The mirrored copy also reaches left of the segment origin
+    // (off-camera), so segments must be at least 2 * imageWidth (101.25u) apart or the copies overlap (Stg01/02/04 put SEG-B at x 110).
+    public static void BuildWideBackground(Transform root, Sprite sprite, float width)
+    {
+        float w = sprite.bounds.size.x, off = width - w;
+        if (off > w) Todo.Add($"Background {sprite.name}: segment {width}u is wider than 2 images ({2f * w}u), right part left empty");
+        for (int i = 0; i < 2; i++)
+        {
+            var go = new GameObject(i == 0 ? "Background (image)" : "Background (mirrored fill)");
+            go.transform.SetParent(root, false);
+            go.transform.localPosition = new Vector3(off, 0f, 0f); // bottom-left pivot: normal copy spans [off, width], mirrored [off - w, off]
+            go.transform.localScale = new Vector3(i == 0 ? 1f : -1f, 1f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = -100;
+        }
     }
 
     // Image background placed bottom-left (the sprite's pivot is BottomLeft), scaled to the segment width.

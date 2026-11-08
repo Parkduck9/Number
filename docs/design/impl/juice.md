@@ -33,14 +33,14 @@
 - 다시 여러 대 맞게 되돌리기: TestEnemy.ReceivePlayerHit의 `if (kind != Kind.Android) { ... }` 블록과 Update의 vanish 블록(`Juice.KillVanishDelay`)을 삭제하면 기존 hp/막힘 규칙이 돌아온다.
 
 ## 일반 적 템포 (한 방 처치 보상)
-Citizen/Bug만 해당 (Android 제외). `Juice.NormalTimeMul` 0.65, `NormalSpeedMul` 1.25, `MinFirstWindup` 0.2 s. 빌더 값은 그대로이고 TestEnemy가 읽을 때 곱한다. NUM-3/NUM-7 보정은 그 위에 얹힌다. 마지막 타 지연(lastStrikeDelay)은 그대로.
+Citizen/Bug만 해당 (Android 제외). `Juice.NormalTimeMul` **0.55**(이전 0.65), `NormalSpeedMul` **1.5**(이전 1.25), `MinFirstWindup` 0.2 s. 2026-11-08 밤 DECISIONS 12로 더 빠르게 바꿨다. 빌더 값은 그대로이고 TestEnemy가 읽을 때 곱한다. NUM-3/NUM-7 보정은 그 위에 얹힌다. 마지막 타 지연(lastStrikeDelay)은 그대로. 새 돌진 공격(RushWindup·Rush) 수치는 `DashRules.cs`에 따로 있다.
 
-| 항목 | 기존 | 새 유효값 |
+| 항목 | 기존 | 새 유효값 (0.55 / 1.5) |
 |---|---|---|
-| 첫 타 선딜 (0.5) | 0.5 s | 0.325 s |
-| 연타 간격 (0.15) | 0.15 s | 0.0975 s |
-| 연타 간격, NUM-3 (0.10) | 0.10 s | 0.065 s |
-| 회복 (0.15) | 0.15 s | 0.0975 s |
-| 접근 속도 (3) | 3 | 3.75 |
+| 첫 타 선딜 (0.5) | 0.5 s | 0.275 s |
+| 연타 간격 (0.15) | 0.15 s | 0.0825 s |
+| 연타 간격, NUM-3 (`Num3ChainWindupTime` 0.15) | 0.15 s | 0.0825 s |
+| 회복 (0.15) | 0.15 s | 0.0825 s |
+| 접근 속도 (3) | 3 | 4.5 |
 
 되돌리기: 두 배율을 1로 설정.

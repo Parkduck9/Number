@@ -21,7 +21,9 @@ TestEnemy FindTargetAhead(float maxDx, float maxDy, out Collider2D col)
 - 가장 작은 `dx` 하나. `col`은 뒤잡기 자리 계산에 쓴다 (`col.bounds.extents.x` = 적 반폭 0.45).
 - 할당은 `OverlapBoxAll` 한 번 (`DoAttackHit`도 같은 방식이라 허용).
 
-## 2. A) 공격 자동 접근
+## 2. A) 공격 자동 접근 — **DECISIONS 12로 대체 (2026-11-08 밤)**
+> 이 절은 더 이상 쓰지 않는다. 좌클릭은 마우스 조준 관통 돌진 + 패링으로 바뀌었고, 자동 접근 코드(`approach*`, `sliding`, `TryStartApproach`)는 지웠다. 근거: [DECISIONS.md](../DECISIONS.md) 12. 아래는 기록용이다. 6절 1~8번 확인 항목과 23번 힌트 문구도 옛 내용이다 (힌트는 이제 "LMB attack · parry").
+
 ### 동작
 좌클릭 → `EnterState(Attack)` 시점에 대상을 찾고, 있으면 **공격 판정이 나가는 `attackHitDelay`(0.08초) 동안** 적 앞 `approachStopDist`까지 미끄러진다. 판정은 기존대로 0.08초에 한 번 나간다. 대상이 없거나 조건이 안 맞으면 지금과 같은 제자리 공격.
 

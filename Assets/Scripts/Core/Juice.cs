@@ -20,8 +20,8 @@ public static class Juice
     public const float OverloadSparkInterval = 0.2f;  // (T) spark burst spacing
 
     // Citizen/Bug tempo (Android unchanged): timings x NormalTimeMul, approach speed x NormalSpeedMul. 1 = old values.
-    public const float NormalTimeMul = 0.65f;
-    public const float NormalSpeedMul = 1.25f;
+    public const float NormalTimeMul = 0.55f;  // DECISIONS 12: 0.65 -> 0.55 (faster tells / chains)
+    public const float NormalSpeedMul = 1.5f;  // DECISIONS 12: 1.25 -> 1.5
     public const float MinFirstWindup = 0.2f; // first-strike windup never shorter than this (readable tell)
 
     public static void Shake(float amp, float time) => CameraFollow2D.Shake(amp, time);

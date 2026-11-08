@@ -1,3 +1,3 @@
 # STG-01 control hint before the first enemy (review 06 #5 / P1-6). Radio line, shown once.
 @mode radio
-yudo | 좌클릭 공격 · 우클릭 패링 | LMB attack / RMB parry | 4
+yudo | 좌클릭 공격 · 패링 | LMB attack · parry | 4

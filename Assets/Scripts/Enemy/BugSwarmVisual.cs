@@ -222,6 +222,7 @@ public class BugSwarmVisual : MonoBehaviour
         switch (s)
         {
             case TestEnemy.State.Windup:
+            case TestEnemy.State.RushWindup:
                 float k = Mathf.Clamp01(t / WindupRamp);
                 stretch = WindupStretch * k; lead = WindupLead * k; jit = 1f - 0.5f * k; // tenses up
                 break;
@@ -257,7 +258,7 @@ public class BugSwarmVisual : MonoBehaviour
     {
         System.Array.Clear(buf, 0, buf.Length);
         bool dead = s == TestEnemy.State.Stunned;
-        bool charge = s == TestEnemy.State.Windup || s == TestEnemy.State.Charge;
+        bool charge = s == TestEnemy.State.Windup || s == TestEnemy.State.RushWindup || s == TestEnemy.State.Charge;
         bool accentOff = (s == TestEnemy.State.Staggered || s == TestEnemy.State.Open) && Mathf.PingPong(Time.time * 8f, 1f) > 0.5f; // eyes blink while open
         bool flashWhite = visual != null && visual.color == Color.white; // parry flash
         bool flashRed = visual != null && visual.color == Color.red;     // kill flash

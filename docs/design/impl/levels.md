@@ -22,9 +22,10 @@
 | 낮 조명 세기 1.15 · 색 · 하늘색 | `Assets/Editor/Stg00Builder.cs:16-18` |
 | 오프닝 전광판 위치, 시민 x 위치·색, 출구 범위 | `Assets/Editor/Stg00Builder.cs:23-26` |
 | 시민 걷기 범위 1.5u · 속도 1u/s · 굳은 색 | `Assets/Scripts/Level/OpeningCitizen.cs:7-10` |
-| STG-02 발판·적·전광판·문 | `Assets/Editor/Stg02Builder.cs:14-51` (문서: [LEVEL_STG02.md](../LEVEL_STG02.md)) |
+| STG-02 발판·적·전광판·문 | `Assets/Editor/Stg02Builder.cs:12-65` (문서: [LEVEL_STG02.md](../LEVEL_STG02.md)) |
 | STG-03 방 너비·러다이트 위치·대화/출구 범위 | `Assets/Editor/Stg03Builder.cs:12-29` |
-| STG-04 발판·적·전광판·문 | `Assets/Editor/Stg04Builder.cs:14-50` (문서: [LEVEL_STG04.md](../LEVEL_STG04.md)) |
+| STG-04 발판·적·전광판·문 | `Assets/Editor/Stg04Builder.cs:12-63` (문서: [LEVEL_STG04.md](../LEVEL_STG04.md)) |
+| 넓은 구간 너비 75.9375 (12-C) | `Assets/Editor/StageBuildKit.cs` `WideWidth` |
 
 ## 3. 나중에 바꿔야 할 임시 것 (PLACEHOLDER)
 
@@ -64,3 +65,18 @@
 - STG-01: 첫 적 = 낮은 단 `LEDGE-A1`(Solid, x 14~26, 높이 0.6u) 위 원거리 1. 표: [LEVEL_STG01.md](../LEVEL_STG01.md) "적 배치 개정". 5 → 8명.
 - STG-02: 표 [LEVEL_STG02.md](../LEVEL_STG02.md). 7 → 10명. STG-04: 표 [LEVEL_STG04.md](../LEVEL_STG04.md). 9 → 11명. STG-00·03·05는 그대로.
 - 진정한 앞뒤 협공은 없다: 적은 발견 거리 안에서만 깨어나 다가오므로, 플레이어 뒤에 두면 혼자 오는 1:1이 된다. 대신 가까운 묶음 + 뒤 원거리로 만들었다.
+
+## 7. 맵 1.5배 + 적 2배 (2026-11-08 밤, DECISIONS 12-C)
+
+| 스테이지 | 구간 너비 | SEG-B 월드 x | 적 (전체 / 일반) | 표 |
+|---|---|---|---|---|
+| STG-01 | 50.625 → **75.9375** | 60 → **110** | 8 → **15** / 15 (원거리 5) | [LEVEL_STG01.md](../LEVEL_STG01.md) "맵 1.5배" |
+| STG-02 | 50.625 → **75.9375** | 60 → **110** | 10 → **18** / 18 (원거리 4) | [LEVEL_STG02.md](../LEVEL_STG02.md) |
+| STG-04 | 50.625 → **75.9375** | 60 → **110** | 11 → **18** / 15 (안드로이드 3·4·6 그대로, 원거리 4) | [LEVEL_STG04.md](../LEVEL_STG04.md) |
+
+- **코드:** `StageBuildKit.WideWidth`(= `SegWidth` × 1.5). `Walls(name, seg, width)`·`SegRect(x, width)`에 너비 인자 추가(기본값 `SegWidth`라 STG-00·03·05는 그대로). `BuildImageBackground`는 구간이 그림보다 넓으면 `BuildWideBackground`를 쓴다.
+- **배경 타일:** 확대하지 않는다. 그림을 구간 오른쪽 끝에 맞춰(x 25.3125~75.9375, 대문 그림이 끝에 남음) 놓고, 왼쪽은 같은 그림을 scale.x −1로 뒤집어 붙인다 → 이음새 양쪽이 같은 픽셀이라 끊김이 없다. 25.3125 = 810px(PPU 32) / 405px(PPU 16)이라 픽셀 격자에 맞는다. 뒤집은 복사본은 구간 왼쪽 밖(−25.3125~0)까지 그려지므로 **구간끼리 101.25u 이상** 떨어뜨렸다(SEG-B x 110). 카메라는 구간 범위로 묶여 있어 밖은 안 보인다.
+- **배치 방식:** 옛 배치(x 0~45)는 그대로 두고, 늘어난 x 44~66에 새 묶음(3~4명) + 중간 높이 발판(+1.3 계단 → +2.6)을 넣었다. +2.6 위 적은 바닥에서 대각선 돌진(사거리 5u) 대상. 대문·목표 트리거는 +25.3125(그림의 대문 위치를 따라감). STG-02 전광판은 그림의 빈 하늘(x 50.3125)로, STG-01·04 전광판은 자리 그대로 + 구역만 구간 전체.
+- **원거리는 바닥에만:** 탄이 발 높이 +1.3에서 수평으로 날아간다(`muzzleOffset.y` 0.3). +1.3 발판 위에서 쏘면 바닥 플레이어 머리 위로 지나가고, +1.3 발판(윗면 = 탄 높이)이 사이에 있으면 탄이 막힐 수 있다 → 원거리는 바닥, 앞에는 +2.6 발판만 두었다.
+- STG-01은 아직 자체 빌더(`Stg01Builder`)라 `SegWidth` 상수를 `StageBuildKit.WideWidth`로 바꾸고 새 발판(`PLAT-*`)을 임시 사각형으로 보이게 했다. STG-01 SEG-B는 여전히 배경 그림이 없다.
+- **다시 만들 씬:** `NUMBER/Build STG-01`, `NUMBER/Build STG-02`, `NUMBER/Build STG-04` (그 뒤 `NUMBER/Sync Build Settings (stage order)`).

@@ -14,6 +14,16 @@ public class EnemyProjectile : MonoBehaviour
     float dieAt;
     bool passedPlayer;
 
+    // Live shots, for the LMB parry merge (PlayerController.FaceParryThreat).
+    public static readonly System.Collections.Generic.List<EnemyProjectile> Active = new System.Collections.Generic.List<EnemyProjectile>();
+    public Vector2 Velocity => velocity;
+    public bool Parryable => !info.Unparryable && !passedPlayer;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => Active.Clear(); // Domain Reload is off
+    void OnEnable() => Active.Add(this);
+    void OnDisable() => Active.Remove(this);
+
     public static void Spawn(Vector2 position, int dir, float speed, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color)
     {
         Spawn(position, new Vector2(dir * speed, 0f), playerMask, groundMask, info, color);

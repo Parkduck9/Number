@@ -38,12 +38,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float dashDuration = 0.15f;
     [SerializeField] float dashCooldown = 2.0f;
 
-    // DECISIONS 11 / docs/design/impl/movement-assist.md
-    [Header("Attack approach (T)")]
-    [SerializeField] float approachRange = 3.0f;      // search distance ahead (u)
-    [SerializeField] float approachMaxDy = 1.0f;
-    [SerializeField] float approachStopDist = 1.4f;   // centre-to-centre stop distance (attack box reaches 1.7)
-    [SerializeField] float approachMaxSpeed = 40f;
+    // DECISIONS 11 / docs/design/impl/movement-assist.md (attack auto-approach replaced by the DECISIONS 12 lunge: DashRules, impl/dash-attack.md)
+    [Header("Ledge probe (T)")]
     [SerializeField] float ledgeProbeDepth = 1.5f;    // ground must exist this far below the target feet
 
     [Header("Dash behind (T)")]
@@ -89,9 +85,12 @@ public class PlayerController : MonoBehaviour
     float nextAfterimageAt;
     bool jumpCut;
     bool attackHitDone;
-    bool sliding;                       // attack auto-approach in progress (first attackHitDelay of an Attack)
-    float slideTargetX, slideSpeed;
-    float dashEndsAfter;                // length of the current dash (dashDuration, or shorter/longer for a dash-behind)
+    bool lunging;                       // DECISIONS 12 lunge attack in progress (part of an Attack)
+    Vector2 lungeStart, lungeEnd, lungeDir;
+    int swingHitStops;                  // hit-stops already played by this swing / lunge (capped at DashRules.LungeMaxHitStops)
+    ContactFilter2D enemyFilter;
+    readonly Collider2D[] enemyHits = new Collider2D[32];
+    float dashEndsAfter;               // length of the current dash (dashDuration, or shorter/longer for a dash-behind)
     bool dashBehindActive;
     bool pendingParry, pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
@@ -114,7 +113,10 @@ public class PlayerController : MonoBehaviour
         visual = GetComponentInChildren<SpriteRenderer>();
         draftSprite = DraftSprites.Setup(visual, DraftSprites.Hero);
         rb.gravityScale = gravityScale;
+        enemyFilter.SetLayerMask(enemyMask);
+        enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
+        MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like Shockwave)
     }
 
     void OnDisable() { EndHitStop(); }
@@ -154,7 +156,7 @@ public class PlayerController : MonoBehaviour
             lastGroundedAt += dt;
             health.ShiftInvulnerability(dt);
             if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
-            if (sliding) { sliding = false; rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // same for an attack auto-approach (FixedUpdate stops writing it)
+            EndLunge(); // same for a lunge (gravity back, velocity zeroed)
             UpdateVisual(Time.time);
             return;
         }
@@ -180,7 +182,8 @@ public class PlayerController : MonoBehaviour
         {
             case State.Locomotion: UpdateLocomotion(now); break;
             case State.Attack:
-                if (!attackHitDone && elapsed >= attackHitDelay) DoAttackHit();
+                if (lunging) UpdateLunge(now, elapsed);
+                else if (!attackHitDone && elapsed >= attackHitDelay) DoAttackHit();
                 if (elapsed >= attackHitDelay && TryDash(now)) break;
                 if (elapsed >= attackDuration) EnterState(State.Locomotion);
                 break;
@@ -188,11 +191,7 @@ public class PlayerController : MonoBehaviour
                 if (elapsed >= parryDuration) EnterState(State.Locomotion);
                 break;
             case State.Dash:
-                if (visual != null && now >= nextAfterimageAt)
-                {
-                    nextAfterimageAt = now + afterimageInterval;
-                    SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife);
-                }
+                SpawnAfterimage(now);
                 if (elapsed >= dashEndsAfter)
                 {
                     if (dashBehindActive && dashBehindFaceBack) Facing = -Facing; // a held direction re-faces next frame
@@ -205,7 +204,7 @@ public class PlayerController : MonoBehaviour
         }
 
         pendingParry = pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
-        if (state == State.Locomotion || state == State.Attack || state == State.Parry) UpdateJumpCut();
+        if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
         UpdateVisual(now);
     }
 
@@ -235,8 +234,13 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
         if (TryDash(now)) return;
-        if (ParryPressed) { EnterState(State.Parry); return; }
-        if (input.AttackPressed || now <= attackBufferedUntil) { EnterState(State.Attack); return; }
+        if (ParryPressed) { EnterState(State.Parry); return; } // RMB alias: parry facing as before
+        if (input.AttackPressed || now <= attackBufferedUntil)
+        {
+            // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
+            EnterState(FaceParryThreat() ? State.Parry : State.Attack);
+            return;
+        }
 
         // jump with coyote + buffer
         if (now <= jumpBufferedUntil && now - lastGroundedAt <= coyoteTime)
@@ -270,10 +274,10 @@ public class PlayerController : MonoBehaviour
 
     void EnterState(State next)
     {
+        EndLunge();                     // any state change ends a lunge (dash cancel, hurt, death)
         state = next;
         stateEnteredAt = Time.time;
-        rb.gravityScale = gravityScale; // always restore (Dash zeroes it)
-        sliding = false;                // any state change ends an auto-approach (dash cancel, hurt, death)
+        rb.gravityScale = gravityScale; // always restore (Dash / lunge zero it)
 
         switch (next)
         {
@@ -282,8 +286,12 @@ public class PlayerController : MonoBehaviour
             case State.Attack:
                 attackHitDone = false;
                 attackBufferedUntil = -999f;
-                if (grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-                TryStartApproach();
+                swingHits.Clear();
+                swingHitStops = 0;
+                Vector2 aim = MouseCrosshair.MouseWorld(out Vector2 mouse) ? mouse - rb.position : new Vector2(Facing, 0f);
+                aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);
+                if (Mathf.Abs(aim.x) > 0.01f) Facing = aim.x > 0f ? 1 : -1; // in-place swing faces the mouse too
+                if (!TryStartLunge(aim) && grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
                 break;
             case State.Parry:
                 attackBufferedUntil = -999f;
@@ -314,10 +322,9 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = new Vector2(Facing * dashSpeed, 0f);
                 break;
             case State.Attack:
-                if (!sliding || GameFlow.InputLocked) break;
-                float remain = (slideTargetX - rb.position.x) * Facing;
-                if (remain <= 0.02f) { sliding = false; rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); }
-                else rb.linearVelocity = new Vector2(Facing * Mathf.Min(slideSpeed, remain / Time.fixedDeltaTime), rb.linearVelocity.y); // last step lands exactly on the target
+                if (!lunging || GameFlow.InputLocked) break;
+                float remain = Vector2.Dot(lungeEnd - rb.position, lungeDir);
+                rb.linearVelocity = lungeDir * Mathf.Clamp(remain / Time.fixedDeltaTime, 0f, DashRules.LungeSpeed); // last step lands exactly on the end point
                 break;
         }
     }
@@ -344,21 +351,146 @@ public class PlayerController : MonoBehaviour
         return best;
     }
 
-    // Ground within ledgeProbeDepth under the feet at x (probe starts just above the feet so a floor we stand on counts).
-    bool GroundBelow(float x) =>
-        Physics2D.Raycast(new Vector2(x, rb.position.y + feetOffset.y + 0.1f), Vector2.down, ledgeProbeDepth, groundMask).collider != null;
+    // Ground within ledgeProbeDepth under the feet of a player centred at `at` (probe starts just above the feet so a floor we stand on counts).
+    bool GroundBelow(Vector2 at) =>
+        Physics2D.Raycast(new Vector2(at.x, at.y + feetOffset.y + 0.1f), Vector2.down, ledgeProbeDepth, groundMask).collider != null;
 
-    // A) Attack auto-approach: slide to attack reach during attackHitDelay. Grounded only, never off a ledge; walls stop it through physics (Continuous RB).
-    void TryStartApproach()
+    // DECISIONS 12 lock-on: nearest hittable enemy within LungeRange + LungeTolerance (centre to centre) inside the +-LungeConeDeg cone around aim.
+    // Also used by MouseCrosshair for the lock-on brackets. null = none.
+    public TestEnemy FindLungeTarget(Vector2 aim, out Collider2D hit)
     {
-        if (!grounded) return;
-        TestEnemy enemy = FindTargetAhead(approachRange, approachMaxDy, out _);
-        if (enemy == null) return;
-        slideTargetX = enemy.transform.position.x - Facing * approachStopDist;
-        float dist = (slideTargetX - rb.position.x) * Facing;
-        if (dist <= 0.05f || !GroundBelow(slideTargetX)) return; // already in reach / target over a gap
-        slideSpeed = Mathf.Min(dist / attackHitDelay, approachMaxSpeed);
-        sliding = true;
+        hit = null;
+        TestEnemy best = null;
+        Vector2 pos = rb.position;
+        float range = DashRules.LungeRange + DashRules.LungeTolerance;
+        float bestDist = float.MaxValue;
+        float minDot = Mathf.Cos(DashRules.LungeConeDeg * Mathf.Deg2Rad);
+        int n = Physics2D.OverlapCircle(pos, range, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+        {
+            Collider2D col = enemyHits[i];
+            TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
+            if (enemy == null || enemy.Current == TestEnemy.State.Stunned || enemy.Current == TestEnemy.State.Frozen || !enemy.gameObject.activeInHierarchy) continue;
+            Vector2 d = (Vector2)enemy.transform.position - pos;
+            float dist = d.magnitude;
+            if (dist > range || dist >= bestDist || (dist > 0.001f && Vector2.Dot(d / dist, aim) < minDot)) continue;
+            bestDist = dist;
+            best = enemy;
+            hit = col;
+        }
+        return best;
+    }
+
+    // Lunge toward the locked target: through it (end LungeBehind past its centre) or, if it blocks hits (Android), LungeStopInFront before it.
+    // Walls clamp the line; on the ground the end must not hang over a pit. false = no target / no room -> in-place swing.
+    bool TryStartLunge(Vector2 aim)
+    {
+        TestEnemy target = FindLungeTarget(aim, out _);
+        if (target == null) return false;
+        Vector2 pos = rb.position;
+        Vector2 d = (Vector2)target.transform.position - pos;
+        float tDist = d.magnitude;
+        Vector2 dir = tDist > 0.001f ? d / tDist : new Vector2(Facing, 0f);
+        float wall = WallDistance(pos, dir, tDist + DashRules.LungeBehind);
+        float len = Mathf.Min(target.BlocksHits ? tDist - DashRules.LungeStopInFront : tDist + DashRules.LungeBehind, wall);
+        if (grounded && !GroundBelow(pos + dir * len))
+        {
+            len = Mathf.Min(tDist + 0.3f, wall); // just past it
+            if (!GroundBelow(pos + dir * len)) len = Mathf.Min(tDist - DashRules.LungeStopInFront, wall); // stop in front
+            if (!GroundBelow(pos + dir * len)) return false;
+        }
+        if (len < 0.2f) return false; // already there (e.g. an Android right in front): plain swing
+
+        if (Mathf.Abs(dir.x) > 0.01f) Facing = dir.x > 0f ? 1 : -1;
+        lunging = true;
+        lungeStart = pos;
+        lungeDir = dir;
+        lungeEnd = pos + dir * len;
+        attackHitDone = true; // the sweep replaces the in-place hit box
+        nextAfterimageAt = 0f;
+        rb.gravityScale = 0f;
+        rb.linearVelocity = dir * DashRules.LungeSpeed;
+        Sfx.Play(SfxId.Swing);
+        return true;
+    }
+
+    // Free distance along dir for a slightly slimmer player box (0.8 x 1.8 of 0.9 x 2). One-way platforms are ignored unless the
+    // lunge heads downward: the effector blocks a body coming from above, so such a lunge would hang on the platform until LungeMaxTime.
+    float WallDistance(Vector2 pos, Vector2 dir, float maxLen)
+    {
+        float best = maxLen;
+        foreach (RaycastHit2D h in Physics2D.BoxCastAll(pos, new Vector2(0.8f, 1.8f), 0f, dir, maxLen, groundMask))
+            if ((!h.collider.usedByEffector || dir.y < -0.01f) && h.distance < best) best = h.distance;
+        return Mathf.Min(maxLen, best - 0.05f);
+    }
+
+    void UpdateLunge(float now, float elapsed)
+    {
+        SpawnAfterimage(now);
+        SweepLunge();
+        if (lunging && (Vector2.Dot(lungeEnd - rb.position, lungeDir) <= 0.05f || elapsed >= DashRules.LungeMaxTime)) EndLunge();
+    }
+
+    // Kill sweep: everything between the lunge start and LungeTolerance ahead of the body. A blocking enemy (Android) stops the lunge.
+    void SweepLunge()
+    {
+        Vector2 front = rb.position + lungeDir * DashRules.LungeTolerance;
+        Vector2 span = front - lungeStart;
+        float len = span.magnitude;
+        if (len < 0.01f) return;
+        float angle = Mathf.Atan2(lungeDir.y, lungeDir.x) * Mathf.Rad2Deg;
+        int n = Physics2D.OverlapBox((lungeStart + front) * 0.5f, new Vector2(len, DashRules.LungeSweepWidth), angle, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+            if (!HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], rb.position, true)) { EndLunge(); return; }
+    }
+
+    void EndLunge()
+    {
+        if (!lunging) return;
+        lunging = false;
+        rb.gravityScale = gravityScale;
+        rb.linearVelocity = Vector2.zero;
+    }
+
+    void SpawnAfterimage(float now)
+    {
+        if (visual == null || now < nextAfterimageAt) return;
+        nextAfterimageAt = now + afterimageInterval;
+        SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife);
+    }
+
+    // DECISIONS 12-B: a parryable shot heading at the player within ParryShotRange, or a melee enemy winding up / striking with the
+    // player inside its attack box. Faces the nearest such threat (parry is front-only) and returns true.
+    bool FaceParryThreat()
+    {
+        Vector2 pos = rb.position;
+        float bestDist = float.MaxValue;
+        int face = 0;
+        foreach (EnemyProjectile p in EnemyProjectile.Active)
+        {
+            if (p == null || !p.Parryable) continue;
+            Vector2 to = pos - (Vector2)p.transform.position;
+            float dist = to.magnitude;
+            Vector2 v = p.Velocity;
+            if (dist > DashRules.ParryShotRange || dist >= bestDist || v.sqrMagnitude < 0.0001f || Vector2.Dot(v, to) <= 0f) continue;
+            Vector2 vn = v.normalized;
+            if (Mathf.Abs(vn.x * to.y - vn.y * to.x) > DashRules.ParryShotLateral) continue; // passes beside the body
+            bestDist = dist;
+            face = Mathf.Abs(v.x) > 0.01f ? (v.x > 0f ? -1 : 1) : (to.x < 0f ? 1 : -1); // ReceiveEnemyHit judges shots by travel direction
+        }
+        int n = Physics2D.OverlapCircle(pos, 4f, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+        {
+            TestEnemy enemy = enemyHits[i].GetComponentInParent<TestEnemy>();
+            if (enemy == null || !enemy.MeleeThreatens(pos)) continue;
+            float dist = Vector2.Distance(enemy.transform.position, pos);
+            if (dist >= bestDist) continue;
+            bestDist = dist;
+            face = enemy.transform.position.x >= pos.x ? 1 : -1;
+        }
+        if (face == 0) return false;
+        Facing = face;
+        return true;
     }
 
     // B) Dash-behind: an enemy very close ahead -> dash to the clear spot just behind it. false = use the fixed-distance dash.
@@ -372,30 +504,41 @@ public class PlayerController : MonoBehaviour
         distance = (targetX - rb.position.x) * Facing;
         Vector2 target = new Vector2(targetX, rb.position.y);
         if (Physics2D.OverlapBox(target, new Vector2(halfW * 2f - 0.1f, halfH * 2f - 0.2f), 0f, groundMask) != null) return false; // spot inside a wall
-        if (grounded && !GroundBelow(targetX)) return false; // spot over a gap
+        if (grounded && !GroundBelow(target)) return false; // spot over a gap
         return true;
     }
 
     void DoAttackHit()
     {
         attackHitDone = true;
-        if (sliding) { sliding = false; if (grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // never keep sliding after the hit
         Sfx.Play(SfxId.Swing);
         ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
-        Collider2D[] cols = Physics2D.OverlapBoxAll(AttackCenter(), attackSize, 0f, enemyMask);
-        swingHits.Clear();
-        foreach (Collider2D col in cols)
+        int n = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+            HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], AttackCenter(), false);
+    }
+
+    // One blow (in-place swing or lunge sweep). false = the enemy blocked it (Android not overloaded).
+    // One hit per enemy per swing; hit-stop + shake only for the first LungeMaxHitStops blows.
+    bool HitEnemy(TestEnemy enemy, Collider2D col, Vector2 from, bool lunge)
+    {
+        if (enemy == null || !enemy.gameObject.activeInHierarchy || enemy.Current == TestEnemy.State.Stunned) return true; // already down / vanishing
+        if (!swingHits.Add(enemy)) return true;
+        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
+        if (!damaged) return false;
+        Sfx.Play(SfxId.Hit);
+        PlayHitSpark(col.ClosestPoint(from), Facing);
+        bool down = enemy.Current == TestEnemy.State.Stunned; // the hit that finishes the enemy
+        if (lunge && down)
+            for (int i = 0; i < DashRules.LungeKillSparks; i++) // cheap "shatter"
+                PlayHitSpark((Vector2)enemy.transform.position + new Vector2(Random.Range(-0.4f, 0.4f), Random.Range(-0.5f, 0.6f)), Random.value < 0.5f ? -1f : 1f);
+        if (swingHitStops < DashRules.LungeMaxHitStops)
         {
-            TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
-            if (enemy == null || !swingHits.Add(enemy)) continue; // one hit per enemy per swing
-            bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
-            if (!damaged) continue;
-            Sfx.Play(SfxId.Hit);
-            PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
-            bool down = enemy.Current == TestEnemy.State.Stunned; // the hit that finishes the enemy
+            swingHitStops++;
             StartHitStop(down ? Juice.HitStopKill : Juice.HitStopHit);
             Juice.Shake(down ? Juice.ShakeKillAmp : Juice.ShakeHitAmp, down ? Juice.ShakeKillTime : Juice.ShakeHitTime);
         }
+        return true;
     }
 
     // hit-spark's pivot is a feet point: shift so its core (+12,+16 px) lands on the contact point. dir = blow direction.
@@ -447,7 +590,7 @@ public class PlayerController : MonoBehaviour
         visual.flipX = Facing < 0;
         if (draftSprite) visual.sprite = DraftFrame(now);
         Color c = draftSprite ? Color.white : BaseColor;
-        if (state == State.Dash) c = Color.white;
+        if (state == State.Dash || lunging) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
         else if (state == State.Dead) c = Color.gray;

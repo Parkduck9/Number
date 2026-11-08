@@ -39,7 +39,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 ## The number rule (3 lines)
 
 1. **The number in front of an enemy's face = how many strikes its next attack chain has.** It never counts down. You count.
-2. **Parry (right mouse) or dash (Shift) through the strikes.** Just before the last one, the number flares red. When the chain ends, the enemy pauses: that is your opening.
+2. **Parry (left click as a strike or bullet arrives) or dash (Shift) through the strikes.** Just before the last one, the number flares red. When the chain ends, the enemy pauses: that is your opening.
 3. **Street enemies drop in one hit whenever you connect. Androids only break when you parry their final strike.** If an Android's number is 7, the 7th strike cannot be parried: dash through it.
 
 ## Controls (keyboard + mouse only)
@@ -48,8 +48,9 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 |---|---|
 | Move | A / D |
 | Jump | W |
-| Attack (slides up to a nearby enemy, then strikes) | Left mouse |
-| Parry (blocks strikes from the front) | Right mouse |
+| Aim | Mouse (a crosshair locks onto an enemy in range) |
+| Attack: with a locked enemy within ~5 m, lunge through it and break it; otherwise swing in place | Left mouse |
+| Parry: left click while a bullet is incoming or you are inside an enemy's attack (parry comes first) | Left mouse |
 | Dash (invulnerable; dashes behind a very close enemy, otherwise a fixed distance; 2 s cooldown) | Shift |
 | Interact / talk / hack a broadcast board | E |
 | Shockwave (unlocked at the Luddite hideout, stage 3; staggers enemies in front of you; 5 s cooldown) | Space |
