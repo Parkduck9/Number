@@ -68,6 +68,9 @@ public static class Stg01Builder
         new Box("CRATE-B3",  B, Kind.OneWay, 17.2f,  19.0f,   2.05f, 2.3f),
         new Box("AW-B3",     B, Kind.OneWay, 19.3f,  26.6f,   4.55f, 4.8f),
         new Box("ROOF-B",    B, Kind.OneWay, 18.4f,  40.8f,   7.25f, 7.5f),
+        // Low solid step for the first ranged 1: 0.6u above the floor so its horizontal shot (TestEnemy needs |dy| <= 1.5 and fires at centre+0.3) still hits a standing player.
+        // Solid (not one-way) so the player is not popped onto it and the enemy's back-off stays on top; 12u wide so one back-off (<= 1s) does not walk off the right end.
+        new Box("LEDGE-A1",  A, Kind.Solid,  14f,    26f,     2.25f, 2.85f),
     };
 
     // 6.2 player start, checkpoints (touch = heal), enemies. y = feet position.
@@ -77,16 +80,21 @@ public static class Stg01Builder
     static readonly Pt[] Checkpoints = { new Pt("CP-A0", A, 6f, 2.25f), new Pt("CP-B0", B, 2f, 1.0f) };
 
     // fixedNumber 0 = reroll by progress. detect = activation range (u). progress = reroll weight position.
-    struct Foe { public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; } }
+    // ranged = gold ranged 1; cap = highest rolled number (placement rule: numbers 5+ only from late STG-02).
+    struct Foe { public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool ranged; public int cap;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool ranged = false, int cap = 0)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.ranged = ranged; this.cap = cap; } }
+    // Placement rule (DECISIONS "Review Top 5" #2): the only 1:1 flat fight is the tutorial melee E-A2; everything else is a group, a ledge or a ranged shot.
     static readonly Foe[] Foes =
     {
-        new Foe("E-A1", A, 20f, 2.25f, 2, 0f,   8f), // D4: fixed 2
-        new Foe("E-A2", A, 38f, 2.25f, 3, 0f,   8f), // D4: fixed 3, charge spot
-        new Foe("E-B3", B, 22f, 7.5f,  0, 0.3f, 8f), // on the roof (D2 roof-edge rule)
-        new Foe("E-B1", B, 30f, 1.0f,  0, 0.3f, 8f),
-        new Foe("E-B2", B, 33f, 1.0f,  0, 0.3f, 8f),
+        new Foe("E-A1", A, 18f, 2.85f, 1, 0f, 10f, true), // FIRST enemy: gold ranged 1 on LEDGE-A1 (wakes at player x 8). Parry the shot (RMB) or dash past. Its 9u range ends near x 31.
+        new Foe("E-A2", A, 37f, 2.25f, 2, 0f, 6f),        // tutorial melee 1:1, fixed 2; wakes at player x 31, outside E-A1's range
+        new Foe("E-A3", A, 40f, 2.25f, 3, 0f, 5f),        // fixed 3 melee with a gold ranged 1 behind it (wakes after the tutorial fight)
+        new Foe("E-A4", A, 42f, 2.25f, 1, 0f, 8f, true),
+        new Foe("E-B3", B, 22f, 7.5f,  0, 0.3f, 8f, false, 4), // on the roof (D2 roof-edge rule)
+        new Foe("E-B1", B, 30f, 1.0f,  0, 0.3f, 8f, false, 4), // pincer pair with E-B2 + ranged E-B4 behind
+        new Foe("E-B2", B, 33f, 1.0f,  0, 0.3f, 8f, false, 4),
+        new Foe("E-B4", B, 38f, 1.0f,  1, 0f,   12f, true),
     };
 
     // Trigger boxes (segment-local x1..x2, y1..y2).
@@ -247,6 +255,16 @@ public static class Stg01Builder
             eff.useSideFriction = false;
             eff.useSideBounce = false;
         }
+        if (b.id == "LEDGE-A1") // visible stage so the ranged enemy has something to stand on
+        {
+            var vis = new GameObject("LEDGE-A1 sprite (PLACEHOLDER)");
+            vis.transform.SetParent(go.transform, false);
+            vis.transform.localScale = new Vector3(col.size.x, col.size.y, 1f) / square.bounds.size.x;
+            var sr = vis.AddComponent<SpriteRenderer>();
+            sr.sprite = square;
+            sr.color = new Color32(0x7A, 0x6A, 0x55, 0xFF);
+            sr.sortingOrder = 5;
+        }
         if (b.id == "CRATE-B") // the one extra visible prop: crate sprite on the barrel (placeholder square)
         {
             var vis = new GameObject("CRATE-B sprite (PLACEHOLDER)");
@@ -305,6 +323,7 @@ public static class Stg01Builder
         var number = go.GetComponent<EnemyNumber>();
         var te = go.GetComponent<TestEnemy>();
         if (f.progress > 0f) SetFloat(number, "progress", f.progress);
+        if (f.cap > 0 && f.fixedNumber <= 0) SetInt(number, "maxValue", f.cap);
 
         if (f.fixedNumber > 0)
         {
@@ -320,6 +339,7 @@ public static class Stg01Builder
         if (HasProp(te, "activationRange")) SetFloat(te, "activationRange", f.detect);
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
+        if (f.ranged) StageBuildKit.TuneRanged(go, number, te);
     }
 
     // Face-portrait health HUD (Card A, top-left) + broadcast display UI (Card B, builds its own UI at runtime).

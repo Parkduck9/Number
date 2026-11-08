@@ -56,3 +56,11 @@
 - 배치 모드: `Unity.exe -batchmode -quit -projectPath <프로젝트> -executeMethod StageBuildKit.BuildAll` (에디터가 이 프로젝트를 열고 있으면 실패 → 메뉴로 실행).
 - 스테이지 순서: `StageFlow.cs:11` 배열 → `NUMBER/Sync Build Settings (stage order)`.
 - 오프닝을 빼고 싶으면: `StageFlow.Stages`에서 `"STG00"`을 지우고 Sync를 실행 (씬은 남겨도 된다).
+
+## 5. 적 배치 개정 (2026-11-09, 검수 Top 5 #2)
+
+- 원칙: 일반 적은 한 방에 쓰러지므로 **1:1 평지 배치는 STG-01 튜토리얼 한 번만**. 나머지는 2~3명 묶음, 근접 적 뒤 원거리 황금 1, 발판 위 적. 숫자 5 이상은 STG-02 SEG-B부터.
+- 코드: `StageBuildKit.Foe`에 `ranged`·`cap` 추가. `ranged` = `StageBuildKit.TuneRanged`(Stg05 벌레 대역과 같은 값: kind Bug, ranged, 사거리 9, 마지막 타 +0.5초, 숫자 1 고정, 황금). `cap` = `EnemyNumber.maxValue` (안드로이드는 적용 안 함). Stg01Builder는 자체 `Foe`에 같은 필드.
+- STG-01: 첫 적 = 낮은 단 `LEDGE-A1`(Solid, x 14~26, 높이 0.6u) 위 원거리 1. 표: [LEVEL_STG01.md](../LEVEL_STG01.md) "적 배치 개정". 5 → 8명.
+- STG-02: 표 [LEVEL_STG02.md](../LEVEL_STG02.md). 7 → 10명. STG-04: 표 [LEVEL_STG04.md](../LEVEL_STG04.md). 9 → 11명. STG-00·03·05는 그대로.
+- 진정한 앞뒤 협공은 없다: 적은 발견 거리 안에서만 깨어나 다가오므로, 플레이어 뒤에 두면 혼자 오는 1:1이 된다. 대신 가까운 묶음 + 뒤 원거리로 만들었다.

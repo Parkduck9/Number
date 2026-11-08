@@ -32,18 +32,20 @@ public static class Stg04Builder
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
     static readonly Pt[] Checkpoints = { new Pt("CP-A0", A, 3f, 1.0f), new Pt("CP-B0", B, 2f, 1.0f) };
 
-    // Last argument true = android (identified by the "(ANDROID)" name suffix until TestEnemy gets a field).
+    // 7th arg true = android, 8th arg true = gold ranged 1. Every enemy sits in a group or on a catwalk.
     static readonly Foe[] Foes =
     {
         new Foe("E-A1", A, 16f, 1.0f, 0, 0.7f, 8f),
-        new Foe("E-A2", A, 19f, 3.6f, 0, 0.7f, 8f), // catwalk
+        new Foe("E-A2", A, 19f, 3.6f, 0, 0.7f, 8f), // catwalk, above E-A1
         new Foe("E-A3", A, 33f, 1.0f, 0, 0.7f, 8f),
         new Foe("E-A4", A, 38f, 1.0f, 0, 0.7f, 8f, true),
+        new Foe("E-A5", A, 44f, 1.0f, 1, 0f,   12f, false, true), // ranged behind melee + android
         new Foe("E-B1", B, 15f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B2", B, 18f, 1.0f, 0, 0.8f, 8f, true),
         new Foe("E-B3", B, 26f, 3.6f, 0, 0.8f, 8f), // catwalk
         new Foe("E-B4", B, 30f, 1.0f, 0, 0.8f, 8f, true),
         new Foe("E-B5", B, 34f, 1.0f, 0, 0.8f, 8f),
+        new Foe("E-B6", B, 40f, 1.0f, 1, 0f,   12f, false, true), // ranged behind
     };
 
     // Billboards (segment-local center, within hand reach for hacking): A shows 7, B shows 0. Zone = the whole segment.

@@ -32,15 +32,19 @@ public static class Stg02Builder
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
     static readonly Pt[] Checkpoints = { new Pt("CP-A0", A, 3f, 1.0f), new Pt("CP-B0", B, 2f, 1.0f) };
 
+    // Numbers: cap 4 until late SEG-B (5+ allowed from E-B2 on). Ranged = gold 1 (7th arg android=false, 8th ranged=true).
     static readonly Foe[] Foes =
     {
-        new Foe("E-A1", A, 22f, 3.8f, 0, 0.4f, 8f), // on the roof
-        new Foe("E-A2", A, 34f, 1.0f, 0, 0.4f, 8f),
-        new Foe("E-A3", A, 37f, 1.0f, 0, 0.4f, 8f), // two at once
-        new Foe("E-B1", B, 20f, 5.0f, 0, 0.6f, 8f), // on the rail
-        new Foe("E-B2", B, 30f, 1.0f, 0, 0.6f, 8f),
-        new Foe("E-B3", B, 34f, 1.0f, 0, 0.6f, 8f),
-        new Foe("E-B4", B, 40f, 5.0f, 0, 0.6f, 8f), // on the rail
+        new Foe("E-A1", A, 22f, 3.8f, 0, 0.4f, 8f, false, false, 4), // on the roof (above the path)
+        new Foe("E-A2", A, 18f, 1.0f, 0, 0.4f, 8f, false, false, 4), // melee with a gold ranged 1 behind it (wakes at x 10, ranged at 12, roof at 14 = one group)
+        new Foe("E-A3", A, 24f, 1.0f, 1, 0f,   12f, false, true),
+        new Foe("E-A4", A, 34f, 1.0f, 0, 0.4f, 8f, false, false, 4), // pair
+        new Foe("E-A5", A, 37f, 1.0f, 0, 0.4f, 8f, false, false, 4),
+        new Foe("E-B1", B, 20f, 5.0f, 0, 0.6f, 8f, false, false, 4), // on the rail
+        new Foe("E-B2", B, 30f, 1.0f, 0, 0.6f, 8f),                  // 5+ allowed from here (late STG-02)
+        new Foe("E-B3", B, 33f, 1.0f, 0, 0.6f, 8f),                  // pair with E-B2, ranged E-B5 behind
+        new Foe("E-B5", B, 38f, 1.0f, 1, 0f,   12f, false, true),
+        new Foe("E-B4", B, 40f, 5.0f, 0, 0.6f, 8f),                  // on the rail
     };
 
     // Billboards (segment-local center): A shows 3 (review), B shows 7 (first time). Zone = the whole segment.

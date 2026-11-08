@@ -44,11 +44,27 @@ public static class StageBuildKit
     }
 
     // fixedNumber 0 = reroll by progress. detect = activation range (u).
+    // ranged = gold ranged bug, number fixed 1. cap > 0 = highest rolled number (placement rule: 5+ only from late STG-02).
     public struct Foe
     {
-        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; }
+        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged; this.cap = cap; }
+    }
+
+    // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
+    public static void TuneRanged(GameObject go, EnemyNumber number, TestEnemy te)
+    {
+        SetInt(te, "kind", 1); // TestEnemy.Kind.Bug
+        SetBool(te, "ranged", true);
+        SetFloat(te, "attackRangeX", 9f);
+        SetFloat(te, "lastStrikeDelay", 0.5f);
+        SetInt(number, "minValue", 1);
+        SetInt(number, "maxValue", 1);
+        SetInt(number, "fixedNumber", 1);
+        Apply(number, "numberColor", p => p.colorValue = new Color(1f, 0.788f, 0.235f));
+        var sr = go.GetComponentInChildren<SpriteRenderer>(true);
+        if (sr != null) sr.color = new Color32(0xE8, 0xD0, 0x5A, 0xFF);
     }
 
     // Left/right walls of a segment (full height).
@@ -228,6 +244,7 @@ public static class StageBuildKit
         var number = go.GetComponent<EnemyNumber>();
         var te = go.GetComponent<TestEnemy>();
         if (f.progress > 0f) SetFloat(number, "progress", f.progress);
+        if (f.cap > 0 && f.fixedNumber <= 0 && !f.android) SetInt(number, "maxValue", f.cap);
 
         if (f.fixedNumber > 0)
         {
@@ -243,6 +260,8 @@ public static class StageBuildKit
         if (HasProp(te, "activationRange")) SetFloat(te, "activationRange", f.detect);
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
+
+        if (f.ranged) TuneRanged(go, number, te);
 
         if (f.android)
         {
