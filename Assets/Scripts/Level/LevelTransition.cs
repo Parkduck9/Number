@@ -35,8 +35,8 @@ public class LevelTransition : MonoBehaviour
 
         if (mode == Mode.Goal)
         {
-            Debug.Log("[LevelTransition] STG-01 clear. TODO: load STG-02 when it exists.");
-            yield break; // stays black, input stays locked
+            if (!StageFlow.LoadNext()) StageFlow.LoadTitle(); // both unlock input when they load
+            yield break;
         }
 
         Vector2 pos = destination.position + Vector3.up; // pivot is the center of the 2-unit body

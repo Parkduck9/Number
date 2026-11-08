@@ -114,7 +114,7 @@ public class BroadcastHackUi : MonoBehaviour
     {
         Keyboard kb = Keyboard.current;
         if (kb == null) return;
-        if (kb.escapeKey.wasPressedThisFrame) { Close(); return; }
+        if (kb.escapeKey.wasPressedThisFrame) { GameFlow.EscConsumedFrame = Time.frameCount; Close(); return; }
         if (kb.eKey.wasPressedThisFrame)
         {
             dialBoard.Hack(selected);

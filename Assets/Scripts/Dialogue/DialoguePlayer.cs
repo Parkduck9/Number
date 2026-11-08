@@ -61,7 +61,7 @@ public class DialoguePlayer : MonoBehaviour
 
     void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.lKey.wasPressedThisFrame) DialogueLanguage.Korean = !DialogueLanguage.Korean;
+        if (Keyboard.current != null && Keyboard.current.lKey.wasPressedThisFrame) Loc.SetKorean(!Loc.Korean);
         UpdateRadio();
         UpdateTalk();
     }
