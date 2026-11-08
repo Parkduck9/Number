@@ -25,10 +25,10 @@ Read the lucky number above every enemy. It tells you exactly how many times the
 ### Description
 In a Joseon-styled cyberpunk city, everyone carries a hologram of their "lucky number", and the AI of the tech company **Embector** quietly makes those numbers come true. The city has gone numb to numbers. You haven't.
 
-Every enemy shows a number in front of its face. **That number is how many strikes are coming.** Parry them, dash through them, and when the number hits zero, strike back. Then hack the city's broadcast boards to turn the numbers against the AI, reach the stop button, and decide what happens to the numbers.
+Every enemy shows a number in front of its face. **That number is how many strikes are coming.** Street enemies drop in one hit, if you hit first. Can't? Count the strikes, parry, dash. Androids only break when you parry their last strike, so you have to count to the end. Then hack the city's broadcast boards to turn the numbers against the AI, reach the stop button, and decide what happens to the numbers.
 
 - **The number is the fight.** No health bars to read: count the strikes, parry, and punish the opening.
-- **Broadcast numbers change the whole street.** 3 makes enemies fast and relentless, 7 dopes them up before they burn out, 0 makes the city hold its breath.
+- **Broadcast numbers change the whole street.** 3 makes enemies fast and relentless, 7 overclocks them before they burn out, 0 makes the city hold its breath.
 - **Hack the boards.** Take a broadcast back for a few seconds and flip the fight.
 - **Two endings.** At the stop button, you decide.
 
@@ -76,4 +76,4 @@ All AI tools were used under their terms of service; no paid generation services
 ---
 
 ## 한국어 요약 (페이지에 한국어 설명을 함께 넣을 경우)
-조선풍 사이버펑크 도시. 모든 적의 얼굴 앞에 뜬 행운의 숫자가 **다음 공격 횟수**를 알려 준다. 숫자를 읽고 패링하고, 대시로 피하고, 숫자가 0이 되면 반격하라. 방송 전광판을 해킹해 숫자를 뒤집고, AI 정지 버튼에 닿아 숫자의 운명을 정하라. 약 10~15분, 엔딩 2개.
+조선풍 사이버펑크 도시. 모든 적의 얼굴 앞에 뜬 행운의 숫자가 **다음 공격 횟수**를 알려 준다. 거리의 적은 먼저 치면 한 방. 못 치면 숫자를 세며 패링하고 대시로 피하라. 안드로이드는 마지막 일격을 패링해야만 무너진다. 방송 전광판을 해킹해 숫자를 뒤집고, AI 정지 버튼에 닿아 숫자의 운명을 정하라. 약 10~15분, 엔딩 2개.
