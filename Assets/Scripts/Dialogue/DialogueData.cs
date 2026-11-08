@@ -27,7 +27,7 @@ public class DialogueScript
         foreach (string raw in text.Split('\n'))
         {
             n++;
-            string line = raw.Trim().TrimStart('﻿'); // BOM is not whitespace for Trim; would hide '@mode talk'
+            string line = raw.Trim().TrimStart('\uFEFF'); // BOM is not whitespace for Trim; would hide '@mode talk'
             if (line.Length == 0 || line[0] == '#') continue;
             if (line.StartsWith("@mode"))
             {
