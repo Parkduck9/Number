@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUMBER 전체 검수</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#1b1d2a; --muted:#5d6173; --line:#dddbd3;
+  --gold:#a8740a; --red:#b3261e; --cyan:#0b7a85; --chip:#efece4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1026; --panel:#131a36; --ink:#e8e9f1; --muted:#9aa0b8; --line:#273056;
+    --gold:#f2b632; --red:#ff5a4f; --cyan:#3fd6e0; --chip:#1b2347;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1026; --panel:#131a36; --ink:#e8e9f1; --muted:#9aa0b8; --line:#273056;
+  --gold:#f2b632; --red:#ff5a4f; --cyan:#3fd6e0; --chip:#1b2347;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 "Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:28px 16px 64px}
+header h1{font-size:28px;margin:0 0 4px;letter-spacing:.02em}
+header h1 b{color:var(--gold)}
+.meta{color:var(--muted);font-size:13px}
+nav{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;gap:6px;overflow-x:auto;padding:10px 0;margin:18px 0 8px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--ink);background:var(--chip);
+  padding:6px 12px;border-radius:4px;font-size:14px}
+nav a:hover{outline:1px solid var(--cyan)}
+h2{font-size:21px;margin:36px 0 10px;padding-left:10px;border-left:4px solid var(--gold)}
+h3{font-size:16px;margin:22px 0 8px;color:var(--cyan)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+.card .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.card .v{font-weight:600;margin-top:4px}
+.card.hot{border-color:var(--red)}
+.table{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--chip)}
+tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:3px;word-break:break-all}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:3px;font-weight:600}
+.t-hi{color:var(--red);border:1px solid var(--red)}
+.t-fix{color:var(--cyan);border:1px solid var(--cyan)}
+.t-user{color:var(--gold);border:1px solid var(--gold)}
+.stars{color:var(--gold);letter-spacing:1px}
+ul,ol{padding-left:22px} li{margin:4px 0}
+.note{background:var(--chip);border-left:3px solid var(--cyan);padding:10px 12px;border-radius:4px;font-size:14px;color:var(--muted)}
+.big{font-size:15.5px}
+.theme{float:right;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 10px;cursor:pointer;font:inherit;font-size:13px}
+@media (max-width:600px){header h1{font-size:23px} th,td{padding:7px 8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <button class="theme" id="tt" type="button">밝기 전환</button>
+  <h1><b>NUMBER</b> 전체 검수</h1>
+  <div class="meta">2026-11-08 · 기준 커밋 c5e7f8a · Opus 리뷰 3개 종합 (정적 분석, Play·WebGL 빌드 안 함) · 원본: docs/review/01~03, Fable 수정 기록 04</div>
+</header>
+
+<nav>
+  <a href="#sum">한눈에</a><a href="#fix">고칠 것</a><a href="#road">로드맵</a><a href="#strat">전략</a><a href="#top5">Top 5</a>
+</nav>
+
+<h2 id="sum">한눈에</h2>
+<div class="cards">
+  <div class="card"><div class="k">상태</div><div class="v">뼈대 완성: 시스템·씬 6개·보스·엔딩 2개. 남은 건 자리표시 교체와 실제 빌드</div></div>
+  <div class="card hot"><div class="k">최대 코드 버그</div><div class="v">히트스톱 중 누른 입력이 사라짐 → Fable 수정 중</div></div>
+  <div class="card hot"><div class="k">최대 게임 위험</div><div class="v">한 방 처치로 일반 적의 숫자를 읽을 이유가 약해짐 (테마 점수 ×2)</div></div>
+  <div class="card hot"><div class="k">최대 일정 위험</div><div class="v">아무도 끝까지 플레이 안 함 · WebGL 빌드 0회 · 사용자 결정 4개 대기</div></div>
+</div>
+<p class="note">로드맵 표의 #2~#8(QA P1·P2)은 커밋 f834116에서 이미 고쳐졌습니다 (01 리뷰가 확인).</p>
+
+<h2 id="fix">1. 고쳐야 할 것</h2>
+<h3><span class="tag t-fix">Fable 수정 중</span> 결정 필요 없음</h3>
+<div class="table"><table>
+<tr><th>#</th><th>문제</th><th>근거</th></tr>
+<tr><td>1</td><td><b>히트스톱 중 입력 손실</b> (공격·패링·대시·점프·충격파) <span class="tag t-hi">높음</span></td><td><code>PlayerController.cs:116-119</code></td></tr>
+<tr><td>8</td><td>릴리스 빌드에 충격파 해금·쿨다운 표시 없음 → 런타임 HUD</td><td><code>Shockwave.cs:80-90</code></td></tr>
+<tr><td>9</td><td>STG-01 재생성 시 AI 컨셉 이미지(가짜 HUD 포함)가 배경으로 들어감 → 빌더에서 제거</td><td><code>Stg01Builder.cs:40-42</code></td></tr>
+<tr><td>12·13</td><td>언어 전환 시 정지 버튼 문구 미갱신, 해킹 0 경고문 한국어 없음</td><td><code>StopButton.cs:111</code></td></tr>
+<tr><td>14</td><td>프레임 히치 때 적 탄이 플레이어를 뚫음</td><td><code>EnemyProjectile.cs:43</code></td></tr>
+<tr><td>17·18</td><td>에디터 정적 값 초기화, 리스폰 뒤 체크포인트 색</td><td><code>GameFlow.cs:7-9</code></td></tr>
+<tr><td>20</td><td>GDD 12장 "숫자 줄어듦" vs 5장 "줄지 않음" 충돌</td><td><code>GDD.md:270</code></td></tr>
+</table></div>
+
+<h3><span class="tag t-user">사용자 결정</span> 정해야 고칠 수 있음</h3>
+<div class="table"><table>
+<tr><th>#</th><th>질문</th><th>추천</th></tr>
+<tr><td>5</td><td>해킹은 언제부터? (지금 STG-01 가능 → 02 불가 → 04 가능)</td><td>방송 HUD는 항상, 해킹은 STG-03 이후</td></tr>
+<tr><td>6</td><td>보스 3웨이브 예고 중 해킹하면 마지막 웨이브 건너뜀</td><td>막는다 (15분)</td></tr>
+<tr><td>7</td><td>GDD "대시가 적을 부순다" 미구현</td><td>GDD를 "피한다"로 수정</td></tr>
+<tr><td>11</td><td>체크포인트 무한 회복 / 충격파 vs 반격 창 / 마지막 일격 경직</td><td>무한 회복은 유지</td></tr>
+<tr><td>15</td><td>게임패드 반쪽 지원</td><td>"패드 미지원" 명시</td></tr>
+</table></div>
+
+<h3>문서·제출</h3>
+<ul>
+  <li><b>CREDITS:</b> 팀원 비어 있음, TMP 폰트(LiberationSans·EmojiOne) 누락, "(draft)" 제거 — <span class="tag t-hi">상 후보 제외 사유</span></li>
+  <li><b>제출 페이지:</b> "숫자 0이 되면 반격"은 현재 규칙과 다름, "dopes" → "overclocks"</li>
+  <li><b>WebGL 빌드 0회:</b> 11/09에 첫 빌드 → itch 비공개 업로드로 스트리핑·jslib·포커스·한글 폰트 확인</li>
+  <li><b>오디오:</b> main에 소리 0개, <code>claude/audio-4c66f5</code> 승인 대기</li>
+  <li><b>패키지:</b> MCP 런타임·Visual Scripting 포함 여부를 첫 빌드 리포트로 확인</li>
+</ul>
+
+<h2 id="road">2. 앞으로 해야 할 것</h2>
+<h3>사용자 결정 (막는 작업이 많은 순서)</h3>
+<div class="table"><table>
+<tr><th>순위</th><th>결정</th><th>기한</th><th>안 정하면</th></tr>
+<tr><td>D1</td><td><b>주인공 스프라이트 확정</b></td><td>11/09 정오</td><td>현재 임시안으로 확정</td></tr>
+<tr><td>D2</td><td><b>오디오 승인</b></td><td>11/09</td><td>무음 제출</td></tr>
+<tr><td>D3</td><td><b>HUD 시안 승인</b></td><td>11/09</td><td>기본 HUD</td></tr>
+<tr><td>D4</td><td><b>배경 STG-02~05 시안 6장</b></td><td>11/10 오전</td><td>단색 배경</td></tr>
+<tr><td>D5</td><td>STG-00/01 AI 컨셉 배경 유지?</td><td>11/10</td><td>유지 + AI 공개</td></tr>
+<tr><td>D6</td><td>대사 (Claude 초안 → 사용자 수정 추천)</td><td>11/10 저녁</td><td>자리표시 대사</td></tr>
+<tr><td>D7</td><td>QA 기획 판단 (위 5·6·7·11)</td><td>11/11</td><td>지금 동작 유지</td></tr>
+<tr><td>D8</td><td>안드로이드 처치 기믹</td><td>11/11</td><td>체력 5 유지</td></tr>
+<tr><td>D9</td><td><b>팀원 이름·역할·자격</b></td><td>11/13</td><td><span class="tag t-hi">제출 불가</span></td></tr>
+</table></div>
+
+<h3>날짜별 계획</h3>
+<div class="table"><table>
+<tr><th>날짜</th><th>할 일</th></tr>
+<tr><td><b>11/08 밤</b></td><td>D1~D4 답하기, C 드라이브 정리 승인, Fable 수정 마무리</td></tr>
+<tr><td><b>11/09</b></td><td>오전 첫 WebGL 빌드 + itch 비공개 업로드 · 사용자 첫 플레이 20분 · 주인공 동작 시안 · 오디오 병합 · AI 벌레 배치</td></tr>
+<tr><td><b>11/10</b></td><td>배경·HUD·주인공 프레임 연결, 적 스프라이트 3종, 조작 힌트, 대사 확정</td></tr>
+<tr><td><b>11/11</b></td><td>적 스프라이트 연결, 2차 QA, 처음 하는 사람 테스트 → <b>24:00 기능 동결</b></td></tr>
+<tr><td><b>11/12</b></td><td>꼭 고칠 버그 → 최종 WebGL 빌드 → 브라우저 3종 확인 · 23:59 개발 마감</td></tr>
+<tr><td><b>11/13</b></td><td>빌드 버그만, 스크린샷·커버, 제출 페이지</td></tr>
+<tr><td><b>11/14</b></td><td>체크리스트 → <b>18:00까지 제출</b> (마감 21:00)</td></tr>
+</table></div>
+
+<h2 id="strat">3. 어떻게 하면 좋을지</h2>
+<h3>게임</h3>
+<div class="table"><table>
+<tr><th>무엇을</th><th>왜</th><th>비용</th><th>추천</th></tr>
+<tr><td>일반 적을 1:1 평지에 두지 않음 (묶음·원거리 엄호·발판 위)</td><td>한 방 처치를 유지하면서 숫자를 살림</td><td>2~3h</td><td class="stars">★★★</td></tr>
+<tr><td>첫 적 = 먼저 못 때리는 원거리 1 (패링해야 통과)</td><td>글 없이 규칙을 배움</td><td>1~2h</td><td class="stars">★★★</td></tr>
+<tr><td>안드로이드 기믹 A: N번째 일격 패링(7은 대시) → 과부하 → 한 대</td><td>숫자를 끝까지 세야 이김. 기존 0.5초 지연·불꽃이 신호</td><td>3~4h</td><td class="stars">★★★</td></tr>
+<tr><td>숫자만큼 버틴 뒤 Open 타격 보상 (큰 히트스톱 + 주변 경직)</td><td>읽는 플레이가 더 멋지고 유리</td><td>2h</td><td class="stars">★★</td></tr>
+<tr><td>숫자 5 이상은 STG-02 후반부터</td><td>연타 간격 0.0975초라 너무 빠름</td><td>1h</td><td class="stars">★★</td></tr>
+<tr><td>중간보스 만들지 않음 (STG-04 안드로이드 + 기믹 A)</td><td>1일 절약</td><td>—</td><td class="stars">★★★</td></tr>
+</table></div>
+
+<h3>첫 60초 · 아트 · 오디오</h3>
+<ul class="big">
+  <li><b>"숨 0번" 장면에 집중</b> — 정적 → 소리 끊김 → 정전 → 숫자 0만 빛남 → 시민이 한 박자씩 굳음. 커버 이미지도 이 장면 <span class="stars">★★★</span></li>
+  <li>오프닝 → 첫 전투 <b>90초 이내</b>, 타이틀엔 숫자 하나만, 엔딩 선택에 해킹 다이얼 재사용</li>
+  <li><b>팔레트 파일 1장(약 24색) 고정</b> → 모든 스프라이트·이펙트를 양자화해 통일 <span class="stars">★★★</span></li>
+  <li><b>AI 벌레 = 1픽셀 점 떼를 코드로</b>, 아트가 거의 필요 없음 <span class="stars">★★★</span></li>
+  <li>방송 차임 하나를 타이틀·방송·해킹·엔딩에 반복 → 소리 정체성</li>
+</ul>
+
+<h3>자를 것 (순서)</h3>
+<ol>
+  <li>중간보스</li><li>TASK-10 대화 연출 애니메이션</li><li>AI 벌레 전용 적 타입 (외형만)</li>
+  <li>배경 6장 → 4장</li><li>END-02 전용 그림</li><li>주인공 동작 7개 → 5개</li><li>업그레이드 추가</li>
+</ol>
+<p class="note">자르지 말 것: STG-00 오프닝, 방송 3·7·0, 해킹 다이얼, 보스 3웨이브, 엔딩 2개.</p>
+
+<h3>일하는 방식</h3>
+<ul>
+  <li>정적 QA 중단 → Antigravity는 빌드 스모크·제출 체크리스트만</li>
+  <li><code>TestEnemy.cs</code>를 고치는 세션은 한 번에 하나만</li>
+  <li>Codex 시안은 하루 2번(점심·저녁) 몰아서 보여 주기</li>
+  <li>매일 저녁 사용자 20분 플레이 → <code>docs/qa/PLAYTEST-날짜.md</code></li>
+</ul>
+
+<h2 id="top5">지금 바로 정하면 좋은 것 Top 5</h2>
+<ol class="big">
+  <li>안드로이드 기믹 = A, 중간보스 없음</li>
+  <li>일반 적 배치 원칙: 1:1 평지 금지</li>
+  <li>11/09 오전 첫 WebGL 빌드 + 매일 저녁 20분 플레이</li>
+  <li>주인공 스프라이트 11/09 정오까지 확정 + 팔레트 고정</li>
+  <li>기능 동결 11/11 24:00 + 자를 목록 승인</li>
+</ol>
+</div>
+<script>
+(function(){
+  var root=document.documentElement,btn=document.getElementById('tt');
+  try{var s=localStorage.getItem('number-review-theme');if(s)root.setAttribute('data-theme',s);}catch(e){}
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var nx=cur==='dark'?'light':'dark';root.setAttribute('data-theme',nx);
+    try{localStorage.setItem('number-review-theme',nx);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
