@@ -24,6 +24,7 @@
 | Shockwave HUD ready / cooldown DRAFT icons and 4x preview — 링 버스트, 팔레트 제한; 게임 미연결 | AI 생성 (Codex gpt-6.1-sol) | Assets/Art/Drafts/UI/shockwave_*.png; source: Assets/Art/Drafts/UI/_gen/gen_ui_icons.py |
 | Embector AI broadcast-screen idle / angry DRAFTs and 4x preview — 기하학 단일 눈, 텍스트·로고 없음; 게임 미연결 | AI 생성 (Codex gpt-6.1-sol) | Assets/Art/Drafts/UI/boss_embector_*.png; source: Assets/Art/Drafts/UI/_gen/gen_ui_icons.py |
 | Sound effects ×12 + BGM ×2 (field, boss) — synthesized from scratch by a generator script Claude wrote (oscillators/noise, modal bells, Karplus-Strong plucks; no samples). Released CC0 by the team. Source: Assets/Audio/Source/gen-audio.mjs.txt | Claude Opus (Claude Code) | Assets/Audio/Resources/Sfx/, Assets/Audio/Resources/Bgm/ |
+| HUD 시안: 얼굴 체력 6단계, 방송 숫자, 홀로그램 숫자 창 (미승인 시안) | Codex CLI (GPT-6.1 Sol)가 쓴 Python 스크립트로 픽셀을 직접 찍음, Claude Opus 검토 | Assets/Art/Drafts/HUD/ |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
