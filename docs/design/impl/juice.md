@@ -26,6 +26,14 @@
 - 숫자 팝: `number.Pop()` 호출(TestEnemy.DoStrike) 삭제, EnemyNumber의 Pop 관련 줄 삭제.
 - 피격 붉은 틴트: PlayerController.UpdateVisual의 `State.Hurt` 줄 삭제.
 
+## 속도감 FX
+시트: `Assets/Resources/FX/run-dust`, `speed-lines`, `dash-burst` (모두 오른쪽 기준, 왼쪽은 flipX). 재생: `PlayerController.UpdateSpeedFx` / `PlayDashBurst` → `SpriteFx.PlayBehind`(플레이어 스프라이트와 같은 정렬 레이어, order −1 = 몸 뒤).
+- **run-dust**: 땅에서 |vx| ≥ moveSpeed × `runFxSpeedFrac`(0.9)로 달리는 동안 `runDustInterval`(0.25 s)마다 발뒤꿈치(feetOffset)에. 착지 순간, 달리다 방향을 바꾼 순간에도 한 번.
+- **speed-lines**: 전속력 달리기·Shift 대시·공격 돌진 중 `speedLinesInterval`(0.15 s)마다 몸 중심에, 플레이어에 붙어 따라간다. 대각선 돌진은 돌진 각도로 회전.
+- **dash-burst**: Shift 대시·공격 돌진 시작에 한 번, 발뒤꿈치에, 이동 방향으로. 같은 프레임에 speed-lines도 바로 나온다.
+- 히트스톱·대화·일시정지(InputLocked) 중에는 새로 생기지 않는다 (이미 나온 것은 0.3~0.5 s 안에 끝남). 튜너블 3개는 PlayerController 직렬화 필드 "Speed FX".
+- 끄기: `UpdateSpeedFx` 호출, `PlayDashBurst` 호출 2곳 삭제.
+
 ## 일반 적 한 방 처치 (2026-11-08 결정)
 - 일반 적(Citizen, Bug)은 어떤 상태에서든 한 대 맞으면 쓰러진다 (`TestEnemy.ReceivePlayerHit`의 `kind != Android` 블록). 맞는 순간 Stunned 상태(눕는 연출 + 숫자 숨김) + 작은 넉백, 이후 `KillVanishDelay` 뒤 `SetActive(false)`로 사라진다 (hit-spark 재생). 처치 히트스톱/흔들림은 그대로 발동.
 - Android(특수 적)는 기존 규칙(hp 5, 숫자가 0이 되기 전엔 막힘) 유지.

@@ -37,7 +37,7 @@ public static class Stg04Builder
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
     static readonly Pt[] Checkpoints = { new Pt("CP-A0", A, 3f, 1.0f), new Pt("CP-B0", B, 2f, 1.0f) };
 
-    // 7th arg true = android, 8th arg true = gold ranged 1. Every enemy sits in a group or on a catwalk.
+    // 7th arg true = android, 8th arg true = gold ranged 1 (10th arg true = ranged AI bug, else ranged citizen). Every enemy sits in a group or on a catwalk.
     static readonly Foe[] Foes =
     {
         new Foe("E-A1", A, 16f, 1.0f, 0, 0.7f, 8f),
@@ -48,7 +48,7 @@ public static class Stg04Builder
         new Foe("E-A5", A, 44f, 1.0f, 1, 0f,   6f, false, true),  // ranged behind melee + android; wakes only past x 38 so the android is read 1:1 (review 06 #2)
         new Foe("E-A7", A, 55f, 1.0f, 0, 0.7f, 8f),               // new group (wakes at x 47): ground + catwalk + ranged
         new Foe("E-A8", A, 58f, 3.6f, 0, 0.7f, 8f),
-        new Foe("E-A9", A, 65f, 1.0f, 1, 0f,   12f, false, true), // ranged on the ground (shot at feet + 1.3 passes under CW-A3)
+        new Foe("E-A9", A, 65f, 1.0f, 1, 0f,   12f, false, true, 0, true), // ranged AI bug on the ground (shot at feet + 1.3 passes under CW-A3)
         new Foe("E-B1", B, 15f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B2", B, 18f, 1.0f, 4, 0f,   8f, true), // androids 3 -> 4 -> 6; no 7 outside the boss (review 06 #3)
         new Foe("E-B3", B, 26f, 3.6f, 0, 0.8f, 8f), // catwalk
@@ -57,7 +57,7 @@ public static class Stg04Builder
         new Foe("E-B6", B, 40f, 1.0f, 1, 0f,   12f, false, true), // ranged behind
         new Foe("E-B7", B, 54f, 1.0f, 0, 0.8f, 8f),               // new group (wakes at x 46): ground + catwalk + ranged
         new Foe("E-B8", B, 57f, 3.6f, 0, 0.8f, 8f),
-        new Foe("E-B9", B, 64f, 1.0f, 1, 0f,   12f, false, true),
+        new Foe("E-B9", B, 64f, 1.0f, 1, 0f,   12f, false, true, 0, true), // ranged AI bug: keeps shooting on 0 while E-B6 (ranged citizen) freezes
     };
 
     // Billboards (segment-local center, within hand reach for hacking): A shows 7, B shows 0. Zone = the whole segment.

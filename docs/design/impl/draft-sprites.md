@@ -9,11 +9,11 @@
 |---|---|---|
 | 플레이어 (`PlayerController.DraftFrame`) | hero_walk_3f / idle_2f / attack_3f / dash_2f / hurt_1f / jump_2f / parry_2f | 걷기 8fps / 제자리 2fps / 공격 0.3초를 3등분 / 대시 / 피격·사망 / 공중(0 상승, 1 하강) / 패링(0 판정 중, 1 이후) |
 | 시민 (Kind.Citizen) | citizen_attack_3f, citizen_walk_2f, citizen_stunned_1f | Windup=0, Strike=1, 그 외=2 / Approach 이동 중 걷기 / Stunned |
-| 원거리 (`ranged`, 금색 1) | citizen_b_ranged_3f, citizen_b_walk_2f (기절은 시민 것) | 시민과 같음. **Bug 스웜 표시는 이 적에게는 붙지 않는다** (`BugSwarmBootstrap.TryAttach`) |
+| 원거리 시민 (`kind` Citizen + `ranged`, 금색 1) | citizen_b_ranged_3f, citizen_b_walk_2f (기절은 시민 것) | 시민과 같음. 원거리 벌레(`kind` Bug + `ranged`)는 초안 그림 없이 Bug 스웜으로 그린다 (DECISIONS 14) |
 | 안드로이드 | android_attack_3f, android_walk_2f, android_stunned_1f | Windup·Special=0, Strike=1, 그 외=2 / 걷기 / Stunned·Overload |
 | 러다이트 NPC (STG-03) | luddite_npc_idle_2f | `DraftIdleAnim`(Stg03Builder가 붙임), 2fps, 좌우 반전 |
 
-- 플레이어는 `flipX = Facing < 0`로 좌우를 뒤집는다 (아트는 오른쪽을 본다). 일반 Bug(비원거리)는 기존 스웜.
+- 플레이어는 `flipX = Facing < 0`로 좌우를 뒤집는다 (아트는 오른쪽을 본다). Bug(근접·원거리 모두)는 스웜 (`TestEnemy`가 Bug에는 초안 그림을 걸지 않는다).
 - 프리팹/씬은 건드리지 않고 런타임에 스프라이트·스케일(1)·위치(발 = 콜라이더 바닥)·흰색을 덮어쓴다.
 
 ## HUD — `Assets/Resources/DraftHud/` (`DraftHud.cs`가 읽음)

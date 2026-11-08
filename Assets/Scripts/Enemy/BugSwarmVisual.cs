@@ -26,6 +26,7 @@ public class BugSwarmVisual : MonoBehaviour
     const float StrikeBurst = 14f;        // px scatter on a melee strike (ranged: recoil backward)
     const float StrikeDecay = 10f;        // 1/s: scatter settles back
     const float Sag = 4f;                 // px the cluster droops while Staggered / Open
+    const float RangedHover = 2f;         // px hover bob of the ranged bug
     const float DeathFade = 0.5f;         // s: mirrors Juice.KillVanishDelay (the body is deactivated after it)
     const float DeathSpeed = 40f, DeathGravity = 90f; // px/s, px/s^2 for the dispersing dots
 
@@ -231,7 +232,8 @@ public class BugSwarmVisual : MonoBehaviour
             case TestEnemy.State.Staggered:
             case TestEnemy.State.Open: sag = Sag; jit = 1.8f; break;
         }
-        float bob = Mathf.Round(Mathf.Sin(Time.time * 5f)); // 1 px hover; legs stay put
+        // Hover: melee 1 px; the ranged dart floats in a slower, deeper 2 px bob so it reads as a hovering shooter. Legs stay put.
+        float bob = ranged ? Mathf.Round(Mathf.Sin(Time.time * 3f) * RangedHover) : Mathf.Round(Mathf.Sin(Time.time * 5f));
         float follow = Mathf.Min(1f, Follow * dt);
         float decay = Mathf.Exp(-StrikeDecay * dt);
         float now = Time.time;
@@ -315,8 +317,7 @@ public static class BugSwarmBootstrap
     // For enemies created at runtime outside the template path.
     public static void TryAttach(TestEnemy e)
     {
-        if (e.GetComponent<BugSwarmVisual>() != null || !IsBug(e)) return;
-        if (IsRanged(e) && DraftSprites.Use && DraftSprites.CitizenRanged != null) return; // draft ranged-citizen art replaces the swarm (draft-sprites.md)
+        if (e.GetComponent<BugSwarmVisual>() != null || !IsBug(e)) return; // ranged bugs get the swarm too; ranged citizens are Kind.Citizen (DECISIONS 14)
         e.gameObject.AddComponent<BugSwarmVisual>();
     }
 

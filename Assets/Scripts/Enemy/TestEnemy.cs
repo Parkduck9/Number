@@ -94,7 +94,8 @@ public class TestEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         number = GetComponent<EnemyNumber>();
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
-        draftFrames = kind == Kind.Android ? DraftSprites.Android : ranged ? DraftSprites.CitizenRanged : kind == Kind.Citizen ? DraftSprites.Citizen : null;
+        // Bugs (melee and ranged) are drawn by BugSwarmVisual; ranged citizens use the hooded ranged-citizen frames (DECISIONS 14).
+        draftFrames = kind == Kind.Android ? DraftSprites.Android : kind == Kind.Bug ? null : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
         draftSprite = DraftSprites.Setup(visual, draftFrames);
         draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
         draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : DraftSprites.CitizenStunned;
@@ -149,7 +150,7 @@ public class TestEnemy : MonoBehaviour
         if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
         if (state == State.Stunned) return; // keep the kill knockback until the body vanishes
         float vx = 0f;
-        bool chasing = false; // spotted the player and heading for them: drops off roof edges instead of stopping
+        bool chasing = false; // spotted the player and heading for them: may drop off a roof edge (see DropOk)
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
         // Only toward a player in front: Recover does not re-face, so never walk away from one who got behind.
         if ((state == State.Approach || state == State.Recover) && player != null &&
@@ -162,7 +163,7 @@ public class TestEnemy : MonoBehaviour
         else if (state == State.Approach && ranged && IsBackingOff())
             vx = -facing * Speed;
         if (state == State.Charge) { vx = facing * (rushing ? DashRules.RushSpeed : chargeSpeed); chasing = true; }
-        if (vx != 0f && !chasing && EdgeAhead(vx > 0f ? 1 : -1)) vx = 0f;
+        if (vx != 0f && !(chasing && DropOk()) && EdgeAhead(vx > 0f ? 1 : -1)) vx = 0f;
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
     }
 
@@ -219,6 +220,16 @@ public class TestEnemy : MonoBehaviour
         if (backoffSince < 0f) backoffSince = Time.time; // timer starts when the player gets too close, not on Approach entry
         return Time.time - backoffSince < backoffMaxTime;
     }
+
+    // Chasing walks off a ledge only toward a player who is below and close (D2 roof drop). Permanent melee aggro
+    // (IsActive) otherwise made far-off chasers fall off roofs toward the player (Fable review): they now wait at the edge.
+    bool DropOk()
+    {
+        if (player == null) return false;
+        Vector2 d = player.transform.position - transform.position;
+        return d.y < -0.5f && Mathf.Abs(d.x) <= DropMaxDistance;
+    }
+    const float DropMaxDistance = 4f; // (T) x-distance within which a chaser drops toward a lower player
 
     // No ground just ahead of the feet (needs groundMask).
     bool EdgeAhead(int dir)

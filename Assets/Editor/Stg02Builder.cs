@@ -37,7 +37,7 @@ public static class Stg02Builder
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
     static readonly Pt[] Checkpoints = { new Pt("CP-A0", A, 3f, 1.0f), new Pt("CP-B0", B, 2f, 1.0f) };
 
-    // Numbers: cap 4 until late SEG-B (5+ allowed from E-B2 on). Ranged = gold 1 (7th arg android=false, 8th ranged=true).
+    // Numbers: cap 4 until late SEG-B (5+ allowed from E-B2 on). Ranged = gold 1 (7th arg android=false, 8th ranged=true, 10th bug=true = ranged AI bug, else ranged citizen).
     // Groups of 3-4, each with a ranged 1 or a platform enemy. Ranged stand on the ground: their shot flies at feet + 1.3.
     static readonly Foe[] Foes =
     {
@@ -49,7 +49,7 @@ public static class Stg02Builder
         new Foe("E-A6", A, 38f, 2.5f, 0, 0.4f, 8f, false, false, 4), // on ROOF-A3
         new Foe("E-A7", A, 53f, 1.0f, 0, 0.45f, 8f, false, false, 4), // new group (wakes at x 45): ground + ROOF-A5 + ranged
         new Foe("E-A8", A, 55f, 3.6f, 0, 0.45f, 8f, false, false, 4),
-        new Foe("E-A9", A, 62f, 1.0f, 1, 0f,   12f, false, true),
+        new Foe("E-A9", A, 62f, 1.0f, 1, 0f,   12f, false, true, 0, true), // first ranged AI bug (swarm; DECISIONS 14)
         new Foe("E-B1", B, 20f, 5.0f, 0, 0.6f, 8f, false, false, 4), // on the rail
         new Foe("E-B2", B, 30f, 1.0f, 0, 0.6f, 8f),                  // 5+ allowed from here (late STG-02)
         new Foe("E-B3", B, 33f, 1.0f, 0, 0.6f, 8f),                  // pair with E-B2, ranged E-B5 behind
@@ -58,7 +58,7 @@ public static class Stg02Builder
         new Foe("E-B6", B, 56f, 1.0f, 0, 0.7f, 8f),                  // new group of 4 (wakes at x 48): ground + PLAT-B2 + ground + ranged
         new Foe("E-B7", B, 58f, 3.6f, 0, 0.7f, 8f),
         new Foe("E-B8", B, 61f, 1.0f, 0, 0.7f, 8f),
-        new Foe("E-B9", B, 66f, 1.0f, 1, 0f,   12f, false, true),
+        new Foe("E-B9", B, 66f, 1.0f, 1, 0f,   12f, false, true, 0, true), // ranged AI bug
     };
 
     // Billboards (segment-local center): A shows 3 (review), B shows 7 (first time). Zone = the whole segment.

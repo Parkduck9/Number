@@ -58,6 +58,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float afterimageInterval = 0.04f;
     [SerializeField] float afterimageLife = 0.2f;
 
+    [Header("Speed FX (T)")] // docs/design/impl/juice.md "속도감 FX"
+    [SerializeField] float runFxSpeedFrac = 0.9f;     // |vx| >= this * moveSpeed on the ground counts as running
+    [SerializeField] float runDustInterval = 0.25f;
+    [SerializeField] float speedLinesInterval = 0.15f;
+
     static readonly Color AfterimageColor = new Color(0.298f, 0.909f, 0.847f, 0.6f); // #4CE8D8
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
@@ -80,6 +85,9 @@ public class PlayerController : MonoBehaviour
     float attackBufferedUntil = -999f;
     float dashCooldownUntil;
     float nextAfterimageAt;
+    float nextRunDustAt, nextSpeedLinesAt;
+    bool fxWasGrounded = true; // true at start: no spurious landing puff on the first unlocked frame (scene load / after the intro dialogue)
+    int fxLastFacing;
     bool jumpCut;
     bool attackHitDone;
     bool lunging;                       // DECISIONS 12 lunge attack in progress (part of an Attack)
@@ -209,6 +217,7 @@ public class PlayerController : MonoBehaviour
 
         pendingParry = pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
         if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
+        UpdateSpeedFx(now);
         UpdateVisual(now);
     }
 
@@ -323,6 +332,7 @@ public class PlayerController : MonoBehaviour
                     dashVelocity = new Vector2(Facing * dashSpeed, 0f);
                 }
                 rb.linearVelocity = dashVelocity;
+                PlayDashBurst(dashVelocity.x);
                 Sfx.Play(SfxId.Dash);
                 break;
             case State.Dead:
@@ -430,6 +440,7 @@ public class PlayerController : MonoBehaviour
         nextAfterimageAt = 0f;
         rb.gravityScale = 0f;
         rb.linearVelocity = dir * DashRules.LungeSpeed;
+        PlayDashBurst(dir.x);
         Sfx.Play(SfxId.Swing);
         return true;
     }
@@ -477,6 +488,40 @@ public class PlayerController : MonoBehaviour
         if (visual == null || now < nextAfterimageAt) return;
         nextAfterimageAt = now + afterimageInterval;
         SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife);
+    }
+
+    // Speed FX (all sheets face right; flipX for left). Only called on unfrozen, unlocked frames, so nothing new spawns during
+    // hit-stop / dialogue / pause. run-dust at the heel while running full speed (+ once on landing / turning);
+    // speed-lines on the body while running, dashing or lunging, rotated to a diagonal lunge.
+    void UpdateSpeedFx(float now)
+    {
+        if (visual == null) return;
+        bool running = grounded && state == State.Locomotion && Mathf.Abs(rb.linearVelocity.x) >= moveSpeed * runFxSpeedFrac;
+        bool landed = grounded && !fxWasGrounded && state != State.Dead;
+        bool turned = running && Facing != fxLastFacing;
+        fxWasGrounded = grounded;
+        fxLastFacing = Facing;
+        if (landed || turned || (running && now >= nextRunDustAt))
+        {
+            nextRunDustAt = now + runDustInterval;
+            SpriteFx.PlayBehind("run-dust", rb.position + feetOffset, Facing < 0, visual);
+        }
+
+        if (!(running || state == State.Dash || lunging) || now < nextSpeedLinesAt) return;
+        nextSpeedLinesAt = now + speedLinesInterval;
+        Vector2 dir = lunging ? lungeDir : state == State.Dash ? dashVelocity : new Vector2(Facing, 0f);
+        bool left = Mathf.Abs(dir.x) > 0.01f ? dir.x < 0f : Facing < 0;
+        if (left) dir = -dir; // flipped sprite: rotate its mirrored forward onto the move direction
+        SpriteFx.PlayBehind("speed-lines", rb.position, left, visual, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg, transform);
+    }
+
+    // Once at the start of a Shift dash / lunge, at the heel, facing the move direction. Speed lines start the same frame.
+    void PlayDashBurst(float dirX)
+    {
+        nextSpeedLinesAt = 0f;
+        if (visual == null) return;
+        bool left = Mathf.Abs(dirX) > 0.01f ? dirX < 0f : Facing < 0;
+        SpriteFx.PlayBehind("dash-burst", rb.position + feetOffset, left, visual);
     }
 
     // DECISIONS 12-B: a parryable shot heading at the player within ParryShotRange, or a melee enemy winding up / striking with the

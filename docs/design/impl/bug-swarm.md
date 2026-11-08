@@ -70,7 +70,7 @@ public bool Ranged => ranged;
 ```
 
 ## Play 모드 체크리스트
-현재 빌더가 만드는 Bug는 전부 **원거리(ranged) 황금 1**이다 (STG01 E-A1 첫 적, STG02/04, 보스 웨이브, `Test_Enemies`의 "Ranged"). 근접형 실루엣은 Bug + `ranged=false`인 적이 있어야 보인다 (`Test_Enemies`에서 "Ranged"의 `ranged`를 꺼서 확인).
+현재 빌더가 만드는 Bug는 전부 **원거리(ranged) 황금 1**이다 (DECISIONS 14: STG02 E-A9·E-B9, STG04 E-A9·E-B9, 보스 1·2웨이브, `Test_Enemies`의 "Ranged"). STG01과 나머지 원거리는 **원거리 시민**(Kind Citizen, 초안 그림)이라 스웜이 붙지 않는다. 원거리 벌레는 2px 느린 호버로 떠 있는 사수처럼 보이게 했다(`RangedHover`). 근접형 실루엣은 Bug + `ranged=false`인 적이 있어야 보인다 (`Test_Enemies`에서 "Ranged"의 `ranged`를 꺼서 확인).
 
 1. STG01 시작 → E-A1(LEDGE-A1 위 황금 1)이 **사각형 대신 점 떼**로 보인다. 처음 0.3초 흩어진 점이 모여 침 모양이 된다. 날개 점이 떨린다.
 2. 4배 확대(에디터 Scene 뷰 줌)로 본다: 점이 전부 1px 격자에 맞고, 반투명·번짐이 없다. 황금 침 끝 3점이 가장 밝다.

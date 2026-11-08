@@ -46,18 +46,20 @@ public static class StageBuildKit
     }
 
     // fixedNumber 0 = reroll by progress. detect = activation range (u).
-    // ranged = gold ranged bug, number fixed 1. cap > 0 = highest rolled number (placement rule: 5+ only from late STG-02).
+    // ranged = gold ranged 1: a ranged citizen (freezes on 0), or a ranged AI bug when bug = true (keeps moving on 0; DECISIONS 14).
+    // cap > 0 = highest rolled number (placement rule: 5+ only from late STG-02).
     public struct Foe
     {
-        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged; this.cap = cap; }
+        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged; this.cap = cap; this.bug = bug; }
     }
 
     // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
-    public static void TuneRanged(GameObject go, EnemyNumber number, TestEnemy te)
+    // bug = false: ranged citizen (Kind.Citizen, draft hooded sprite, freezes on 0); true: ranged AI bug (Kind.Bug, dot swarm).
+    public static void TuneRanged(GameObject go, EnemyNumber number, TestEnemy te, bool bug)
     {
-        SetInt(te, "kind", 1); // TestEnemy.Kind.Bug
+        SetInt(te, "kind", bug ? 1 : 0); // TestEnemy.Kind.Bug / Citizen
         SetBool(te, "ranged", true);
         SetFloat(te, "attackRangeX", 9f);
         SetFloat(te, "lastStrikeDelay", 0.5f);
@@ -277,7 +279,7 @@ public static class StageBuildKit
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
 
-        if (f.ranged) TuneRanged(go, number, te);
+        if (f.ranged) TuneRanged(go, number, te, f.bug);
 
         if (f.android)
         {

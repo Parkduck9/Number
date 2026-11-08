@@ -81,6 +81,17 @@ public static class SpriteFx
         return go;
     }
 
+    // Same, drawn just behind 'behind' (its sorting layer, order - 1), rotated by 'angle' degrees, and parented to 'follow' if given.
+    public static GameObject PlayBehind(string name, Vector2 position, bool flipX, SpriteRenderer behind, float angle = 0f, Transform follow = null)
+    {
+        GameObject go = Play(name, position, flipX, behind.sortingOrder - 1);
+        if (go == null) return null;
+        go.GetComponent<SpriteRenderer>().sortingLayerID = behind.sortingLayerID;
+        go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        if (follow != null) go.transform.SetParent(follow, true);
+        return go;
+    }
+
     // Dash afterimage: copy of the visual's current sprite, tinted and fading out, just behind it.
     public static void Afterimage(SpriteRenderer source, Color tint, float life)
     {

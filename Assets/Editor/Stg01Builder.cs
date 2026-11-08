@@ -361,7 +361,7 @@ public static class Stg01Builder
         if (HasProp(te, "activationRange")) SetFloat(te, "activationRange", f.detect);
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
-        if (f.ranged) StageBuildKit.TuneRanged(go, number, te);
+        if (f.ranged) StageBuildKit.TuneRanged(go, number, te, false); // STG-01: every ranged is a ranged citizen (DECISIONS 14)
     }
 
     // Face-portrait health HUD (Card A, top-left) + broadcast display UI (Card B, builds its own UI at runtime).
