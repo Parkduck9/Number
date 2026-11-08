@@ -27,6 +27,13 @@ public class RespawnManager : MonoBehaviour
         recordScene = SceneManager.GetActiveScene().name;
     }
 
+    // Pause menu: reload the scene and put the player at the last checkpoint (same path as after death).
+    public static void RestartFromCheckpoint()
+    {
+        respawnPending = true;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
     void Start()
     {
         GameFlow.InputLocked = false; // a reload mid-dialogue must not leave input locked
