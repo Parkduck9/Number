@@ -15,6 +15,11 @@ public class PlayerHealth : MonoBehaviour
 
     void Awake() => hp = maxHp;
 
+    public void RestoreFull()
+    {
+        if (!IsDead) hp = maxHp;
+    }
+
     // Returns true if damage was applied. Caller checks Invulnerable first for result priority.
     public bool TakeDamage(int amount)
     {
