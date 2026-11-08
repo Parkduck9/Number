@@ -129,7 +129,9 @@ public static class StageBuildKit
         }
         foreach (var s in EditorBuildSettings.scenes)
             if (File.Exists(s.path) && !paths.Contains(s.path)) paths.Add(s.path);
-        EditorBuildSettings.scenes = paths.Select(p => new EditorBuildSettingsScene(p, true)).ToArray();
+        var old = EditorBuildSettings.scenes.ToDictionary(s => s.path, s => s.enabled);
+        bool IsFlow(string p) => p == TitleScenePath || StageFlow.Stages.Any(n => p == $"Assets/Scenes/{n}.unity");
+        EditorBuildSettings.scenes = paths.Select(p => new EditorBuildSettingsScene(p, IsFlow(p) || (old.TryGetValue(p, out var en) && en))).ToArray();
         Debug.Log("[StageBuildKit] Build Settings: " + string.Join(", ", paths.Select(Path.GetFileNameWithoutExtension)));
     }
 
@@ -243,12 +245,10 @@ public static class StageBuildKit
 
         if (f.android)
         {
-            string field = HasProp(te, "android") ? "android" : HasProp(te, "isAndroid") ? "isAndroid" : null;
-            if (field != null) SetBool(te, field, true);
-            else if (!Todo.Contains(AndroidTodo)) Todo.Add(AndroidTodo);
+            if (HasProp(te, "kind")) SetInt(te, "kind", 2); // TestEnemy.Kind.Android
+            else Todo.Add($"{f.id}: TestEnemy.kind missing");
         }
     }
-    const string AndroidTodo = "set android after enemy-rules merge (TestEnemy has no android/isAndroid field; rename suffix (ANDROID) only)";
 
     public static void BuildLight(float intensity, Color color)
     {

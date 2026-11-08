@@ -9,6 +9,7 @@ public class TitleScreen : MonoBehaviour
 
     void Start()
     {
+        Shockwave.SetUnlocked(false); // new game: the Luddite upgrade must not leak in
         Time.timeScale = 1f;
         GameFlow.InputLocked = false;
         var cam = Camera.main;

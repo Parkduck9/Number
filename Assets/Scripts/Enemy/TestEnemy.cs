@@ -435,7 +435,7 @@ public class TestEnemy : MonoBehaviour
     // strikesLeft = 0 opens the punish window, same as the dash-through stagger.
     public void ForceStagger(float seconds)
     {
-        if (state == State.Stunned) return;
+        if (state == State.Stunned || state == State.Frozen) return;
         strikesLeft = 0;
         number.SetPulse(false);
         EnterState(State.Staggered);

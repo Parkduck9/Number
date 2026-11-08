@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 using UnityEngine;
 
 // STG-03: walk up to the Luddite, talk (blocking), receive the shockwave device, the exit door opens. Once only.
@@ -26,22 +25,7 @@ public class LudditeMeeting : MonoBehaviour
     {
         yield return null; // let the talk box lock input
         while (GameFlow.InputLocked) yield return null;
-        GrantUpgrade();
+        Shockwave.SetUnlocked(true);
         if (exit != null) exit.SetActive(true);
-    }
-
-    // PLACEHOLDER HOOK: the upgrade branch adds `public class Shockwave` with `static void SetUnlocked(bool)`.
-    // Resolved by reflection so this branch compiles without it. After the merge, replace with Shockwave.SetUnlocked(true).
-    static void GrantUpgrade()
-    {
-        foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (!asm.GetName().Name.StartsWith("Assembly-CSharp")) continue;
-            var m = asm.GetType("Shockwave")?.GetMethod("SetUnlocked", BindingFlags.Public | BindingFlags.Static);
-            if (m == null) continue;
-            m.Invoke(null, new object[] { true });
-            return;
-        }
-        Debug.Log("[LudditeMeeting] TODO(upgrade): Shockwave not found; replace this with Shockwave.SetUnlocked(true) after merge");
     }
 }

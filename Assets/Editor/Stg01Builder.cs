@@ -163,7 +163,7 @@ public static class Stg01Builder
         BuildBoard(roots[BoardSeg]); // SEG-B only (5-B); the HUD (BuildHud) shows the board of the player's zone
 
         EditorSceneManager.SaveScene(scene, ScenePath);
-        SetBuildScene();
+        StageBuildKit.SyncBuildSettings();
         AssetDatabase.SaveAssets();
         Debug.Log("[Stg01Builder] Built " + ScenePath + (Todo.Count == 0 ? "" : "\nTODO / skipped:\n - " + string.Join("\n - ", Todo)));
     }
@@ -318,15 +318,6 @@ public static class Stg01Builder
         if (HasProp(te, "activationRange")) SetFloat(te, "activationRange", f.detect);
         else Todo.Add($"{f.id}: activation range {f.detect}u (TestEnemy.activationRange missing)");
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
-    }
-
-    // STG01 goes first in Build Settings (it is the game's first level); other scenes (Prototype, tests) keep their order after it.
-    static void SetBuildScene()
-    {
-        var list = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(ScenePath, true) };
-        foreach (var s in EditorBuildSettings.scenes)
-            if (s.path != ScenePath) list.Add(s);
-        EditorBuildSettings.scenes = list.ToArray();
     }
 
     // Face-portrait health HUD (Card A, top-left) + broadcast display UI (Card B, builds its own UI at runtime).

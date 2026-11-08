@@ -97,6 +97,7 @@ public static class Stg05Builder
         // STAND-IN for the "AI bug": ranged gold 1 (mirrors EnemyVariantsTestSetup "Ranged").
         var bug = BuildTemplate(enemy, "Template-Bug", templates, t =>
         {
+            Tune(t, "kind", 1);                // TestEnemy.Kind.Bug
             Tune(t, "ranged", true);
             Tune(t, "attackRangeX", 9f);       // (T)
             Tune(t, "lastStrikeDelay", 0.5f);  // (T)
@@ -106,6 +107,7 @@ public static class Stg05Builder
         // STAND-IN for the "android": strong variant (mirrors EnemyVariantsTestSetup "Strong").
         var android = BuildTemplate(enemy, "Template-Android", templates, t =>
         {
+            Tune(t, "kind", 2);                // TestEnemy.Kind.Android
             Tune(t, "lastStrikeDelay", 0.5f);  // (T)
             Tune(t, "unparryableNumber", 7);   // (T)
             Tune(t, "maxHp", 5);               // (T)
