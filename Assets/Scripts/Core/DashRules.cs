@@ -15,9 +15,19 @@ public static class DashRules
     public const int LungeKillSparks = 2;       // extra hit-sparks on a lunge kill (cheap "shatter")
 
     // ---- LMB parry merge (PlayerController.FaceParryThreat): parry wins over the lunge when a threat is about to land ----
-    public const float ParryShotRange = 2f;     // a parryable shot this close (u) and flying at the player
+    public const float ParryShotRange = 3f;     // a parryable shot this close (u) and flying at the player (playtest 11-09: 2 was too late for humans)
     public const float ParryShotLateral = 1.3f; // ...whose line passes within this of the player's centre (half height 1 + shot 0.25)
-    // melee: an enemy in Windup/Strike whose attack box overlaps the player box (TestEnemy.MeleeThreatens)
+    // melee: an enemy in Windup/Strike whose attack box overlaps the player box and whose strike lands within this (TestEnemy.MeleeThreatens)
+    public const float ParryMeleeWindow = 0.3f; // s; was parryActiveTime 0.2 (playtest 11-09: too strict)
+    public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (capped by parryDuration); RMB keeps parryActiveTime.
+                                                 // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
+    public const float ParryHitStop = 0.1f;     // minimum hit-stop on a successful parry (Player prefab hitStopTime 0.06 read as nothing)
+
+    // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter) ----
+    public const float ShiftAssistRange = 4f;   // u (centre to centre, horizontal): enemy this close on either side -> dash behind it and counter
+    public const float ShiftAssistDy = 1.5f;    // max height difference (centres) for that search
+    public const float ShiftStepDy = 0.5f;      // feet-level gap the dash may climb/drop onto the target's ground; larger stays horizontal
+    public const float ShiftCooldown = 3.5f;    // s (was 2.0); bullet-dodge invulnerability is the dash itself, unchanged
 
     // ---- Enemy rush (TestEnemy, melee Citizen/Bug only; Android and ranged unchanged) ----
     public const float RushRange = 5f;          // player within this x-distance (and attackRangeY) but outside attackRangeX -> rush tell
@@ -25,4 +35,8 @@ public static class DashRules
     public const float RushSpeed = 16f;         // u/s (plain mid-chain Charge keeps chargeSpeed 14)
     public const float RushMaxDistance = 6f;    // give up after this distance -> back to Approach
     public const float RushCooldown = 0.6f;     // no new rush tell for this long after a rush that did not reach the player
+
+    // ---- Enemy awareness (TestEnemy; playtest 11-09 "enemies notice too slowly") ----
+    public const float MeleeDetectMin = 7f;     // melee enemies spot the player at max(builder activationRange, this) x-distance (ranged keep theirs)
+    // Melee enemies also stay aggro once they have spotted the player (no going idle when the player steps back out of range).
 }

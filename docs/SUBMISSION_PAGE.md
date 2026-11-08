@@ -51,7 +51,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 | Aim | Mouse (a crosshair locks onto an enemy in range) |
 | Attack: with a locked enemy within ~5 m, lunge through it and break it; otherwise swing in place | Left mouse |
 | Parry: left click while a bullet is incoming or you are inside an enemy's attack (parry comes first) | Left mouse |
-| Dash (invulnerable; dashes behind a very close enemy, otherwise a fixed distance; 2 s cooldown) | Shift |
+| Dodge + counter (invulnerable dash behind the nearest enemy within ~4 m, then turn and strike it; with no enemy near, a fixed-distance dash that ends facing back; 3.5 s cooldown) | Shift |
 | Interact / talk / hack a broadcast board | E |
 | Shockwave (unlocked at the Luddite hideout, stage 3; staggers enemies in front of you; 5 s cooldown) | Space |
 | Pause / language | Esc or P |

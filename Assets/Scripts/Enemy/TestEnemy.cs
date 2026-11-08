@@ -79,6 +79,7 @@ public class TestEnemy : MonoBehaviour
     float nextSparkAt;        // Overload: next spark burst
     bool rushing;             // DECISIONS 12: the current Charge is a rush (RushSpeed, RushMaxDistance)
     float nextRushAt;         // no new rush tell before this
+    bool aggro;               // melee: spotted the player once -> stays active (DashRules.MeleeDetectMin)
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -202,7 +203,11 @@ public class TestEnemy : MonoBehaviour
 
     bool IsActive()
     {
-        return activationRange <= 0f || Mathf.Abs(player.transform.position.x - transform.position.x) <= activationRange; // height ignored
+        if (activationRange <= 0f || aggro) return true;
+        float range = ranged ? activationRange : Mathf.Max(activationRange, DashRules.MeleeDetectMin);
+        if (Mathf.Abs(player.transform.position.x - transform.position.x) > range) return false; // height ignored
+        aggro = !ranged; // melee: once spotted, keep chasing (playtest 11-09)
+        return true;
     }
 
     // Ranged: player closer than keepDistance (same height band) and we have not been backing off too long.
@@ -469,10 +474,13 @@ public class TestEnemy : MonoBehaviour
 
     // LMB parry merge (DECISIONS 12-B): a parryable melee strike is about to land (Windup with <= imminentWindow left, or Strike)
     // and its box overlaps a player (0.9 x 2) centred at playerPos. Earlier in the windup LMB stays a lunge/swing (user: "직전에만 패링").
-    public bool MeleeThreatens(Vector2 playerPos, float imminentWindow)
+    // eta = seconds until the strike lands (0 in Strike).
+    public bool MeleeThreatens(Vector2 playerPos, float imminentWindow, out float eta)
     {
+        eta = 0f;
         if (ranged || (state != State.Windup && state != State.Strike) || !gameObject.activeInHierarchy) return false;
-        if (state == State.Windup && WindupWait() - (Time.time - stateEnteredAt) > imminentWindow) return false;
+        if (state == State.Windup) eta = Mathf.Max(0f, WindupWait() - (Time.time - stateEnteredAt));
+        if (eta > imminentWindow) return false;
         if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;

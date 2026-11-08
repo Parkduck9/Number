@@ -1,0 +1,193 @@
+{
+ "frames": [
+  {
+   "filename": "run-dust 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 1",
+   "frame": {
+    "x": 80,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 2",
+   "frame": {
+    "x": 0,
+    "y": 40,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 3",
+   "frame": {
+    "x": 80,
+    "y": 40,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 4",
+   "frame": {
+    "x": 0,
+    "y": 80,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 5",
+   "frame": {
+    "x": 80,
+    "y": 80,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  },
+  {
+   "filename": "run-dust 6",
+   "frame": {
+    "x": 0,
+    "y": 120,
+    "w": 80,
+    "h": 40
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 40
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 40
+   },
+   "duration": 67
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "run-dust.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 160,
+   "h": 160
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "run-dust",
+    "from": 0,
+    "to": 6,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "run-dust",
+   "name": "Run dust",
+   "fps": 15,
+   "loop": false,
+   "frames": 7,
+   "frameSize": [
+    80,
+    40
+   ],
+   "pivot": [
+    36,
+    36
+   ],
+   "columns": 2
+  }
+ }
+}

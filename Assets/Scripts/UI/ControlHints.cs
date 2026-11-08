@@ -21,13 +21,25 @@ public class ControlHints : MonoBehaviour
             new[] { "ctrl_key_a", "A", "", "" },
             new[] { "ctrl_key_d", "D", "Move", "이동" },
             new[] { "ctrl_key_w", "W", "Jump", "점프" },
-            new[] { "ctrl_key_shift", "SHIFT", "Dash", "대시" },
+            new[] { "ctrl_key_shift", "SHIFT", "Dodge + counter", "회피 + 반격" },
         } },
         { "STG01", new[]
         {
             new[] { "ctrl_mouse_left", "", "Attack · Parry", "공격 · 패링" },
         } },
+        { "Shockwave", new[] // not a scene: shown by Show("Shockwave") when the Luddite unlocks it (STG03)
+        {
+            new[] { "ctrl_key_space", "SPACE", "Shockwave (stagger enemies in front)", "충격파 (앞쪽 적 경직)" },
+        } },
     };
+
+    // Shows a non-scene strip once per run (e.g. an ability unlocked mid-level).
+    public static void Show(string id)
+    {
+        if (!DraftSprites.Use || !Hints.TryGetValue(id, out var entries) || Shown.Contains(id)) return;
+        Shown.Add(id);
+        new GameObject("ControlHints").AddComponent<ControlHints>().Build(entries);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Shown.Clear();

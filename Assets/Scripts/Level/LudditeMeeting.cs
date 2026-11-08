@@ -26,6 +26,7 @@ public class LudditeMeeting : MonoBehaviour
         yield return null; // let the talk box lock input
         while (GameFlow.InputLocked) yield return null;
         Shockwave.SetUnlocked(true);
+        ControlHints.Show("Shockwave"); // Space icon + what it does, a few playable seconds
         if (exit != null) exit.SetActive(true);
     }
 }

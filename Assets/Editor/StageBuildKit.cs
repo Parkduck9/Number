@@ -134,6 +134,20 @@ public static class StageBuildKit
         SyncBuildSettings();
     }
 
+    // One click for playtests: every scene the game flow uses (Title, STG-00..05) + build order.
+    [MenuItem("NUMBER/Build EVERYTHING (Title + STG-00~05)", priority = 0)]
+    public static void BuildEverything()
+    {
+        TitleSceneBuilder.Build();
+        Stg00Builder.Build();
+        Stg01Builder.Build();
+        Stg02Builder.Build();
+        Stg03Builder.Build();
+        Stg04Builder.Build();
+        Stg05Builder.Build();
+        SyncBuildSettings();
+    }
+
     // Build Settings order: Title, then StageFlow.Stages (existing files only), then every other existing entry as it was.
     [MenuItem("NUMBER/Sync Build Settings (stage order)")]
     public static void SyncBuildSettings()

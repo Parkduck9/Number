@@ -84,6 +84,7 @@ public class Shockwave : MonoBehaviour
         Vector2 center = Center(player.Facing);
         Vector2 size = new Vector2(range, height);
         ParryFx.Swing(center, size, fxColor, null, player.Facing, 0.15f, 0f);
+        StartCoroutine(WaveFront(player.Facing));
 
         hitEnemies.Clear();
         foreach (Collider2D col in Physics2D.OverlapBoxAll(center, size, 0f, player.EnemyMask))
@@ -92,6 +93,33 @@ public class Shockwave : MonoBehaviour
             if (enemy != null && hitEnemies.Add(enemy)) enemy.ForceStagger(staggerSeconds);
         }
         Used?.Invoke();
+    }
+
+    // Readable "wave": two thin bars race from the player to the box edge, growing taller and fading (code-drawn, no art).
+    System.Collections.IEnumerator WaveFront(int facing)
+    {
+        const float time = 0.3f;
+        Vector2 origin = transform.position;
+        var bars = new SpriteRenderer[2];
+        for (int i = 0; i < bars.Length; i++)
+        {
+            bars[i] = new GameObject("ShockwaveFront").AddComponent<SpriteRenderer>();
+            bars[i].sprite = ParryFx.Square;
+            bars[i].sortingOrder = 91;
+        }
+        for (float t = 0f; t < time; t += Time.deltaTime)
+        {
+            for (int i = 0; i < bars.Length; i++)
+            {
+                float k = Mathf.Clamp01(t / time - i * 0.25f); // second bar trails the first
+                bars[i].transform.position = origin + new Vector2(facing * range * k, 0f);
+                bars[i].transform.localScale = new Vector3(0.15f, height * (0.5f + 0.6f * k), 1f);
+                Color c = fxColor; c.a = (1f - k) * (i == 0 ? 0.9f : 0.5f);
+                bars[i].color = c;
+            }
+            yield return null;
+        }
+        foreach (var b in bars) Destroy(b.gameObject);
     }
 
     Vector2 Center(int facing) => (Vector2)transform.position + new Vector2(facing * range * 0.5f, 0f);
@@ -111,7 +139,8 @@ public class Shockwave : MonoBehaviour
         if (hudIcon != null) // draft icon: caption is just the key / the seconds left
         {
             hudIcon.sprite = ready ? iconReady : iconCooldown;
-            hudText.text = ready ? "SPACE" : $"{tenths / 10f:0.0}s";
+            hudText.text = ready ? Loc.T("SPACE  Shockwave", "SPACE  충격파")
+                                 : Loc.T($"SPACE  {tenths / 10f:0.0}s", $"SPACE  {tenths / 10f:0.0}초");
         }
         else
             hudText.text = ready ? Loc.T("SPACE  Shockwave: READY", "SPACE  충격파: 준비")
@@ -135,7 +164,7 @@ public class Shockwave : MonoBehaviour
         var rt = UiKit.Rect("Text", canvas.transform, Vector2.zero, new Vector2((icon ? 16f + 48f + 8f : 16f) + 180f, icon ? 40f : 24f), new Vector2(360f, 24f));
         hudText = rt.gameObject.AddComponent<TextMeshProUGUI>();
         if (UiTheme.Current.font != null) hudText.font = UiTheme.Current.font;
-        hudText.fontSize = 18;
+        hudText.fontSize = 20;
         hudText.alignment = TextAlignmentOptions.Left;
         hudText.textWrappingMode = TextWrappingModes.NoWrap;
         hudText.raycastTarget = false;

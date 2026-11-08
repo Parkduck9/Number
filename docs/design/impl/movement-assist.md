@@ -64,8 +64,17 @@ TestEnemy FindTargetAhead(float maxDx, float maxDy, out Collider2D col)
 - `GameFlow.InputLocked` 중에는 `stateEnteredAt`을 밀어 주니 미끄러짐도 그만큼 연장된다. FixedUpdate는 Locked 중 Attack에서 velocity를 쓰지 않도록 `if (GameFlow.InputLocked) return;`을 FixedUpdate 첫 줄에 둔다 (현재 Locomotion도 Locked 중 MoveX=0으로 쓰고 있어 동작은 같다).
 - 안드로이드·연타 중 적도 접근 대상이다 (막힘 판정은 `ReceivePlayerHit` 그대로).
 
-## 3. B) Shift 대시: 뒤잡기 / 정거리
-### 동작
+## 3. B) Shift 대시: 뒤잡기 / 정거리 — **DECISIONS 13으로 바뀜 (2026-11-08 밤): 회피 + 반격**
+> 지금 동작 (`PlayerController.TryPlanDashBehind` / `PlanBehind` / `DoShiftCounter`, 수치는 `DashRules.cs`):
+> - **대상 찾기 (보정):** 수평 `ShiftAssistRange` 4u · 높이차 `ShiftAssistDy` 1.5u 안의 가장 가까운 적 (Stunned·Frozen·비활성 제외). **누른 방향 → (안 누르면) 바라보는 쪽 → 반대쪽** 순서. 한쪽 대상의 뒤 자리가 막히면 다른 쪽을 본다.
+> - **대상 있음:** 무적 대시로 적 뒤 자리(적 반폭 + 0.45 + 0.3)까지. 사이에 벽(수평 BoxCast, 일방 발판 무시)·자리가 벽 안·땅에서 시작했는데 발밑이 허공이면 그 대상은 못 씀. 발 높이 차가 `ShiftStepDy` 0.5u 이하면 적의 땅 높이로 살짝 올라가거나 내려가고, 그보다 크면 수평 그대로. 대시 시간 = 거리/24 (0.08~0.25초), 끝점에 정확히 닿게 속도를 맞춘다.
+> - **대시 끝:** 적 쪽으로 돌아서 바로 **반격 1타** (`HitEnemy` — 좌클릭과 같은 경로: 일반 적 한 방, 히트스톱·흔들림·Hit 소리. 안드로이드는 과부하가 아니면 흰 번쩍 + 패링 소리 작게 = 막힘). 같은 순간 공격 상자 안의 다른 적도 맞는다. Swing 소리 + 베기 이펙트.
+> - **회피 판정 그대로:** 적의 Strike는 대시 중에 처리되므로(`TestEnemy.DoStrike`의 `DashStart` 분기 그대로) 마지막 일격 경직·안드로이드 7번째 과부하가 먼저 성립하고, 그 뒤 대시 끝 반격이 과부하된 안드로이드를 쓰러뜨릴 수 있다.
+> - **대상 없음:** 정거리 대시(0.15초, 3.6u) 후 **뒤돌아본다** (`Facing` 반전, 이동키를 누르고 있으면 다음 프레임에 그쪽으로).
+> - **쿨다운 `ShiftCooldown` 3.5초** (전 2초, 프리팹 `dashCooldown` 필드는 지움). 탄 피하기 무적 = 대시 상태, 그대로. 반격 뒤 상태는 Locomotion이라 대시 중 누른 좌클릭 버퍼는 대시가 끝나자마자 나간다.
+> - 지운 필드: `dashCooldown`, `dashBehindRange`, `dashBehindMaxDy`, `dashBehindFaceBack`. 아래는 DECISIONS 11 때의 기록이다 (6절 9·10·16·18번도 옛 내용).
+
+### 동작 (DECISIONS 11, 기록)
 `TryDash` → `EnterState(Dash)` 때 `FindTargetAhead(dashBehindRange, dashBehindMaxDy, …)`. 적이 있고 **뒤 자리가 비어 있으면** 그 자리까지 대시(속도 24 유지, **시간이 거리에 맞게 달라짐**). 아니면 지금처럼 `dashDuration` 0.15초 정거리(3.6u). 무적·잔상·쿨다운은 같다.
 
 ### 추가 필드 (Header "Dash behind (T)")

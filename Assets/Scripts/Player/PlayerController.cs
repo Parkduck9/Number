@@ -36,18 +36,15 @@ public class PlayerController : MonoBehaviour
     [Header("Dash (T)")]
     [SerializeField] float dashSpeed = 24f;
     [SerializeField] float dashDuration = 0.15f;
-    [SerializeField] float dashCooldown = 2.0f;
+    // cooldown: DashRules.ShiftCooldown (DECISIONS 13)
 
-    // DECISIONS 11 / docs/design/impl/movement-assist.md (attack auto-approach replaced by the DECISIONS 12 lunge: DashRules, impl/dash-attack.md)
+    // DECISIONS 11/13 / docs/design/impl/movement-assist.md (attack auto-approach replaced by the DECISIONS 12 lunge: DashRules, impl/dash-attack.md)
     [Header("Ledge probe (T)")]
     [SerializeField] float ledgeProbeDepth = 1.5f;    // ground must exist this far below the target feet
 
-    [Header("Dash behind (T)")]
-    [SerializeField] float dashBehindRange = 2.0f;    // 1.5 + tolerance
-    [SerializeField] float dashBehindMaxDy = 1.0f;
+    [Header("Dash behind (T)")] // search range / dy: DashRules.ShiftAssistRange / ShiftAssistDy
     [SerializeField] float dashBehindClearance = 0.3f; // gap between the two boxes at the landing spot
     [SerializeField] float dashMinDuration = 0.08f;
-    [SerializeField] bool dashBehindFaceBack = true;  // end a dash-behind facing the enemy's back
 
     [Header("Hurt (T)")]
     [SerializeField] Vector2 knockback = new Vector2(5f, 4f);
@@ -92,13 +89,17 @@ public class PlayerController : MonoBehaviour
     readonly Collider2D[] enemyHits = new Collider2D[32];
     float dashEndsAfter;               // length of the current dash (dashDuration, or shorter/longer for a dash-behind)
     bool dashBehindActive;
+    TestEnemy dashTarget;               // DECISIONS 13: enemy the Shift dash goes behind and counters at the dash end
+    Collider2D dashTargetCol;
+    Vector2 dashVelocity;               // Shift dash velocity (horizontal, plus a small vertical step onto the target's ground level)
     bool pendingParry, pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
     public bool Grounded => grounded;
-    public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveTime;
+    public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveFor;
+    float parryActiveFor; // parryActiveTime, or longer for an LMB parry so it covers the threat it was chosen for (DashRules.ParryCoverMargin)
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
@@ -194,8 +195,11 @@ public class PlayerController : MonoBehaviour
                 SpawnAfterimage(now);
                 if (elapsed >= dashEndsAfter)
                 {
-                    if (dashBehindActive && dashBehindFaceBack) Facing = -Facing; // a held direction re-faces next frame
+                    // DECISIONS 13: end turned around (a held direction re-faces next frame); with a target, counter it right away.
+                    // Enemy strikes during the dash were already resolved as dodges (stagger / Android overload), so the counter comes after.
                     EnterState(State.Locomotion);
+                    if (dashBehindActive) DoShiftCounter();
+                    else Facing = -Facing;
                 }
                 break;
             case State.Hurt:
@@ -238,7 +242,12 @@ public class PlayerController : MonoBehaviour
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
             // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
-            EnterState(FaceParryThreat() ? State.Parry : State.Attack);
+            if (FaceParryThreat(out float eta))
+            {
+                EnterState(State.Parry);
+                parryActiveFor = Mathf.Clamp(eta + DashRules.ParryCoverMargin, parryActiveTime, parryDuration);
+            }
+            else EnterState(State.Attack);
             return;
         }
 
@@ -267,7 +276,7 @@ public class PlayerController : MonoBehaviour
     {
         if (!DashPressed || now < dashCooldownUntil) return false;
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1; // dash toward the held direction (also cancels an attack/parry)
-        dashCooldownUntil = now + dashCooldown;
+        dashCooldownUntil = now + DashRules.ShiftCooldown;
         EnterState(State.Dash);
         return true;
     }
@@ -295,14 +304,25 @@ public class PlayerController : MonoBehaviour
                 break;
             case State.Parry:
                 attackBufferedUntil = -999f;
+                parryActiveFor = parryActiveTime;
                 if (grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
                 break;
             case State.Dash:
                 rb.gravityScale = 0f;
                 DashStart = rb.position;
-                dashBehindActive = TryPlanDashBehind(out float behindDist);
-                dashEndsAfter = dashBehindActive ? Mathf.Clamp(behindDist / dashSpeed, dashMinDuration, 0.25f) : dashDuration;
-                rb.linearVelocity = new Vector2(Facing * dashSpeed, 0f);
+                dashBehindActive = TryPlanDashBehind(out Vector2 behindOffset);
+                if (dashBehindActive)
+                {
+                    dashEndsAfter = Mathf.Clamp(Mathf.Abs(behindOffset.x) / dashSpeed, dashMinDuration, 0.25f);
+                    dashVelocity = behindOffset / dashEndsAfter; // lands on the spot
+                }
+                else
+                {
+                    dashTarget = null;
+                    dashEndsAfter = dashDuration;
+                    dashVelocity = new Vector2(Facing * dashSpeed, 0f);
+                }
+                rb.linearVelocity = dashVelocity;
                 Sfx.Play(SfxId.Dash);
                 break;
             case State.Dead:
@@ -319,7 +339,7 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = new Vector2(input.MoveX * moveSpeed, rb.linearVelocity.y);
                 break;
             case State.Dash:
-                rb.linearVelocity = new Vector2(Facing * dashSpeed, 0f);
+                rb.linearVelocity = dashVelocity;
                 break;
             case State.Attack:
                 if (!lunging || GameFlow.InputLocked) break;
@@ -329,20 +349,20 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Nearest enemy on the Facing side within maxDx / maxDy of the player's centre that can still be hit. null = none.
-    TestEnemy FindTargetAhead(float maxDx, float maxDy, out Collider2D hit)
+    // Nearest enemy on the given side (+1 right / -1 left) within maxDx / maxDy of the player's centre that can still be hit. null = none.
+    TestEnemy FindTargetAhead(int side, float maxDx, float maxDy, out Collider2D hit)
     {
         hit = null;
         TestEnemy best = null;
         float bestDx = float.MaxValue;
         Vector2 pos = rb.position;
-        Vector2 center = pos + new Vector2(Facing * maxDx * 0.5f, 0f);
+        Vector2 center = pos + new Vector2(side * maxDx * 0.5f, 0f);
         foreach (Collider2D col in Physics2D.OverlapBoxAll(center, new Vector2(maxDx + 1f, maxDy * 2f + 2f), 0f, enemyMask))
         {
             TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
             if (enemy == null || enemy.Current == TestEnemy.State.Stunned || enemy.Current == TestEnemy.State.Frozen || !enemy.gameObject.activeInHierarchy) continue; // downed / vanishing / frozen (STG-00)
             Vector2 d = (Vector2)enemy.transform.position - pos;
-            float dx = d.x * Facing;
+            float dx = d.x * side;
             if (dx <= 0f || dx > maxDx || Mathf.Abs(d.y) > maxDy || dx >= bestDx) continue;
             bestDx = dx;
             best = enemy;
@@ -460,12 +480,13 @@ public class PlayerController : MonoBehaviour
     }
 
     // DECISIONS 12-B: a parryable shot heading at the player within ParryShotRange, or a melee enemy winding up / striking with the
-    // player inside its attack box. Faces the nearest such threat (parry is front-only) and returns true.
-    bool FaceParryThreat()
+    // player inside its attack box. Faces the nearest such threat (parry is front-only) and returns true. eta = seconds until it lands.
+    bool FaceParryThreat(out float eta)
     {
         Vector2 pos = rb.position;
         float bestDist = float.MaxValue;
         int face = 0;
+        eta = 0f;
         foreach (EnemyProjectile p in EnemyProjectile.Active)
         {
             if (p == null || !p.Parryable) continue;
@@ -477,15 +498,17 @@ public class PlayerController : MonoBehaviour
             if (Mathf.Abs(vn.x * to.y - vn.y * to.x) > DashRules.ParryShotLateral) continue; // passes beside the body
             bestDist = dist;
             face = Mathf.Abs(v.x) > 0.01f ? (v.x > 0f ? -1 : 1) : (to.x < 0f ? 1 : -1); // ReceiveEnemyHit judges shots by travel direction
+            eta = Mathf.Max(0f, dist - 0.7f) / v.magnitude; // contact ~0.7u before the centre (player half 0.45 + shot half 0.25)
         }
         int n = Physics2D.OverlapCircle(pos, 4f, enemyFilter, enemyHits);
         for (int i = 0; i < n; i++)
         {
             TestEnemy enemy = enemyHits[i].GetComponentInParent<TestEnemy>();
-            if (enemy == null || !enemy.MeleeThreatens(pos, parryActiveTime)) continue;
+            if (enemy == null || !enemy.MeleeThreatens(pos, DashRules.ParryMeleeWindow, out float strikeEta)) continue;
             float dist = Vector2.Distance(enemy.transform.position, pos);
             if (dist >= bestDist) continue;
             bestDist = dist;
+            eta = strikeEta;
             face = enemy.transform.position.x >= pos.x ? 1 : -1;
         }
         if (face == 0) return false;
@@ -493,19 +516,65 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
-    // B) Dash-behind: an enemy very close ahead -> dash to the clear spot just behind it. false = use the fixed-distance dash.
-    bool TryPlanDashBehind(out float distance)
+    // DECISIONS 13 Shift: nearest enemy within ShiftAssistRange / ShiftAssistDy, the Facing side (= held direction, set by TryDash)
+    // first, then the other side. Plans the dash to the clear spot just behind it and turns Facing toward that side.
+    // offset = dash displacement. false = no usable target (none, or every behind spot is in a wall / over a gap / walled off).
+    bool TryPlanDashBehind(out Vector2 offset)
     {
-        distance = 0f;
-        TestEnemy enemy = FindTargetAhead(dashBehindRange, dashBehindMaxDy, out Collider2D col);
-        if (enemy == null) return false;
+        offset = Vector2.zero;
+        dashTarget = null;
+        int first = Facing;
+        for (int k = 0; k < 2; k++)
+        {
+            int side = k == 0 ? first : -first;
+            TestEnemy enemy = FindTargetAhead(side, DashRules.ShiftAssistRange, DashRules.ShiftAssistDy, out Collider2D col);
+            if (enemy == null || !PlanBehind(enemy, col, side, out offset)) continue;
+            Facing = side;
+            dashTarget = enemy;
+            dashTargetCol = col;
+            return true;
+        }
+        return false;
+    }
+
+    bool PlanBehind(TestEnemy enemy, Collider2D col, int side, out Vector2 offset)
+    {
         const float halfW = 0.45f, halfH = 1f; // player box 0.9 x 2 (PrototypeSceneBuilder)
-        float targetX = enemy.transform.position.x + Facing * (col.bounds.extents.x + halfW + dashBehindClearance);
-        distance = (targetX - rb.position.x) * Facing;
-        Vector2 target = new Vector2(targetX, rb.position.y);
+        Vector2 pos = rb.position;
+        float targetX = enemy.transform.position.x + side * (col.bounds.extents.x + halfW + dashBehindClearance);
+        // small step onto the enemy's ground level (its feet vs ours); a bigger height gap keeps the dash horizontal
+        float step = col.bounds.min.y - (pos.y + feetOffset.y);
+        Vector2 target = new Vector2(targetX, Mathf.Abs(step) <= DashRules.ShiftStepDy ? pos.y + step : pos.y);
+        offset = target - pos;
+        float dist = offset.x * side;
+        if (dist <= 0.05f) return false;
+        if (WallDistance(pos, new Vector2(side, 0f), dist) < dist - 0.01f) return false; // wall between us and the spot
         if (Physics2D.OverlapBox(target, new Vector2(halfW * 2f - 0.1f, halfH * 2f - 0.2f), 0f, groundMask) != null) return false; // spot inside a wall
         if (grounded && !GroundBelow(target)) return false; // spot over a gap
         return true;
+    }
+
+    // DECISIONS 13 counter at the end of a Shift dash-behind: turn to the target and strike it (same HitEnemy path as LMB).
+    // Normal enemies die in one hit; a non-overloaded Android blocks (white flash + clank). Other enemies in the swing box are hit too.
+    void DoShiftCounter()
+    {
+        TestEnemy target = dashTarget;
+        dashTarget = null;
+        if (target != null && target.gameObject.activeInHierarchy)
+        {
+            float dx = target.transform.position.x - rb.position.x;
+            if (Mathf.Abs(dx) > 0.01f) Facing = dx > 0f ? 1 : -1;
+        }
+        else Facing = -Facing;
+        swingHits.Clear();
+        swingHitStops = 0;
+        Sfx.Play(SfxId.Swing);
+        ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
+        if (target != null && dashTargetCol != null && !HitEnemy(target, dashTargetCol, rb.position, false)) Sfx.Play(SfxId.Parry, 0.5f); // blocked: clank
+        int n = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+            HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], AttackCenter(), false);
+        dashTargetCol = null;
     }
 
     void DoAttackHit()
@@ -569,7 +638,7 @@ public class PlayerController : MonoBehaviour
             parryGuardUntil = Time.time + parryGuardTime;
             SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
             Sfx.Play(SfxId.Parry);
-            StartHitStop(hitStopTime);
+            StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop));
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
         }

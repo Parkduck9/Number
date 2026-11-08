@@ -12,23 +12,30 @@ DECISIONS 11의 "공격 자동 접근"을 대체한다. 수치는 모두 `Assets
 | `LungeStopInFront` | 1.0 u | 안드로이드(과부하 아님)·뒤가 낭떠러지일 때 적 앞에서 멈춤 |
 | `LungeSweepWidth` | 1.4 u | 돌진 경로 판정 두께 (시작점 ~ 몸 앞 0.6u) |
 | `LungeMaxHitStops` / `LungeKillSparks` | 2 / 2 | 한 번 공격에 히트스톱 최대 2번 / 돌진 처치 시 추가 불꽃 |
-| `ParryShotRange` / `ParryShotLateral` | 2 / 1.3 u | 좌클릭이 패링이 되는 탄 거리 / 탄 진로와 몸 중심 거리 |
+| `ParryShotRange` / `ParryShotLateral` | 3 / 1.3 u | 좌클릭이 패링이 되는 탄 거리 / 탄 진로와 몸 중심 거리 (11-09 플레이: 2 → 3) |
+| `ParryMeleeWindow` | 0.3 s | 근접 일격이 이 시간 안에 들어올 때만 좌클릭 = 패링 (11-09: 0.2 → 0.3) |
+| `ParryCoverMargin` | 0.05 s | 좌클릭 패링은 고른 위협이 닿을 때 + 이 값까지 유효 (최소 parryActiveTime 0.2, 최대 parryDuration 0.35). 우클릭은 0.2 그대로 |
+| `ParryHitStop` | 0.1 s | 패링 성공 히트스톱 최소값 (프리팹 0.06은 거의 안 보였음) |
+| `MeleeDetectMin` | 7 u | 근접 적 인지 거리 = max(빌더 값, 7). 한 번 보면 계속 쫓음. 원거리는 빌더 값 그대로 |
 | `RushRange` / `RushWindup` | 5 u / 0.3 s | 적 돌진 예고 거리 / 예고 시간 |
 | `RushSpeed` / `RushMaxDistance` / `RushCooldown` | 16 u/s / 6 u / 0.6 s | 적 돌진 속도 / 최대 거리 / 빗나간 뒤 재돌진 대기 |
 | `Juice.NormalTimeMul` / `NormalSpeedMul` | 0.55 / 1.5 | 일반 적 템포 (전 0.65 / 1.25) |
+| `ShiftAssistRange` / `ShiftAssistDy` | 4 / 1.5 u | Shift 회피+반격 대상 찾기 (누른 방향 → 바라보는 쪽 → 반대쪽). DECISIONS 13, [movement-assist.md](movement-assist.md) 3절 |
+| `ShiftStepDy` | 0.5 u | 대상의 땅 높이로 살짝 오르내리는 한도 (넘으면 수평 대시) |
+| `ShiftCooldown` | 3.5 s | Shift 쿨다운 (전 2초) |
 
 ## 동작
 - **좌클릭 순서: 패링 > 돌진 > 제자리 공격.**
   - 패링: 패링 가능한 탄이 2u 안에서 날아오거나, 근접 적이 예고(Windup)·타격 중이고 그 공격 판정 안에 플레이어가 있으면 그 위협 쪽을 보고 패링한다. 막을 수 없는 마지막 일격(7)은 패링 대상이 아니다. 우클릭은 기존 패링(바라보는 쪽) 그대로.
   - 돌진: 원뿔 안 대상이 있으면 대상 쪽으로 돌진(중력 0, 잔상). 경로의 일반 적은 전부 한 방. 안드로이드에 막히면 그 앞에서 멈춘다. 벽은 BoxCast로 잘라 멈추고(일방 발판 무시), 땅에서 시작했으면 끝점 아래 땅이 없을 때 적 바로 뒤 → 적 앞 순으로 줄이고, 그래도 없으면 제자리 공격.
   - 제자리 공격: 기존 판정 상자(0.08초 뒤), 마우스 쪽을 본다.
-- 돌진 중 무적 없음. Shift 대시(적 뒤로 이동·탄 회피)는 그대로.
+- 돌진 중 무적 없음. Shift는 DECISIONS 13의 회피 + 반격(적 뒤로 무적 대시 → 돌아서서 1타, 적이 없으면 정거리 후 뒤돌아봄, 쿨다운 3.5초).
 - **조준점:** `UI/MouseCrosshair.cs`가 11×11 픽셀 십자(코드로 그림)를 마우스 위치에 그린다. 대상이 잡히면 십자가 하늘색으로 바뀌고 적 콜라이더 네 모서리에 꺾쇠가 붙는다. 대화·일시정지 중에는 OS 커서를 보이고 조준점을 숨긴다.
 - **적 돌진:** 일반 근접 적(시민·벌레)이 사거리 밖 5u 안에 플레이어를 보면 0.3초 예고(Windup 색·펄스·예고음) 뒤 16 u/s로 돌진. 닿으면 바로 연타 시작(마지막 일격 지연 규칙 유지). 6u 안에 못 닿으면 걷기로 돌아가고 0.6초 동안 다시 돌진하지 않는다. 안드로이드·원거리는 그대로.
 
 ## 제거 방법
 - 돌진만 끄기: `PlayerController.EnterState(Attack)`의 `TryStartLunge(aim)` 호출을 `false`로 바꾸면 제자리 공격만 남는다.
-- 좌클릭 패링 끄기: `UpdateLocomotion`의 `FaceParryThreat() ? State.Parry : State.Attack`를 `State.Attack`으로.
+- 좌클릭 패링 끄기: `UpdateLocomotion`의 `if (FaceParryThreat(out float eta)) {...} else` 블록을 `EnterState(State.Attack)` 한 줄로.
 - 조준점 끄기: `PlayerController.Awake`의 `MouseCrosshair.Create(this)` 줄 삭제.
 - 적 돌진 끄기: `TestEnemy` Approach의 `RushWindup` 분기 삭제.
 
