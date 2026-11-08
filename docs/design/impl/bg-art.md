@@ -45,7 +45,7 @@
 - 공통: 꺼진 네온 간판 틀이 거의 없다. 승인 뒤 간판 자리를 정해 간판별 PNG + `neon_list.csv`(LIGHTING 2.3)를 만든다.
 - 검토 페이지: https://claude.ai/artifact/9FoUegC8CiyL3dLcUcMwBq (비공개)
 
-## 5. Codex 프롬프트 (원문, 영어)
+## 4. Codex 프롬프트 (원문, 영어)
 
 ````text
 You are the asset role in this repo (read AGENTS.md). Task: generate 6 DRAFT background source images with your image generation tool (image_gen). Do NOT edit any scripts, scenes, prefabs or files under Assets/. Do NOT touch CREDITS.md (Claude records it). Only write the 6 PNG files below.
@@ -81,5 +81,5 @@ Top floor of the Embector headquarters, one room, side view, about 16:9. A thron
 When done, list the 6 saved paths and the pixel size of each file. Final answer only that list.
 ````
 
-## 4. 크레딧
+## 5. 크레딧
 - 이 그림들은 **AI 생성(Codex CLI / OpenAI GPT 이미지 생성) + Claude 스크립트 도트화**다. 게임에 쓰게 되면 [CREDITS.md](../../../CREDITS.md)의 AI 생성 에셋·AI 공개 항목에 반드시 추가한다 (공식 규칙 7(d)). 시안 단계라 아직 CREDITS.md에는 넣지 않았다.
