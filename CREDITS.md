@@ -16,6 +16,7 @@
 | 에셋 | 도구 | 사용 위치 |
 |---|---|---|
 | number-ember (last-strike red flame on enemy numbers) — new effect written by Claude on pixelfx (MIT, Patch / Hugo Duprez; flame-tongue code adapted from Sprite Fusion fire, MIT, Hugo Duprez). Source: Assets/Art/FX/Source/number-ember.js.txt | Claude Opus (Claude Code) + pixelfx | Assets/Resources/FX/number-ember.png |
+| Sound effects ×12 + BGM ×2 (field, boss) — synthesized from scratch by a generator script Claude wrote (oscillators/noise, modal bells, Karplus-Strong plucks; no samples). Released CC0 by the team. Source: Assets/Audio/Source/gen-audio.mjs.txt | Claude Opus (Claude Code) | Assets/Audio/Resources/Sfx/, Assets/Audio/Resources/Bgm/ |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
