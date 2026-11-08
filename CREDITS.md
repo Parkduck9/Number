@@ -14,6 +14,7 @@
 ## AI-generated assets
 | 에셋 | 도구 | 사용 위치 |
 |---|---|---|
+| HUD 시안: 얼굴 체력 6단계, 방송 숫자, 홀로그램 숫자 창 (미승인 시안) | Codex CLI (GPT-6.1 Sol)가 쓴 Python 스크립트로 픽셀을 직접 찍음, Claude Opus 검토 | Assets/Art/Drafts/HUD/ |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
