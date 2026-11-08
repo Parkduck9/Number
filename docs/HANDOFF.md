@@ -87,7 +87,7 @@
    - **D6 대사**: [design/DIALOGUE_DRAFT.md](design/DIALOGUE_DRAFT.md) 초안을 읽고 고치기 → Claude가 `Assets/Data/Dialogue/`에 넣음
    - **D9 팀원 이름·역할·만 19세 이상·자격** → CREDITS.md, SUBMISSION_PAGE.md (없으면 **제출 불가**)
 4. 🎨 **Codex 에셋 시안 확인** (main에 커밋됨, 게임에는 미연결, 각 `*_preview4x.png`로 보기). 승인한 것만 게임에 연결.
-   - `Assets/Art/Drafts/Sprites/`: 주인공 대기 2·공격 3·대시 2·피격 1프레임 (`ad5e0a4`, **대시 프레임 품질이 약함**), 안드로이드 공격 3·원거리 시민 3·러다이트 NPC 대기 2 (`987da1c`)
+   - `Assets/Art/Drafts/Sprites/`: 주인공 대기 2·공격 3·대시 2·피격 1프레임 (`ad5e0a4` + 개선판 `228a47a`, 대시 프레임은 여전히 약한 편), 안드로이드 공격 3·원거리 시민 3·러다이트 NPC 대기 2 (`987da1c`)
    - `Assets/Art/Drafts/UI/`: 조작 힌트 낙서 아이콘(마우스 좌·우, Shift, E, Space, W·A·D — 키 글자는 게임에서 폰트로 얹음), 충격파 HUD 아이콘, 보스 Embector 화면 얼굴 2프레임 (`e230c02`)
    - 모두 24색 팔레트(`Assets/Art/Palette/`)로 양자화됨.
 5. 승인 결과대로 연결 작업 → 11/11 2차 QA → **11/11 24:00 기능 동결** → 11/12 최종 WebGL 빌드 → 11/13 페이지·스크린샷 → 11/14 제출.
