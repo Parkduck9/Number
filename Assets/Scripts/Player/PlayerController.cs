@@ -61,6 +61,8 @@ public class PlayerController : MonoBehaviour
     State state;
     float stateEnteredAt;
     bool grounded;
+    ContactFilter2D groundFilter;
+    readonly Collider2D[] groundHits = new Collider2D[8];
     float lastGroundedAt = -999f;
     float jumpBufferedUntil = -999f;
     float attackBufferedUntil = -999f;
@@ -103,7 +105,14 @@ public class PlayerController : MonoBehaviour
         float elapsed = now - stateEnteredAt;
 
         // ground check (ignore while rising so a jump doesn't refresh coyote time)
-        grounded = Physics2D.OverlapBox((Vector2)transform.position + feetOffset, feetSize, 0f, groundMask);
+        // A ground collider that already contains a point just above the feet means the feet are embedded in it
+        // (jump apex inside a one-way platform), so it is not something we stand on.
+        Vector2 feet = (Vector2)transform.position + feetOffset;
+        groundFilter.SetLayerMask(groundMask);
+        int hitCount = Physics2D.OverlapBox(feet, feetSize, 0f, groundFilter, groundHits);
+        grounded = false;
+        for (int i = 0; i < hitCount && !grounded; i++)
+            grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f);
         if (grounded && rb.linearVelocity.y <= 0.1f) lastGroundedAt = now;
 
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
