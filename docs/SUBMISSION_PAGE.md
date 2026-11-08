@@ -48,6 +48,7 @@ About 10–15 minutes. Made in 7 days for the Official Unity Game Jam 2026, them
 
 Tip: an enemy's final strike glows red. A **7th** strike from a strong enemy can't be parried, so dash.
 Language: English / 한국어 (Pause menu).
+Keyboard and mouse only (no gamepad support).
 
 ### Credits
 **Team** ⚠ 확인
