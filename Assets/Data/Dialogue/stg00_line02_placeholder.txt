@@ -1,0 +1,4 @@
+# PLACEHOLDER — the user writes the real dialogue. Keep the format.
+# GDD LINE-02 [확정] text.
+@mode talk
+yudo | 0이요? 그럼 숨 0번 쉬면 최고의 하루겠네요? | Zero? So zero breaths makes the luckiest day, huh?
