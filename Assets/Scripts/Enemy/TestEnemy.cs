@@ -494,6 +494,8 @@ public class TestEnemy : MonoBehaviour
     public void ForceStagger(float seconds)
     {
         if (state == State.Stunned || state == State.Frozen || state == State.Overload) return; // overload window stays
+        // Never shorten a counter window that is already open (DECISIONS, QA #11): keep the longer remaining time.
+        if ((state == State.Open || state == State.Staggered) && openDuration - (Time.time - stateEnteredAt) >= seconds) return;
         strikesLeft = 0;
         number.SetPulse(false);
         EnterState(State.Staggered);

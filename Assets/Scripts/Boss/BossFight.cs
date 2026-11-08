@@ -56,7 +56,8 @@ public class BossFight : MonoBehaviour
     void Update()
     {
         if (GameFlow.InputLocked) return;
-        if (NewHackThisFrame() && waveIndex == waves.Length - 1 && state != State.Unlocked) Unlock();
+        // Only a hack made once the last wave's enemies are coming counts: a hack during its announce is ignored (DECISIONS, QA #6).
+        if (NewHackThisFrame() && waveIndex == waves.Length - 1 && (state == State.Spawning || state == State.Fighting)) Unlock();
         elapsed += Time.deltaTime;
         switch (state)
         {
