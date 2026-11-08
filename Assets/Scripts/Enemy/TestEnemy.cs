@@ -26,6 +26,20 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] float chargeSpeed = 14f;
     [SerializeField] float chargeMaxTime = 0.6f;
 
+    [Header("Variants (defaults = melee citizen)")]
+    [SerializeField] LayerMask groundMask;           // 0 = no edge check
+    [SerializeField] float activationRange = 8f;     // idle until the player is this close (spotting range); 0 = always active
+    [SerializeField] float edgeProbeForward = 0.7f;  // ground probe ahead of the feet
+    [SerializeField] float edgeProbeDepth = 1.5f;
+    [SerializeField] float lastStrikeDelay = 0f;     // special enemies: last strike lands this much later (flame tell)
+    [SerializeField] int unparryableNumber = 0;      // last strike of a chain with this number cannot be parried (0 = none)
+    [SerializeField] bool ranged = false;            // the strike fires a projectile instead of a melee box
+    [SerializeField] float keepDistance = 5f;        // ranged: back off while the player is closer
+    [SerializeField] float backoffMaxTime = 1f;      // ranged: give up backing off (cornered) and shoot anyway
+    [SerializeField] float projectileSpeed = 9f;
+    [SerializeField] Vector2 muzzleOffset = new Vector2(0.8f, 0.3f);
+    [SerializeField] Color projectileColor = new Color(1f, 0.788f, 0.235f); // gold #FFC93C
+
     static readonly Color WindupColor = new Color(1f, 0.8f, 0.5f);
     static readonly Color StaggerColor = new Color(0.7f, 0.7f, 0.75f);
     static readonly Color StunnedColor = new Color(0.4f, 0.4f, 0.4f);
@@ -47,6 +61,7 @@ public class TestEnemy : MonoBehaviour
     Color baseColor = Color.white;
     Color flashColor;
     float flashUntil;
+    float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
 
     void Awake()
     {
@@ -71,6 +86,7 @@ public class TestEnemy : MonoBehaviour
         {
             stateEnteredAt += Time.deltaTime;
             flashUntil += Time.deltaTime;
+            if (backoffSince >= 0f) backoffSince += Time.deltaTime;
             return;
         }
         if (player != null && state != State.Stunned) UpdateState();
@@ -81,13 +97,44 @@ public class TestEnemy : MonoBehaviour
     {
         if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
         float vx = 0f;
+        bool chasing = false; // spotted the player and heading for them: drops off roof edges instead of stopping
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
         // Only toward a player in front: Recover does not re-face, so never walk away from one who got behind.
         if ((state == State.Approach || state == State.Recover) && player != null &&
             (player.transform.position.x - transform.position.x) * facing > attackRangeX)
+        {
             vx = facing * moveSpeed; // stop under a jumping player instead of jittering
-        if (state == State.Charge) vx = facing * chargeSpeed;
+            chasing = state == State.Approach && IsActive();
+            if (state == State.Approach && !chasing) vx = 0f; // idle until activated
+        }
+        else if (state == State.Approach && ranged && IsBackingOff())
+            vx = -facing * moveSpeed;
+        if (state == State.Charge) { vx = facing * chargeSpeed; chasing = true; }
+        if (vx != 0f && !chasing && EdgeAhead(vx > 0f ? 1 : -1)) vx = 0f;
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
+    }
+
+    bool IsActive()
+    {
+        return activationRange <= 0f || (player.transform.position - transform.position).sqrMagnitude <= activationRange * activationRange;
+    }
+
+    // Ranged: player closer than keepDistance (same height band) and we have not been backing off too long.
+    bool IsBackingOff()
+    {
+        if (player == null || !IsActive()) return false;
+        Vector2 d = player.transform.position - transform.position;
+        if (Mathf.Abs(d.x) >= keepDistance || Mathf.Abs(d.y) > attackRangeY) { backoffSince = -1f; return false; }
+        if (backoffSince < 0f) backoffSince = Time.time; // timer starts when the player gets too close, not on Approach entry
+        return Time.time - backoffSince < backoffMaxTime;
+    }
+
+    // No ground just ahead of the feet (needs groundMask).
+    bool EdgeAhead(int dir)
+    {
+        if (groundMask.value == 0) return false;
+        Vector2 origin = (Vector2)transform.position + new Vector2(dir * edgeProbeForward, -0.9f);
+        return Physics2D.Raycast(origin, Vector2.down, edgeProbeDepth, groundMask).collider == null;
     }
 
     void UpdateState()
@@ -96,13 +143,16 @@ public class TestEnemy : MonoBehaviour
         switch (state)
         {
             case State.Approach:
+                if (!IsActive()) break; // idle until the player comes close
                 FacePlayer();
                 Vector2 d = player.transform.position - transform.position;
-                if (Mathf.Abs(d.x) <= attackRangeX && Mathf.Abs(d.y) <= attackRangeY)
+                if (Mathf.Abs(d.x) <= attackRangeX && Mathf.Abs(d.y) <= attackRangeY && !(ranged && IsBackingOff()))
                     EnterState(State.Windup);
                 break;
             case State.Windup:
-                if (t >= (chainStarted ? chainWindupTime : windupTime)) EnterState(State.Strike);
+                float wait = chainStarted ? chainWindupTime : windupTime;
+                if (strikesLeft == 1) wait += lastStrikeDelay; // flame is already on for the last strike
+                if (t >= wait) EnterState(State.Strike);
                 break;
             case State.Strike:
                 DoStrike();
@@ -112,7 +162,8 @@ public class TestEnemy : MonoBehaviour
                 break;
             case State.Charge:
                 Vector2 cd = player.transform.position - transform.position;
-                if (Mathf.Abs(cd.x) <= attackRangeX && Mathf.Abs(cd.y) <= attackRangeY) EnterState(State.Strike);
+                if (Mathf.Abs(cd.x) <= attackRangeX && Mathf.Abs(cd.y) <= attackRangeY)
+                    EnterState(strikesLeft == 1 && lastStrikeDelay > 0f ? State.Windup : State.Strike); // keep the late last strike
                 else if ((cd.x * facing < 0f)) EnterState(State.Turn); // player slipped behind mid-charge
                 else if (t >= chargeMaxTime) EnterState(State.Recover);
                 break;
@@ -145,22 +196,34 @@ public class TestEnemy : MonoBehaviour
         HitResult result = HitResult.Dodged; // a whiff counts as dodged for the number...
         bool dashedThrough = false;
 
-        Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
-        ParryFx.Swing(center, attackSize, Color.red, visual != null ? visual.transform : null, facing);
-        Collider2D col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
-        if (col != null)
+        bool unparryable = special && unparryableNumber > 0 && number.Value == unparryableNumber;
+        var hit = new HitInfo
         {
-            PlayerController pc = col.GetComponentInParent<PlayerController>();
-            if (pc != null)
+            Damage = 1,
+            SourcePosition = transform.position,
+            IsSpecial = special,
+            Unparryable = unparryable
+        };
+        Collider2D col = null;
+        if (ranged)
+        {
+            Vector2 muzzle = (Vector2)transform.position + new Vector2(muzzleOffset.x * facing, muzzleOffset.y);
+            EnemyProjectile.Spawn(muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor);
+        }
+        else
+        {
+            Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
+            ParryFx.Swing(center, attackSize, Color.red, visual != null ? visual.transform : null, facing);
+            col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
+            if (col != null)
             {
-                // Dodged also covers post-hit invulnerability/Dead; only an actual dash counts for the stagger.
-                dashedThrough = pc.CurrentState == PlayerController.State.Dash;
-                result = pc.ReceiveEnemyHit(new HitInfo
+                PlayerController pc = col.GetComponentInParent<PlayerController>();
+                if (pc != null)
                 {
-                    Damage = 1,
-                    SourcePosition = transform.position,
-                    IsSpecial = special
-                });
+                    // Dodged also covers post-hit invulnerability/Dead; only an actual dash counts for the stagger.
+                    dashedThrough = pc.CurrentState == PlayerController.State.Dash;
+                    result = pc.ReceiveEnemyHit(hit);
+                }
             }
         }
         strikesLeft--;
@@ -178,7 +241,7 @@ public class TestEnemy : MonoBehaviour
         float dx = (player.transform.position.x - transform.position.x) * facing;
         bool playerBehind = dx < 0f;
         // Player dashed away out of range (nothing was hit, not a dash-through): charge after them.
-        if (!playerBehind && col == null && dx > attackRangeX && strikesLeft > 0)
+        if (!ranged && !playerBehind && col == null && dx > attackRangeX && strikesLeft > 0)
         {
             EnterState(State.Charge);
             return;
@@ -196,6 +259,7 @@ public class TestEnemy : MonoBehaviour
             case State.Approach:
                 strikesLeft = number.Value; // new chain
                 chainStarted = false;
+                backoffSince = -1f; // each new chain may back off again
                 break;
             case State.Windup:
                 number.SetPulse(true);

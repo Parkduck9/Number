@@ -234,7 +234,7 @@ public class PlayerController : MonoBehaviour
 
         float dx = info.SourcePosition.x - transform.position.x;
         bool fromFront = Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
-        if (ParryActive && fromFront)
+        if (ParryActive && fromFront && !info.Unparryable)
         {
             // No knockback for either side. Hit-stop + flash + sparks (placeholder FX).
             EnterState(State.Locomotion);

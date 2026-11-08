@@ -12,6 +12,12 @@ public class EnemyNumber : MonoBehaviour
     [SerializeField] float[] earlyWeights = { 40f, 40f, 15f, 5f };
     [SerializeField] float[] lateWeights = { 5f, 15f, 40f, 40f };
 
+    [Header("Variant")]
+    [SerializeField] int minValue = 2; // inclusive. If the range size matches the weight arrays they are used, else a linear early/late ramp
+    [SerializeField] int maxValue = 5;
+    [SerializeField] int fixedNumber = 0; // > 0 = always this number (tutorial enemies); 0 = weighted random
+    [SerializeField] Color numberColor = new Color(1f, 0.1647f, 0.1647f); // red = melee, gold (#FFC93C) = ranged
+
     [SerializeField] float pulseSpeed = 2.5f; // (T) pulses per second
     [SerializeField] float pulseScale = 1.3f; // (T)
 
@@ -49,21 +55,32 @@ public class EnemyNumber : MonoBehaviour
 
     public void Reroll()
     {
-        float total = 0f;
-        float[] w = new float[4];
-        for (int i = 0; i < 4; i++)
+        if (fixedNumber > 0)
         {
-            w[i] = Mathf.Lerp(earlyWeights[i], lateWeights[i], progress);
+            Value = fixedNumber;
+            SetPulse(false);
+            SetFlame(false);
+            Refresh();
+            return;
+        }
+        int n = Mathf.Max(1, maxValue - minValue + 1);
+        bool useArrays = n == earlyWeights.Length && n == lateWeights.Length;
+        float total = 0f;
+        float[] w = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            w[i] = useArrays ? Mathf.Lerp(earlyWeights[i], lateWeights[i], progress)
+                             : Mathf.Lerp(n - i, i + 1, progress);
             total += w[i];
         }
         float r = Random.value * total;
-        int pick = 3;
-        for (int i = 0; i < 4; i++)
+        int pick = n - 1;
+        for (int i = 0; i < n; i++)
         {
             if (r < w[i]) { pick = i; break; }
             r -= w[i];
         }
-        Value = pick + 2;
+        Value = pick + minValue;
         SetPulse(false);
         SetFlame(false);
         Refresh();
@@ -94,6 +111,7 @@ public class EnemyNumber : MonoBehaviour
         if (on && flame == null && label != null) BuildFlame();
         if (flame != null)
             foreach (Transform t in flame) t.gameObject.SetActive(on);
+        Refresh(); // non-red numbers (gold) look redder while the flame burns
     }
 
     void BuildFlame()
@@ -134,7 +152,7 @@ public class EnemyNumber : MonoBehaviour
         if (label == null) return;
         label.gameObject.SetActive(true);
         label.text = Value.ToString();
-        label.color = Red;
+        label.color = flameOn ? Color.Lerp(numberColor, Red, 0.6f) : numberColor;
         if (!pulsing) label.transform.localScale = Vector3.one;
     }
 }

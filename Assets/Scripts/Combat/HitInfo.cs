@@ -8,6 +8,7 @@ public struct HitInfo
     public int Damage;
     public Vector2 SourcePosition;
     public bool IsSpecial; // last strike of the enemy chain (number 1 -> 0)
+    public bool Unparryable; // parry attempts count as a hit; only a dash dodges it
 }
 
 public enum HitResult { Hit, Parried, Dodged }
