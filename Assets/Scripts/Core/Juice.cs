@@ -11,9 +11,13 @@ public static class Juice
     public const float HitStopHit = 0.04f;
     public const float HitStopKill = 0.08f;
 
-    // One-hit kill of normal enemies (Citizen, Bug): knocked out, then vanish after this delay. Android keeps hp/blocking.
+    // One-hit kill of normal enemies (Citizen, Bug): knocked out, then vanish after this delay. Android: only while overloaded (below).
     public const float KillVanishDelay = 0.5f;
     public static readonly UnityEngine.Vector2 KillKnockback = new UnityEngine.Vector2(3f, 2f);
+
+    // Android overload (gimmick A): after a parried last strike / dodged 7th strike, the next hit kills it.
+    public const float OverloadSeconds = 1.5f;        // (T) how long the window stays open
+    public const float OverloadSparkInterval = 0.2f;  // (T) spark burst spacing
 
     // Citizen/Bug tempo (Android unchanged): timings x NormalTimeMul, approach speed x NormalSpeedMul. 1 = old values.
     public const float NormalTimeMul = 0.65f;

@@ -29,6 +29,8 @@ public class EnemyNumber : MonoBehaviour
     int pinned; // > 0 = forced number (broadcast rule), wins over fixedNumber
     bool pulsing;
     bool flameOn;
+    bool broken; // android overload: label flickers between ERR and the number
+    int lastErrShown = -1; // -1 = not set yet
     GameObject flame;
 
     void Awake()
@@ -39,6 +41,16 @@ public class EnemyNumber : MonoBehaviour
     void Update()
     {
         if (label == null) return;
+        if (broken)
+        {
+            int errShown = Mathf.FloorToInt(Time.time * 12f) % 2 == 0 ? 1 : 0;
+            if (errShown != lastErrShown) // assign only on flips: no per-frame string garbage
+            {
+                lastErrShown = errShown;
+                label.text = errShown == 1 ? "ERR" : Value.ToString();
+                label.color = errShown == 1 ? Color.white : numberColor;
+            }
+        }
         float s = pulsing ? Mathf.Lerp(1f, pulseScale, Mathf.PingPong(Time.time * pulseSpeed, 1f)) : 1f;
         float pop = (Time.time - popAt) / PopTime; // brief punch on top of the pulse
         if (pop >= 0f && pop < 1f) s *= 1f + PopScale * (1f - pop);
@@ -88,8 +100,18 @@ public class EnemyNumber : MonoBehaviour
         Refresh();
     }
 
+    // Overload look: Update flickers the label. Turning it off restores the number.
+    public void SetBroken(bool on)
+    {
+        if (broken == on) return;
+        broken = on;
+        lastErrShown = -1;
+        if (!on) Refresh();
+    }
+
     public void Hide()
     {
+        broken = false;
         pulsing = false;
         SetFlame(false);
         if (label != null)

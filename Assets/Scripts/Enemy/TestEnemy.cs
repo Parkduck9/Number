@@ -4,13 +4,13 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyNumber))]
 public class TestEnemy : MonoBehaviour
 {
-    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special }
+    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special, Overload }
 
     [SerializeField] LayerMask playerMask;
     [SerializeField] SpriteRenderer visual; // optional; found in children if empty
 
     [Header("Tuning (T)")]
-    [SerializeField] int maxHp = 3;
+    [SerializeField] int maxHp = 3;                 // unused by Android since gimmick A (blocks until overloaded)
     [SerializeField] float moveSpeed = 3f;
     [SerializeField] float attackRangeX = 1.8f;
     [SerializeField] float attackRangeY = 1.5f;
@@ -47,6 +47,7 @@ public class TestEnemy : MonoBehaviour
     static readonly Color StaggerColor = new Color(0.7f, 0.7f, 0.75f);
     static readonly Color StunnedColor = new Color(0.4f, 0.4f, 0.4f);
     static readonly Color FrozenColor = new Color(0.6f, 0.75f, 0.9f);
+    static readonly Color OverloadColor = new Color(0.4f, 0.9f, 1f); // flicker colour while overloaded
     static readonly Color SpecialColor = new Color(1f, 0.788f, 0.235f); // gold tell of the fan special
 
     public State Current => state;
@@ -73,6 +74,7 @@ public class TestEnemy : MonoBehaviour
     int exhaustedCycle = -1;  // NUM-7: index of the dope/exhaust cycle (from the board's change time) already punished
     float nextSpecialAt;      // Android fan cooldown
     float openDuration;       // length of the current Open state
+    float nextSparkAt;        // Overload: next spark burst
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -119,9 +121,10 @@ public class TestEnemy : MonoBehaviour
             flashUntil += Time.deltaTime;
             if (backoffSince >= 0f) backoffSince += Time.deltaTime;
             nextSpecialAt += Time.deltaTime;
+            nextSparkAt += Time.deltaTime;
             return;
         }
-        if (state == State.Stunned && kind != Kind.Android && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
+        if (state == State.Stunned && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
         {
             if (visual != null) PlayVanishSpark();
             gameObject.SetActive(false); // inactive, not destroyed: BossFight keeps a valid (Stunned) entry, and the board listener stays harmless
@@ -135,7 +138,7 @@ public class TestEnemy : MonoBehaviour
     void FixedUpdate()
     {
         if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
-        if (state == State.Stunned && kind != Kind.Android) return; // keep the kill knockback until the body vanishes
+        if (state == State.Stunned) return; // keep the kill knockback until the body vanishes
         float vx = 0f;
         bool chasing = false; // spotted the player and heading for them: drops off roof edges instead of stopping
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
@@ -177,7 +180,7 @@ public class TestEnemy : MonoBehaviour
     void UpdateDope()
     {
         // NUM-7: dope ran out -> exhausted (hittable); a zone that stays on 7 cycles dope / exhaustion.
-        if (broadcast != 7 || zoneBoard == null || state == State.Stunned || state == State.Frozen) return;
+        if (broadcast != 7 || zoneBoard == null || state == State.Stunned || state == State.Frozen || state == State.Overload) return;
         float phase = Num7Phase;
         int cycle = Mathf.FloorToInt(phase / Num7Cycle);
         float inCycle = phase - cycle * Num7Cycle;
@@ -253,6 +256,10 @@ public class TestEnemy : MonoBehaviour
             case State.Open:
                 if (t >= openDuration) FinishReset();
                 break;
+            case State.Overload:
+                if (Time.time >= nextSparkAt) { PlayOverloadSpark(); nextSparkAt = Time.time + Juice.OverloadSparkInterval; }
+                if (t >= Juice.OverloadSeconds) FinishReset(); // unused: back to the normal pattern
+                break;
             case State.Special:
                 if (t >= BroadcastRules.AndroidFanTell)
                 {
@@ -290,6 +297,7 @@ public class TestEnemy : MonoBehaviour
 
     void FinishReset()
     {
+        number.SetBroken(false);
         number.Reroll();
         EnterState(State.Approach);
     }
@@ -336,6 +344,13 @@ public class TestEnemy : MonoBehaviour
         number.Pop();
         number.SetFlame(strikesLeft == 1); // tell: next strike is the last one
 
+        // Android gimmick A: parrying the last strike (or dashing through the unparryable 7th) overloads it.
+        if (kind == Kind.Android && special && (result == HitResult.Parried || (unparryable && dashedThrough && result == HitResult.Dodged)))
+        {
+            if (result == HitResult.Parried) Flash(Color.white);
+            EnterState(State.Overload);
+            return;
+        }
         // ...but only a real dash-through (player was inside the hitbox) staggers; a plain whiff does not.
         if (special && dashedThrough && result == HitResult.Dodged)
         {
@@ -387,6 +402,13 @@ public class TestEnemy : MonoBehaviour
                 number.SetPulse(true);
                 number.SetFlame(false); // no last-strike flame during the fan; Windup re-lights it
                 break;
+            case State.Overload:
+                strikesLeft = 0;
+                number.SetPulse(false);
+                number.SetFlame(false);
+                number.SetBroken(true);
+                nextSparkAt = Time.time;
+                break;
             case State.Stunned:
                 number.Hide();
                 rb.linearVelocity = Vector2.zero;
@@ -406,24 +428,25 @@ public class TestEnemy : MonoBehaviour
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (kind != Kind.Android) // normal enemies go down in one hit, in any state (Android keeps the block/hp rules)
-        {
-            Flash(Color.red);
-            hp = 0;
-            EnterState(State.Stunned);
-            float dir = Mathf.Approximately(info.SourcePosition.x, transform.position.x) ? -facing : Mathf.Sign(transform.position.x - info.SourcePosition.x);
-            rb.linearVelocity = new Vector2(dir * Juice.KillKnockback.x, Juice.KillKnockback.y);
-            return true;
-        }
-        if (strikesLeft > 0 && state != State.Turn && state != State.Frozen) // frozen: damage always applies
+        if (kind == Kind.Android && state != State.Overload) // Android blocks every hit except while overloaded
         {
             Flash(Color.white);
             return false;
         }
-        hp -= info.Damage;
+        // Citizen/Bug in any state, Android while overloaded: one hit knocks it down.
         Flash(Color.red);
-        if (hp <= 0) EnterState(State.Stunned);
+        hp = 0;
+        EnterState(State.Stunned);
+        float dir = Mathf.Approximately(info.SourcePosition.x, transform.position.x) ? -facing : Mathf.Sign(transform.position.x - info.SourcePosition.x);
+        rb.linearVelocity = new Vector2(dir * Juice.KillKnockback.x, Juice.KillKnockback.y);
         return true;
+    }
+
+    // Overload sparks: existing hit-spark FX at a random spot on the body.
+    void PlayOverloadSpark()
+    {
+        Vector2 p = (Vector2)transform.position + new Vector2(Random.Range(-0.4f, 0.4f), Random.Range(-0.5f, 0.6f));
+        SpriteFx.Play("hit-spark", p - new Vector2(12f, 16f) / SpriteFx.Ppu, Random.value < 0.5f);
     }
 
     void PlayVanishSpark()
@@ -451,6 +474,7 @@ public class TestEnemy : MonoBehaviour
             case State.Stunned: c = StunnedColor; break;
             case State.Frozen: c = FrozenColor; break;
             case State.Special: c = SpecialColor; break;
+            case State.Overload: c = Mathf.FloorToInt(Time.time * 16f) % 2 == 0 ? OverloadColor : baseColor; break;
         }
         if (Time.time < flashUntil) c = flashColor;
         visual.color = c;
@@ -469,7 +493,7 @@ public class TestEnemy : MonoBehaviour
     // strikesLeft = 0 opens the punish window, same as the dash-through stagger.
     public void ForceStagger(float seconds)
     {
-        if (state == State.Stunned || state == State.Frozen) return;
+        if (state == State.Stunned || state == State.Frozen || state == State.Overload) return; // overload window stays
         strikesLeft = 0;
         number.SetPulse(false);
         EnterState(State.Staggered);
