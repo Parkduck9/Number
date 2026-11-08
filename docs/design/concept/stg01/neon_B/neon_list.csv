@@ -1,0 +1,12 @@
+layer,file,x_px,y_px,light_hex,light_radius_px,flicker
+near,neon_B_01.png,428,110,#8AE0C8,192,0.3
+near,neon_B_02.png,1502,104,#FFD0A0,192,0
+near,neon_B_03.png,790,240,#FF9B87,128,0
+near,neon_B_04.png,80,116,#8AE0C8,80,0
+near,neon_B_05.png,494,262,#8AE0C8,80,0
+near,neon_B_06.png,126,410,#8AE0C8,80,0
+near,neon_B_07.png,424,418,#8AE0C8,80,0.3
+near,neon_B_08.png,708,410,#8AE0C8,96,0
+near,neon_B_09.png,278,72,#FFD0A0,0,0
+near,neon_B_10.png,740,126,#8AE0C8,0,0
+near,neon_B_11.png,1336,166,#FF9B87,0,0

@@ -1,0 +1,178 @@
+[
+  {
+    "file": "neon_B_01.png",
+    "x": 428,
+    "y": 110,
+    "w": 143,
+    "h": 51,
+    "label": "Skyline left billboard",
+    "radius": 192,
+    "flicker": 0.3,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_02.png",
+    "x": 1502,
+    "y": 104,
+    "w": 67,
+    "h": 55,
+    "label": "Skyline right billboard",
+    "radius": 192,
+    "flicker": 0,
+    "light": "#FFD0A0",
+    "tube": [
+      255,
+      179,
+      71
+    ]
+  },
+  {
+    "file": "neon_B_03.png",
+    "x": 790,
+    "y": 240,
+    "w": 101,
+    "h": 15,
+    "label": "Skyline middle panel",
+    "radius": 128,
+    "flicker": 0,
+    "light": "#FF9B87",
+    "tube": [
+      255,
+      74,
+      60
+    ]
+  },
+  {
+    "file": "neon_B_04.png",
+    "x": 80,
+    "y": 116,
+    "w": 27,
+    "h": 41,
+    "label": "Left post glass",
+    "radius": 80,
+    "flicker": 0,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_05.png",
+    "x": 494,
+    "y": 262,
+    "w": 25,
+    "h": 33,
+    "label": "Middle post glass",
+    "radius": 80,
+    "flicker": 0,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_06.png",
+    "x": 126,
+    "y": 410,
+    "w": 47,
+    "h": 15,
+    "label": "Stall 1 edge tube",
+    "radius": 80,
+    "flicker": 0,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_07.png",
+    "x": 424,
+    "y": 418,
+    "w": 45,
+    "h": 13,
+    "label": "Stall 2 edge tube",
+    "radius": 80,
+    "flicker": 0.3,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_08.png",
+    "x": 708,
+    "y": 410,
+    "w": 71,
+    "h": 19,
+    "label": "Stall 3 edge tube",
+    "radius": 96,
+    "flicker": 0,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_09.png",
+    "x": 278,
+    "y": 72,
+    "w": 17,
+    "h": 103,
+    "label": "Skyline strip left",
+    "radius": 0,
+    "flicker": 0,
+    "light": "#FFD0A0",
+    "tube": [
+      255,
+      179,
+      71
+    ]
+  },
+  {
+    "file": "neon_B_10.png",
+    "x": 740,
+    "y": 126,
+    "w": 17,
+    "h": 93,
+    "label": "Skyline strip centre",
+    "radius": 0,
+    "flicker": 0,
+    "light": "#8AE0C8",
+    "tube": [
+      60,
+      255,
+      219
+    ]
+  },
+  {
+    "file": "neon_B_11.png",
+    "x": 1336,
+    "y": 166,
+    "w": 67,
+    "h": 11,
+    "label": "Skyline strip right",
+    "radius": 0,
+    "flicker": 0,
+    "light": "#FF9B87",
+    "tube": [
+      255,
+      74,
+      60
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+AI generated (Codex / image_gen)
+Fresh candidates A/B/C. Selected B; alt_a=A, alt_b=C. No v6 files used.
+Native canvas 80x80; play order 0,1,2,1; PPU32; target canvas960x540.
+Sampling: source silhouette bounding box, centre-point sampling to height64; no averaging or hand-plotted pixels. Background navy chroma keyed; dark outline retained.
+Palette: 32-centre RGB k-means, 16 iterations; uniform palette gain only if luminance outside 15%.
+Luminance: mean Rec.709 weighted sRGB code values over opaque native sprite pixels (NOT linear-light relative luminance). Reference crop x34,y194,w151,h371 from supplied original, same centre sampling/key. Reference mean=71.721
+frame0: opaque colours=32, partial alpha=0, isolated opaque pixels (8-neighbour)=0, height=64, mean luminance=62.168, reference ratio=0.8668
+frame1: opaque colours=32, partial alpha=0, isolated opaque pixels (8-neighbour)=0, height=64, mean luminance=61.419, reference ratio=0.8564
+frame2: opaque colours=32, partial alpha=0, isolated opaque pixels (8-neighbour)=0, height=64, mean luminance=62.912, reference ratio=0.8772
+alt_a: opaque colours=32, partial alpha=0, isolated opaque pixels (8-neighbour)=0, height=64, mean luminance=68.412, reference ratio=0.9539
+alt_b: opaque colours=29, partial alpha=0, isolated opaque pixels (8-neighbour)=0, height=64, mean luminance=66.712, reference ratio=0.9302
+Lower legs/feet y61..79 changed pixels=0
+Breathing uses body-band centre sampling with +/-1 pixel shift and colour-detected sash rectangle; head fixed. Review hip/hem junction at native scale.
