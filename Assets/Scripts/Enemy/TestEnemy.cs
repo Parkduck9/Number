@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyNumber))]
 public class TestEnemy : MonoBehaviour
 {
-    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge }
+    public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special }
 
     [SerializeField] LayerMask playerMask;
     [SerializeField] SpriteRenderer visual; // optional; found in children if empty
@@ -26,7 +26,10 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] float chargeSpeed = 14f;
     [SerializeField] float chargeMaxTime = 0.6f;
 
+    public enum Kind { Citizen, Bug, Android }
+
     [Header("Variants (defaults = melee citizen)")]
+    [SerializeField] Kind kind = Kind.Citizen;       // NUM-0 freezes citizens only; Android uses the gold fan special
     [SerializeField] LayerMask groundMask;           // 0 = no edge check
     [SerializeField] float activationRange = 8f;     // idle until the player is this close (spotting range); 0 = always active
     [SerializeField] float edgeProbeForward = 0.7f;  // ground probe ahead of the feet
@@ -43,6 +46,8 @@ public class TestEnemy : MonoBehaviour
     static readonly Color WindupColor = new Color(1f, 0.8f, 0.5f);
     static readonly Color StaggerColor = new Color(0.7f, 0.7f, 0.75f);
     static readonly Color StunnedColor = new Color(0.4f, 0.4f, 0.4f);
+    static readonly Color FrozenColor = new Color(0.6f, 0.75f, 0.9f);
+    static readonly Color SpecialColor = new Color(1f, 0.788f, 0.235f); // gold tell of the fan special
 
     public State Current => state;
     public int Hp => hp;
@@ -62,6 +67,15 @@ public class TestEnemy : MonoBehaviour
     Color flashColor;
     float flashUntil;
     float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
+    BroadcastBoard zoneBoard;
+    int broadcast = -1;       // number of the zone's broadcast board (-1 = no board)
+    float dopedUntil;         // NUM-7: dope runs until this time; reaching it starts the exhaustion
+    float exhaustUntil;       // NUM-7: exhausted (Open) until this time
+    float nextSpecialAt;      // Android fan cooldown
+    float openDuration;       // length of the current Open state
+
+    bool Doped => broadcast == 7 && Time.time < dopedUntil && Time.time >= exhaustUntil;
+    float Speed => moveSpeed * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
 
     void Awake()
     {
@@ -78,6 +92,17 @@ public class TestEnemy : MonoBehaviour
     {
         player = FindFirstObjectByType<PlayerController>();
         EnterState(State.Approach);
+        zoneBoard = BroadcastBoard.At(transform.position); // zone is fixed: find it once, then react to its changes
+        if (zoneBoard != null)
+        {
+            zoneBoard.NumberChanged += OnBroadcastChanged;
+            OnBroadcastChanged(zoneBoard, zoneBoard.Number, -1);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (zoneBoard != null) zoneBoard.NumberChanged -= OnBroadcastChanged;
     }
 
     void Update()
@@ -87,8 +112,12 @@ public class TestEnemy : MonoBehaviour
             stateEnteredAt += Time.deltaTime;
             flashUntil += Time.deltaTime;
             if (backoffSince >= 0f) backoffSince += Time.deltaTime;
+            dopedUntil += Time.deltaTime;
+            exhaustUntil += Time.deltaTime;
+            nextSpecialAt += Time.deltaTime;
             return;
         }
+        if (state != State.Stunned) UpdateDope();
         if (player != null && state != State.Stunned) UpdateState();
         ApplyVisual();
     }
@@ -103,15 +132,49 @@ public class TestEnemy : MonoBehaviour
         if ((state == State.Approach || state == State.Recover) && player != null &&
             (player.transform.position.x - transform.position.x) * facing > attackRangeX)
         {
-            vx = facing * moveSpeed; // stop under a jumping player instead of jittering
+            vx = facing * Speed; // stop under a jumping player instead of jittering
             chasing = state == State.Approach && IsActive();
             if (state == State.Approach && !chasing) vx = 0f; // idle until activated
         }
         else if (state == State.Approach && ranged && IsBackingOff())
-            vx = -facing * moveSpeed;
+            vx = -facing * Speed;
         if (state == State.Charge) { vx = facing * chargeSpeed; chasing = true; }
         if (vx != 0f && !chasing && EdgeAhead(vx > 0f ? 1 : -1)) vx = 0f;
         rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
+    }
+
+    // Zone broadcast rules (DECISIONS 1-A, 7-A, NUM-0). Values in BroadcastRules; delete a block to remove its rule.
+    void OnBroadcastChanged(BroadcastBoard board, int n, int old)
+    {
+        if (state == State.Stunned) return;
+        broadcast = n;
+        // NUM-3: melee numbers are pinned to 3 while the zone shows 3. Never rerolled mid-chain, else it applies at the next FinishReset.
+        number.Pin(n == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3Number : 0);
+        if (!ranged && (n == BroadcastRules.Num3Number || old == BroadcastRules.Num3Number) && state == State.Approach && !chainStarted)
+        {
+            number.Reroll();
+            strikesLeft = number.Value;
+        }
+        // NUM-7: doping starts. Leaving 7 early just clears it (no exhaustion when the number is hacked away).
+        if (n == 7) dopedUntil = Time.time + BroadcastRules.Num7DopeSeconds;
+        // NUM-0: citizens stop breathing; the number changing away releases them.
+        if (n == 0 && kind == Kind.Citizen) EnterState(State.Frozen);
+        else if (old == 0 && state == State.Frozen) FinishReset();
+    }
+
+    // NUM-7 timer (time-based, not a board poll).
+    void UpdateDope()
+    {
+        // NUM-7: dope ran out -> exhausted (hittable); a zone that stays on 7 cycles dope / exhaustion.
+        if (broadcast == 7 && Time.time >= dopedUntil && state != State.Stunned && state != State.Frozen)
+        {
+            exhaustUntil = Time.time + BroadcastRules.Num7ExhaustSeconds;
+            dopedUntil = exhaustUntil + BroadcastRules.Num7DopeSeconds;
+            strikesLeft = 0;
+            number.SetPulse(false);
+            EnterState(State.Open);
+            openDuration = BroadcastRules.Num7ExhaustSeconds;
+        }
     }
 
     bool IsActive()
@@ -150,7 +213,9 @@ public class TestEnemy : MonoBehaviour
                     EnterState(State.Windup);
                 break;
             case State.Windup:
-                float wait = chainStarted ? chainWindupTime : windupTime;
+                float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
+                float wait = chainStarted ? chainWait : windupTime;
+                if (Doped) wait /= BroadcastRules.Num7SpeedMul;
                 if (strikesLeft == 1) wait += lastStrikeDelay; // flame is already on for the last strike
                 if (t >= wait) EnterState(State.Strike);
                 break;
@@ -174,14 +239,37 @@ public class TestEnemy : MonoBehaviour
                 if (t >= staggerTime) FinishReset();
                 break;
             case State.Open:
-                if (t >= openTime) FinishReset();
+                if (t >= openDuration) FinishReset();
+                break;
+            case State.Special:
+                if (t >= BroadcastRules.AndroidFanTell)
+                {
+                    FireFan();
+                    nextSpecialAt = Time.time + BroadcastRules.AndroidFanCooldown;
+                    EnterState(State.Windup); // continue the chain
+                }
                 break;
         }
     }
 
     void NextAfterChain()
     {
-        EnterState(strikesLeft > 0 ? State.Windup : State.Open);
+        if (kind == Kind.Android && strikesLeft > 0 && Time.time >= nextSpecialAt) EnterState(State.Special);
+        else EnterState(strikesLeft > 0 ? State.Windup : State.Open);
+    }
+
+    // Gold fan: parryable shots spread around the facing direction.
+    void FireFan()
+    {
+        Vector2 muzzle = (Vector2)transform.position + new Vector2(muzzleOffset.x * facing, muzzleOffset.y);
+        var hit = new HitInfo { Damage = 1, SourcePosition = transform.position, IsSpecial = false, Unparryable = false };
+        int count = BroadcastRules.AndroidFanCount;
+        for (int i = 0; i < count; i++)
+        {
+            float angle = (i - (count - 1) * 0.5f) * BroadcastRules.AndroidFanSpreadDeg;
+            Vector2 dir = Quaternion.Euler(0f, 0f, angle) * new Vector2(facing, 0f);
+            EnemyProjectile.Spawn(muzzle, dir * BroadcastRules.AndroidFanSpeed, playerMask, groundMask, hit, projectileColor);
+        }
     }
 
     void FinishReset()
@@ -271,6 +359,15 @@ public class TestEnemy : MonoBehaviour
             case State.Open:
             case State.Staggered:
                 number.SetFlame(false);
+                openDuration = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3OpenTime : openTime;
+                break;
+            case State.Frozen:
+                number.SetPulse(false);
+                number.SetFlame(false);
+                break;
+            case State.Special:
+                FacePlayer();
+                number.SetPulse(true);
                 break;
             case State.Stunned:
                 number.Hide();
@@ -291,7 +388,7 @@ public class TestEnemy : MonoBehaviour
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (strikesLeft > 0 && state != State.Turn)
+        if (strikesLeft > 0 && state != State.Turn && state != State.Frozen) // frozen: damage always applies
         {
             Flash(Color.white);
             return false;
@@ -318,6 +415,8 @@ public class TestEnemy : MonoBehaviour
             case State.Windup: c = WindupColor; break;
             case State.Staggered: c = Mathf.PingPong(Time.time * 10f, 1f) > 0.5f ? StaggerColor : baseColor; break;
             case State.Stunned: c = StunnedColor; break;
+            case State.Frozen: c = FrozenColor; break;
+            case State.Special: c = SpecialColor; break;
         }
         if (Time.time < flashUntil) c = flashColor;
         visual.color = c;

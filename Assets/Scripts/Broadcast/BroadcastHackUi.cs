@@ -13,7 +13,7 @@ public class BroadcastHackUi : MonoBehaviour
 {
     [SerializeField] TMP_FontAsset font;
     [SerializeField] float interactRange = 3f;
-    [SerializeField] bool showCounterHackBar = false; // [proposal] progress bar next to the number: off by default
+    [SerializeField] bool showCounterHackBar = true; // progress bar next to the number (DECISIONS 3-A)
 
     // ---- Style (placeholder; restyle here) ----
     static readonly Vector2 RefResolution = new Vector2(960f, 540f);
@@ -35,6 +35,8 @@ public class BroadcastHackUi : MonoBehaviour
     int selected;
     bool lockedLastFrame; // the E that closes a Talk line must not also open the dial
     int shownNumber = -1, shownHacked = -1; // HUD cache: rebuild the string only when it changes
+    bool hudWasShown;
+    float punchAt = -10f; // unscaled time of the last number punch
 
     TMP_Text hudText, promptText, dialNumber, dialDigits, dialHint, dialWarn;
     GameObject dialRoot, barRoot, promptRoot;
@@ -47,7 +49,7 @@ public class BroadcastHackUi : MonoBehaviour
     void Update()
     {
         if (player == null) player = FindFirstObjectByType<PlayerController>();
-        BroadcastBoard hud = Nearest(float.MaxValue);
+        BroadcastBoard hud = player != null ? BroadcastBoard.At(player.transform.position) : null; // only the player's zone
         UpdateHud(hud);
 
         BroadcastBoard near = player != null ? Nearest(interactRange) : null;
@@ -82,15 +84,21 @@ public class BroadcastHackUi : MonoBehaviour
     void UpdateHud(BroadcastBoard b)
     {
         hudText.transform.parent.gameObject.SetActive(b != null);
+        bool wasShown = hudWasShown;
+        hudWasShown = b != null;
         if (b == null) return;
         int hacked = b.IsHacked ? 1 : 0;
-        if (b.Number != shownNumber || hacked != shownHacked)
+        if (!wasShown || b.Number != shownNumber || hacked != shownHacked)
         {
+            if (!wasShown || b.Number != shownNumber) punchAt = Time.unscaledTime; // TODO(audio): SFX-01 broadcast chime here
             shownNumber = b.Number;
             shownHacked = hacked;
             hudText.text = "((( " + b.Number + " )))";
             hudText.color = b.IsHacked ? HackedCyan : BroadcastGold;
         }
+        float k = Mathf.Clamp01((Time.unscaledTime - punchAt) / 0.3f);
+        float s = Mathf.Lerp(1.4f, 1f, k); // short scale punch on a new / changed number
+        hudText.transform.localScale = new Vector3(s, s, 1f);
         barRoot.SetActive(showCounterHackBar && b.IsHacked);
         if (barRoot.activeSelf) barFill.anchorMax = new Vector2(b.CounterHackProgress, 1f);
     }

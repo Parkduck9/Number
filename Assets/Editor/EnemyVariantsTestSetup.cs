@@ -67,6 +67,7 @@ public static class EnemyVariantsTestSetup
                 so.FindProperty("ranged").boolValue = true;
                 so.FindProperty("attackRangeX").floatValue = 9f;
                 so.FindProperty("lastStrikeDelay").floatValue = 0.5f;
+                so.FindProperty("kind").intValue = 1; // TestEnemy.Kind.Bug (ranged AI bug): keeps moving on 0
             });
 
         // 3. Strong (android placeholder): 1-7, last strike +0.5s with flame, number 7 -> last strike unparryable.
@@ -78,11 +79,20 @@ public static class EnemyVariantsTestSetup
                 so.FindProperty("lastStrikeDelay").floatValue = 0.5f;
                 so.FindProperty("unparryableNumber").intValue = 7;
                 so.FindProperty("maxHp").intValue = 5;
+                so.FindProperty("kind").intValue = 2; // TestEnemy.Kind.Android: gold fan special
             });
 
         // 4. Citizen on the roof: chases the player off the edge when spotted.
         Enemy("RoofCitizen", new Vector2(10f, -3f), new Color32(0xFF, 0x8C, 0x42, 0xFF), 2, 3, new Color(1f, 0.1647f, 0.1647f),
             so => { so.FindProperty("groundMask").intValue = 1 << GroundLayer; so.FindProperty("activationRange").floatValue = 8f; });
+
+        // Broadcast board for trying the rules: hack it with E (3 = fast chains, 7 = dope/exhaust, 0 = freezes citizens). zoneX (0,0) = whole scene.
+        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/Mulmaru/Mulmaru SDF.asset");
+        BuildBoard(new Vector3(-8f, -4.5f, 0f), font, 3);
+        var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
+        var uso = new SerializedObject(ui);
+        uso.FindProperty("font").objectReferenceValue = font;
+        uso.ApplyModifiedProperties();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
@@ -125,6 +135,30 @@ public static class EnemyVariantsTestSetup
         go.transform.position = pos;
         go.layer = GroundLayer;
         go.AddComponent<BoxCollider2D>().size = square.bounds.size;
+    }
+
+    // Same approach as BroadcastTestSetup.BuildBoard: 3x3 dark square + number text + BroadcastBoard.
+    static void BuildBoard(Vector3 pos, TMP_FontAsset font, int aiNumber)
+    {
+        var board = Square("Board", new Color32(0x1A, 0x1F, 0x33, 0xFF), new Vector2(3f, 3f), 1);
+        board.transform.position = pos;
+
+        var textGo = new GameObject("Number");
+        textGo.transform.SetParent(board.transform, false);
+        textGo.transform.localScale = new Vector3(1f / board.transform.localScale.x, 1f / board.transform.localScale.y, 1f); // undo the board's scale
+        var tmp = textGo.AddComponent<TextMeshPro>();
+        if (font != null) tmp.font = font;
+        tmp.text = aiNumber.ToString();
+        tmp.fontSize = 18f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color32(0xFF, 0xD2, 0x4A, 0xFF);
+        tmp.sortingOrder = 5;
+
+        var b = board.AddComponent<BroadcastBoard>();
+        var so = new SerializedObject(b);
+        so.FindProperty("aiNumber").intValue = aiNumber;
+        so.FindProperty("label").objectReferenceValue = tmp;
+        so.ApplyModifiedProperties();
     }
 
     static void Enemy(string name, Vector2 pos, Color visualColor, int min, int max, Color numColor, System.Action<SerializedObject> tune)
