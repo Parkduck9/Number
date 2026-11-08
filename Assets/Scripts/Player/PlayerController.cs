@@ -60,6 +60,7 @@ public class PlayerController : MonoBehaviour
     PlayerInputReader input;
     PlayerHealth health;
     SpriteRenderer visual;
+    bool draftSprite; // DraftSprites: hero frames instead of the placeholder square
 
     State state;
     float stateEnteredAt;
@@ -88,6 +89,7 @@ public class PlayerController : MonoBehaviour
         input = GetComponent<PlayerInputReader>();
         health = GetComponent<PlayerHealth>();
         visual = GetComponentInChildren<SpriteRenderer>();
+        draftSprite = DraftSprites.Setup(visual, DraftSprites.Hero);
         rb.gravityScale = gravityScale;
         if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
     }
@@ -321,7 +323,12 @@ public class PlayerController : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = Facing < 0;
-        Color c = BaseColor;
+        if (draftSprite)
+        {
+            bool walking = state == State.Locomotion && grounded && Mathf.Abs(rb.linearVelocity.x) > 0.1f;
+            visual.sprite = DraftSprites.Hero[walking ? Mathf.FloorToInt(now * DraftSprites.WalkFps) % 3 : 0];
+        }
+        Color c = draftSprite ? Color.white : BaseColor;
         if (state == State.Dash) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);

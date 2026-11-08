@@ -64,6 +64,7 @@ public class TestEnemy : MonoBehaviour
     bool chainStarted;    // first strike of a chain gets the long windup
     int facing = -1;
     Color baseColor = Color.white;
+    bool draftSprite; // DraftSprites: citizen attack frames instead of the placeholder square
     Color flashColor;
     float flashUntil;
     float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
@@ -86,7 +87,8 @@ public class TestEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         number = GetComponent<EnemyNumber>();
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
-        if (visual != null) baseColor = visual.color;
+        draftSprite = kind == Kind.Citizen && DraftSprites.Setup(visual, DraftSprites.Citizen);
+        if (visual != null) baseColor = visual.color; // white after the draft sprite swap
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
         hp = maxHp;
@@ -439,6 +441,8 @@ public class TestEnemy : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = facing < 0;
+        if (draftSprite) // windup / strike / recover = frames 0 / 1 / 2, anything else rests on the recover pose
+            visual.sprite = DraftSprites.Citizen[state == State.Windup ? 0 : state == State.Strike ? 1 : 2];
         Color c = baseColor;
         switch (state)
         {
