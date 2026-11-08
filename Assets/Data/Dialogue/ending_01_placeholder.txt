@@ -1,0 +1,7 @@
+# PLACEHOLDER ending text for END-01 (press the stop button). The user rewrites these lines.
+# format:  speakerId | Korean | English
+@mode talk
+broadcast | [임시] 정지 버튼이 눌렸다. | [PLACEHOLDER] The stop button is pressed.
+yudo | [임시] 행운의 숫자 같은 건 처음부터 없었어. | [PLACEHOLDER] There was never a lucky number.
+yudo | [임시] 전부 AI가 정한 거였어. | [PLACEHOLDER] The AI decided all of it.
+broadcast | [임시] END-01 | [PLACEHOLDER] END-01

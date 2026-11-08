@@ -21,7 +21,8 @@ public static class BroadcastTestSetup
         var player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefab);
         var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
         if (square == null || player == null) { Debug.LogError("Broadcast test: missing Square sprite or Player prefab (build the prototype scene first)."); return; }
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) // never raise a modal dialog
+            if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty) { Debug.LogError("Broadcast test: a scene has unsaved changes. Save it first, then run the menu again."); return; }
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 

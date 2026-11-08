@@ -1,0 +1,7 @@
+# PLACEHOLDER ending text for END-02 (press it, but set the lucky number yourself). The user rewrites these lines.
+# format:  speakerId | Korean | English
+@mode talk
+broadcast | [임시] 정지 버튼이 눌렸다. 그리고 숫자 입력창이 열렸다. | [PLACEHOLDER] The stop button is pressed. A number prompt opens.
+yudo | [임시] 이제 행운의 숫자는 내가 정한다. | [PLACEHOLDER] From now on, I choose the lucky number.
+citizen | [임시] 오늘의 행운의 숫자는… | [PLACEHOLDER] Today's lucky number is...
+broadcast | [임시] END-02 | [PLACEHOLDER] END-02
