@@ -77,6 +77,7 @@ public class PlayerController : MonoBehaviour
     public bool Grounded => grounded;
     public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveTime;
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
+    public LayerMask EnemyMask => enemyMask;
 
     void Awake()
     {
@@ -85,6 +86,7 @@ public class PlayerController : MonoBehaviour
         health = GetComponent<PlayerHealth>();
         visual = GetComponentInChildren<SpriteRenderer>();
         rb.gravityScale = gravityScale;
+        if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
     }
 
     void OnDisable() { EndHitStop(); }
