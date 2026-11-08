@@ -28,6 +28,25 @@ public class CameraFollow2D : MonoBehaviour
     float facing = 1f;
     float lastTargetX;
 
+    // Camera shake: decaying random offset added after the follow step, in unscaled time. Removed again at the start of the next
+    // LateUpdate, so it never feeds into the follow position.
+    static CameraFollow2D active;
+    float shakeAmp, shakeTime, shakeLeft;
+    Vector2 shakeOffset;
+
+    // Strongest shake wins; a weaker one never cuts a stronger one short.
+    public static void Shake(float amplitude, float duration)
+    {
+        if (active == null || amplitude <= 0f || duration <= 0f) return;
+        float currentAmp = active.shakeLeft > 0f ? active.shakeAmp * active.shakeLeft / active.shakeTime : 0f;
+        if (amplitude < currentAmp) return;
+        active.shakeAmp = amplitude;
+        active.shakeTime = active.shakeLeft = duration;
+    }
+
+    void OnEnable() => active = this;
+    void OnDisable() { if (active == this) active = null; }
+
     void Awake()
     {
         cam = GetComponent<Camera>();
@@ -47,16 +66,34 @@ public class CameraFollow2D : MonoBehaviour
         lookAhead = 0f;
         velocity = Vector2.zero;
         lookAheadVelocity = 0f;
+        shakeOffset = Vector2.zero;
         Vector2 p = Clamp((Vector2)target.position + offset);
         transform.position = new Vector3(p.x, p.y, transform.position.z);
     }
 
     void LateUpdate()
     {
-        if (target == null) return;
+        transform.position -= new Vector3(shakeOffset.x, shakeOffset.y, 0f);
         float dt = Time.deltaTime;
-        if (dt <= 0f) return;
+        if (target != null && dt > 0f) Follow(dt); // dt is 0 during hit-stop / pause: hold position
+        ApplyShake();
+    }
 
+    void ApplyShake()
+    {
+        if (!PauseMenu.IsOpen) // paused: no progress, keep the current offset
+        {
+            shakeLeft = Mathf.Max(0f, shakeLeft - Time.unscaledDeltaTime);
+            float ppu = ppc != null && ppc.assetsPPU > 0 ? ppc.assetsPPU : 32f;
+            float a = shakeTime > 0f ? shakeAmp * shakeLeft / shakeTime : 0f;
+            Vector2 r = new Vector2(Random.Range(-a, a), Random.Range(-a, a));
+            shakeOffset = new Vector2(Mathf.Round(r.x * ppu), Mathf.Round(r.y * ppu)) / ppu; // pixel-snapped
+        }
+        transform.position += new Vector3(shakeOffset.x, shakeOffset.y, 0f);
+    }
+
+    void Follow(float dt)
+    {
         float vx = (target.position.x - lastTargetX) / dt;
         lastTargetX = target.position.x;
         if (Mathf.Abs(vx) > facingMinSpeed) facing = Mathf.Sign(vx);

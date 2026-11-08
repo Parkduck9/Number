@@ -77,7 +77,9 @@ public class TestEnemy : MonoBehaviour
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
     static float Num7Cycle => BroadcastRules.Num7DopeSeconds + BroadcastRules.Num7ExhaustSeconds;
     bool Doped => broadcast == 7 && zoneBoard != null && Num7Phase % Num7Cycle < BroadcastRules.Num7DopeSeconds;
-    float Speed => moveSpeed * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
+    bool Normal => kind != Kind.Android;
+    float TimeMul => Normal ? Juice.NormalTimeMul : 1f; // Citizen/Bug act faster since they die in one hit
+    float Speed => moveSpeed * (Normal ? Juice.NormalSpeedMul : 1f) * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
 
     void Awake()
     {
@@ -117,6 +119,12 @@ public class TestEnemy : MonoBehaviour
             nextSpecialAt += Time.deltaTime;
             return;
         }
+        if (state == State.Stunned && kind != Kind.Android && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
+        {
+            if (visual != null) PlayVanishSpark();
+            gameObject.SetActive(false); // inactive, not destroyed: BossFight keeps a valid (Stunned) entry, and the board listener stays harmless
+            return;
+        }
         if (state != State.Stunned) UpdateDope();
         if (player != null && state != State.Stunned) UpdateState();
         ApplyVisual();
@@ -125,6 +133,7 @@ public class TestEnemy : MonoBehaviour
     void FixedUpdate()
     {
         if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
+        if (state == State.Stunned && kind != Kind.Android) return; // keep the kill knockback until the body vanishes
         float vx = 0f;
         bool chasing = false; // spotted the player and heading for them: drops off roof edges instead of stopping
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
@@ -215,7 +224,7 @@ public class TestEnemy : MonoBehaviour
                 break;
             case State.Windup:
                 float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
-                float wait = chainStarted ? chainWait : windupTime;
+                float wait = chainStarted ? chainWait * TimeMul : Mathf.Max(windupTime * TimeMul, Normal ? Juice.MinFirstWindup : 0f);
                 if (Doped) wait /= BroadcastRules.Num7SpeedMul;
                 if (strikesLeft == 1) wait += lastStrikeDelay; // flame is already on for the last strike
                 if (t >= wait) EnterState(State.Strike);
@@ -224,7 +233,7 @@ public class TestEnemy : MonoBehaviour
                 DoStrike();
                 break;
             case State.Recover:
-                if (t >= recoverTime) NextAfterChain();
+                if (t >= recoverTime * TimeMul) NextAfterChain();
                 break;
             case State.Charge:
                 Vector2 cd = player.transform.position - transform.position;
@@ -322,6 +331,7 @@ public class TestEnemy : MonoBehaviour
         strikesLeft--;
         chainStarted = true;
         number.SetPulse(false);
+        number.Pop();
         number.SetFlame(strikesLeft == 1); // tell: next strike is the last one
 
         // ...but only a real dash-through (player was inside the hitbox) staggers; a plain whiff does not.
@@ -394,6 +404,15 @@ public class TestEnemy : MonoBehaviour
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
+        if (kind != Kind.Android) // normal enemies go down in one hit, in any state (Android keeps the block/hp rules)
+        {
+            Flash(Color.red);
+            hp = 0;
+            EnterState(State.Stunned);
+            float dir = Mathf.Approximately(info.SourcePosition.x, transform.position.x) ? -facing : Mathf.Sign(transform.position.x - info.SourcePosition.x);
+            rb.linearVelocity = new Vector2(dir * Juice.KillKnockback.x, Juice.KillKnockback.y);
+            return true;
+        }
         if (strikesLeft > 0 && state != State.Turn && state != State.Frozen) // frozen: damage always applies
         {
             Flash(Color.white);
@@ -403,6 +422,11 @@ public class TestEnemy : MonoBehaviour
         Flash(Color.red);
         if (hp <= 0) EnterState(State.Stunned);
         return true;
+    }
+
+    void PlayVanishSpark()
+    {
+        SpriteFx.Play("hit-spark", (Vector2)transform.position - new Vector2(12f, 16f) / SpriteFx.Ppu);
     }
 
     void Flash(Color c)

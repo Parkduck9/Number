@@ -40,8 +40,15 @@ public class EnemyNumber : MonoBehaviour
     {
         if (label == null) return;
         float s = pulsing ? Mathf.Lerp(1f, pulseScale, Mathf.PingPong(Time.time * pulseSpeed, 1f)) : 1f;
+        float pop = (Time.time - popAt) / PopTime; // brief punch on top of the pulse
+        if (pop >= 0f && pop < 1f) s *= 1f + PopScale * (1f - pop);
         label.transform.localScale = new Vector3(s, s, 1f);
     }
+
+    const float PopTime = 0.12f, PopScale = 0.5f; // (T) punch length / extra scale when a strike uses up one count
+    float popAt = -10f;
+
+    public void Pop() { popAt = Time.time; }
 
     public void SetProgress(float p) { progress = Mathf.Clamp01(p); }
 

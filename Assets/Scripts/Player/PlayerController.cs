@@ -94,6 +94,14 @@ public class PlayerController : MonoBehaviour
 
     void OnDisable() { EndHitStop(); }
 
+    // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
+    void StartHitStop(float seconds)
+    {
+        if (seconds <= 0f || GameFlow.InputLocked || PauseMenu.IsOpen) return;
+        hitStopEndsAt = Mathf.Max(hitStopEndsAt, Time.unscaledTime + seconds);
+        Time.timeScale = 0f;
+    }
+
     void EndHitStop()
     {
         if (hitStopEndsAt < 0f) return;
@@ -260,7 +268,11 @@ public class PlayerController : MonoBehaviour
             TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
             if (enemy == null || !swingHits.Add(enemy)) continue; // one hit per enemy per swing
             bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
-            if (damaged) PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
+            if (!damaged) continue;
+            PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
+            bool down = enemy.Current == TestEnemy.State.Stunned; // the hit that finishes the enemy
+            StartHitStop(down ? Juice.HitStopKill : Juice.HitStopHit);
+            Juice.Shake(down ? Juice.ShakeKillAmp : Juice.ShakeHitAmp, down ? Juice.ShakeKillTime : Juice.ShakeHitTime);
         }
     }
 
@@ -291,16 +303,14 @@ public class PlayerController : MonoBehaviour
             parryFlashUntil = Time.time + parryFlashTime;
             parryGuardUntil = Time.time + parryGuardTime;
             SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
-            if (hitStopTime > 0f)
-            {
-                hitStopEndsAt = Time.unscaledTime + hitStopTime;
-                Time.timeScale = 0f;
-            }
+            StartHitStop(hitStopTime);
+            Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
         }
 
         health.TakeDamage(info.Damage);
         EnterState(State.Hurt);
+        Juice.Shake(Juice.ShakeHurtAmp, Juice.ShakeHurtTime);
         float away = Mathf.Approximately(dx, 0f) ? -Facing : (dx > 0f ? -1f : 1f); // dx==0: knock back behind the player
         PlayHitSpark(transform.position, away); // blow travels away from the source
         rb.linearVelocity = new Vector2(health.IsDead ? 0f : away * knockback.x, knockback.y); // dying: no sideways push (could carry the corpse into an exit)
@@ -316,6 +326,7 @@ public class PlayerController : MonoBehaviour
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
         else if (state == State.Dead) c = Color.gray;
+        else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
         if (now < parryFlashUntil) c = Color.white;
         visual.color = c;
