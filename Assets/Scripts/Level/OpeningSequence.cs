@@ -21,6 +21,8 @@ public class OpeningSequence : MonoBehaviour
 
     IEnumerator Start()
     {
+        // The radio's 0 would trigger GameAudio's own breath stop (chime, then silence) before the joke; the cut belongs to BreathZero.
+        if (breathZero) GameAudio.BreathStopOnZero = false;
         yield return new WaitForSeconds(introDelay);
 
         Current = Phase.Broadcast;
@@ -35,7 +37,8 @@ public class OpeningSequence : MonoBehaviour
         yield return new WaitForSeconds(silenceDelay);
 
         Current = Phase.Freeze;
-        if (breathZero) gameObject.AddComponent<BreathZero>().Play();
+        if (breathZero) gameObject.AddComponent<BreathZero>().Play(); // silence hook: BreathZero calls GameAudio.BreathStop
+        GameAudio.BreathStopOnZero = true;
         FreezeCitizens();
         Play(line03Radio);
         yield return new WaitForSeconds(freezeWait);
@@ -43,6 +46,8 @@ public class OpeningSequence : MonoBehaviour
         Current = Phase.Escape;
         if (exit != null) exit.SetActive(true);
     }
+
+    void OnDestroy() { GameAudio.BreathStopOnZero = true; } // left the scene mid-opening
 
     // Citizens freeze in a wave spreading from the board.
     void FreezeCitizens()

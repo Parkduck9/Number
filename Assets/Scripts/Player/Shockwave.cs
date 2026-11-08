@@ -45,6 +45,8 @@ public class Shockwave : MonoBehaviour
     GameObject hudRoot;
     TMP_Text hudText;
     int shownTenths = -1;
+    UnityEngine.UI.Image hudIcon; // DraftSprites: shockwave_icon / shockwave_icon_cooldown instead of the text line
+    Sprite iconReady, iconCooldown;
 
     void Awake()
     {
@@ -59,7 +61,7 @@ public class Shockwave : MonoBehaviour
     void Update()
     {
         if (Time.timeScale == 0f) { pendingPress |= input.ShockwavePressed; return; } // hit-stop / pause: keep the press
-        if (GameFlow.InputLocked) pendingPress = false;
+        if (GameFlow.InputLocked) { pendingPress = false; readyAt += Time.deltaTime; UpdateHud(); return; } // dialogue: cooldown pauses like the player's timers
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Keyboard.current != null && Keyboard.current.f9Key.wasPressedThisFrame)
         {
@@ -78,6 +80,7 @@ public class Shockwave : MonoBehaviour
     void Fire()
     {
         readyAt = Time.time + cooldown;
+        Sfx.Play(SfxId.Shockwave);
         Vector2 center = Center(player.Facing);
         Vector2 size = new Vector2(range, height);
         ParryFx.Swing(center, size, fxColor, null, player.Facing, 0.15f, 0f);
@@ -105,8 +108,14 @@ public class Shockwave : MonoBehaviour
         if (tenths == shownTenths) return;
         shownTenths = tenths;
         bool ready = tenths <= 0;
-        hudText.text = ready ? Loc.T("SPACE  Shockwave: READY", "SPACE  충격파: 준비")
-                             : Loc.T($"SPACE  Shockwave: {tenths / 10f:0.0}s", $"SPACE  충격파: {tenths / 10f:0.0}초");
+        if (hudIcon != null) // draft icon: caption is just the key / the seconds left
+        {
+            hudIcon.sprite = ready ? iconReady : iconCooldown;
+            hudText.text = ready ? "SPACE" : $"{tenths / 10f:0.0}s";
+        }
+        else
+            hudText.text = ready ? Loc.T("SPACE  Shockwave: READY", "SPACE  충격파: 준비")
+                                 : Loc.T($"SPACE  Shockwave: {tenths / 10f:0.0}s", $"SPACE  충격파: {tenths / 10f:0.0}초");
         hudText.color = ready ? ReadyColor : UiTheme.Current.dim;
     }
 
@@ -114,7 +123,16 @@ public class Shockwave : MonoBehaviour
     {
         var canvas = UiKit.CreateCanvas("ShockwaveHud", null, 40); // below the broadcast HUD (50)
         hudRoot = canvas.gameObject;
-        var rt = UiKit.Rect("Text", canvas.transform, Vector2.zero, new Vector2(16f + 180f, 24f), new Vector2(360f, 24f));
+        iconReady = Resources.Load<Sprite>("DraftUi/shockwave_icon");
+        iconCooldown = Resources.Load<Sprite>("DraftUi/shockwave_icon_cooldown");
+        bool icon = DraftSprites.Use && iconReady != null && iconCooldown != null;
+        if (icon) // 16px art at 3x = 48 reference px, bottom-left; the caption sits to its right
+        {
+            var ir = UiKit.Rect("Icon", canvas.transform, Vector2.zero, new Vector2(16f + 24f, 16f + 24f), new Vector2(48f, 48f));
+            hudIcon = UiKit.FilledImage(ir, Color.white);
+            hudIcon.sprite = iconReady;
+        }
+        var rt = UiKit.Rect("Text", canvas.transform, Vector2.zero, new Vector2((icon ? 16f + 48f + 8f : 16f) + 180f, icon ? 40f : 24f), new Vector2(360f, 24f));
         hudText = rt.gameObject.AddComponent<TextMeshProUGUI>();
         if (UiTheme.Current.font != null) hudText.font = UiTheme.Current.font;
         hudText.fontSize = 18;

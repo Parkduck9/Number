@@ -65,7 +65,8 @@ public class TestEnemy : MonoBehaviour
     bool chainStarted;    // first strike of a chain gets the long windup
     int facing = -1;
     Color baseColor = Color.white;
-    bool draftSprite; // DraftSprites: citizen attack frames instead of the placeholder square
+    bool draftSprite; // DraftSprites: attack frames (citizen / ranged citizen / android) instead of the placeholder square
+    Sprite[] draftFrames, draftWalk, draftStunned; // attack 3f, walk 2f, stunned 1f (walk / stunned may be null = fall back to the attack strip)
     Color flashColor;
     float flashUntil;
     float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
@@ -89,7 +90,10 @@ public class TestEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         number = GetComponent<EnemyNumber>();
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
-        draftSprite = kind == Kind.Citizen && DraftSprites.Setup(visual, DraftSprites.Citizen);
+        draftFrames = kind == Kind.Android ? DraftSprites.Android : ranged ? DraftSprites.CitizenRanged : kind == Kind.Citizen ? DraftSprites.Citizen : null;
+        draftSprite = DraftSprites.Setup(visual, draftFrames);
+        draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
+        draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : DraftSprites.CitizenStunned;
         if (visual != null) baseColor = visual.color; // white after the draft sprite swap
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
@@ -337,6 +341,14 @@ public class TestEnemy : MonoBehaviour
                     result = pc.ReceiveEnemyHit(hit);
                 }
             }
+            else if (player.CurrentState == PlayerController.State.Dash)
+            {
+                // Dash-behind (DECISIONS 11): the dash began inside this hitbox and carried the player out before the strike landed.
+                // Still a dash-through (last-strike stagger, Android 7th-strike overload); the strike itself is a whiff (Dodged).
+                Vector2 s = player.DashStart - center;
+                dashedThrough = Mathf.Abs(s.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(s.y) <= attackSize.y * 0.5f + 1f // player box 0.9 x 2
+                    && Mathf.Sign(player.transform.position.x - player.DashStart.x) == Mathf.Sign(transform.position.x - player.DashStart.x); // toward/past the enemy only; dashing away stays a Charge trigger
+            }
         }
         strikesLeft--;
         chainStarted = true;
@@ -384,6 +396,7 @@ public class TestEnemy : MonoBehaviour
             case State.Windup:
                 number.SetPulse(true);
                 number.SetFlame(strikesLeft == 1); // single-strike chain: tell during its windup
+                Sfx.Play(strikesLeft == 1 ? SfxId.LastTell : SfxId.EnemyTell);
                 break;
             case State.Charge:
                 number.SetPulse(true);
@@ -392,6 +405,7 @@ public class TestEnemy : MonoBehaviour
             case State.Staggered:
                 number.SetFlame(false);
                 openDuration = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3OpenTime : openTime;
+                if (next == State.Open) Sfx.Play(SfxId.Stunned, 0.6f); // counter window opens
                 break;
             case State.Frozen:
                 number.SetPulse(false);
@@ -411,8 +425,9 @@ public class TestEnemy : MonoBehaviour
                 break;
             case State.Stunned:
                 number.Hide();
+                Sfx.Play(SfxId.Stunned);
                 rb.linearVelocity = Vector2.zero;
-                if (visual != null) visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f * -facing);
+                if (visual != null && !(draftSprite && draftStunned != null)) visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f * -facing);
                 break;
         }
     }
@@ -460,12 +475,20 @@ public class TestEnemy : MonoBehaviour
         flashUntil = Time.time + flashTime;
     }
 
+    // Stunned / Overload = stunned frame; Approach = walk frames while moving; windup (and the android's fan tell) / strike / recover = attack frames 0 / 1 / 2; the rest rests on the recover pose.
+    Sprite DraftFrame()
+    {
+        if ((state == State.Stunned || (state == State.Overload && kind == Kind.Android)) && draftStunned != null) return draftStunned[0];
+        if (state == State.Approach && draftWalk != null)
+            return draftWalk[Mathf.Abs(rb.linearVelocity.x) > 0.1f ? Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length : 0];
+        return draftFrames[state == State.Windup || state == State.Special ? 0 : state == State.Strike ? 1 : 2];
+    }
+
     void ApplyVisual()
     {
         if (visual == null) return;
         visual.flipX = facing < 0;
-        if (draftSprite) // windup / strike / recover = frames 0 / 1 / 2, anything else rests on the recover pose
-            visual.sprite = DraftSprites.Citizen[state == State.Windup ? 0 : state == State.Strike ? 1 : 2];
+        if (draftSprite) visual.sprite = DraftFrame();
         Color c = baseColor;
         switch (state)
         {

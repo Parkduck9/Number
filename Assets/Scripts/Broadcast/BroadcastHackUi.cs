@@ -34,6 +34,8 @@ public class BroadcastHackUi : MonoBehaviour
     TMP_Text hudText, promptText;
     GameObject barRoot, promptRoot;
     RectTransform barFill;
+    RectTransform digitRow; // DraftHud art; null = the TMP text above is used
+    Image arcL, digitImg, arcR;
 
     void Awake() { BuildUi(); }
 
@@ -96,15 +98,16 @@ public class BroadcastHackUi : MonoBehaviour
         int hacked = b.IsHacked ? 1 : 0;
         if (!wasShown || b.Number != shownNumber || hacked != shownHacked)
         {
-            if (!wasShown || b.Number != shownNumber) punchAt = Time.unscaledTime; // TODO(audio): SFX-01 broadcast chime here
+            if (!wasShown || b.Number != shownNumber) punchAt = Time.unscaledTime; // the SFX-01 chime is played by GameAudio's board observer
             shownNumber = b.Number;
             shownHacked = hacked;
             hudText.text = "((( " + b.Number + " )))";
             hudText.color = b.IsHacked ? HackedCyan : BroadcastGold;
+            if (digitRow != null) ShowDigits(b);
         }
         float k = Mathf.Clamp01((Time.unscaledTime - punchAt) / 0.3f);
         float s = Mathf.Lerp(1.4f, 1f, k); // short scale punch on a new / changed number
-        hudText.transform.localScale = new Vector3(s, s, 1f);
+        (digitRow != null ? digitRow : hudText.rectTransform).localScale = new Vector3(s, s, 1f);
         barRoot.SetActive(showCounterHackBar && b.IsHacked);
         if (barRoot.activeSelf) barFill.anchorMax = new Vector2(b.CounterHackProgress, 1f);
     }
@@ -152,7 +155,8 @@ public class BroadcastHackUi : MonoBehaviour
         GameObject hud = NewRect("Hud", root, new Vector2(0.5f, 1f), new Vector2(0f, -16f), new Vector2(360f, 72f));
         hudText = NewText("Number", hud.transform, HudSize, TextAlignmentOptions.Center);
         Stretch((RectTransform)hudText.transform, 0f, 0f, 0f, 0f);
-        barRoot = NewRect("Bar", hud.transform, new Vector2(0.5f, 0f), new Vector2(0f, -6f), new Vector2(240f, 8f));
+        BuildDigitRow(hud.transform);
+        barRoot =NewRect("Bar", hud.transform, new Vector2(0.5f, 0f), new Vector2(0f, -6f), new Vector2(240f, 8f));
         barRoot.AddComponent<Image>().color = BorderColor;
         GameObject fill = NewRect("Fill", barRoot.transform, Vector2.zero, Vector2.zero, Vector2.zero);
         Stretch((RectTransform)fill.transform, 0f, 0f, 0f, 0f);
@@ -173,6 +177,38 @@ public class BroadcastHackUi : MonoBehaviour
 
         // Dial panel: center (shared look, see NumberDial)
         dial = new NumberDial(root, font, "BROADCAST HACK", "방송 해킹");
+    }
+
+    // DraftHud: arc + 12x18 glyph + arc at 3x replaces the "((( N )))" text (magenta = the AI's number, cyan = hacked). No art = text stays.
+    void BuildDigitRow(Transform parent)
+    {
+        if (DraftHud.BroadcastDigits(false) == null || DraftHud.BroadcastDigits(true) == null ||
+            DraftHud.BroadcastArcs(false) == null || DraftHud.BroadcastArcs(true) == null) return;
+        digitRow = UiKit.Rect("DigitRow", parent, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(114f, 54f));
+        arcL = DigitPiece("ArcL", -40.5f);
+        digitImg = DigitPiece("Digit", 0f);
+        arcR = DigitPiece("ArcR", 40.5f);
+        hudText.enabled = false;
+    }
+
+    Image DigitPiece(string name, float x)
+    {
+        var img = UiKit.FilledImage(UiKit.Rect(name, digitRow, new Vector2(0.5f, 0.5f), new Vector2(x, 0f), Vector2.zero), Color.white);
+        return img;
+    }
+
+    void ShowDigits(BroadcastBoard b)
+    {
+        Sprite[] digits = DraftHud.BroadcastDigits(b.IsHacked), arcs = DraftHud.BroadcastArcs(b.IsHacked);
+        Place(arcL, arcs[0]);
+        Place(digitImg, digits[Mathf.Clamp(b.Number, 0, 9)]);
+        Place(arcR, arcs[1]);
+    }
+
+    static void Place(Image img, Sprite s)
+    {
+        img.sprite = s;
+        img.rectTransform.sizeDelta = s.rect.size * 3f; // 3x the 960x540 reference grid
     }
 
     TMP_Text NewText(string name, Transform parent, int size, TextAlignmentOptions align)

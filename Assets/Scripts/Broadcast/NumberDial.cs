@@ -94,7 +94,7 @@ public class NumberDial
             if (wheel > 0f) Selected = (Selected + 1) % 10;
             else if (wheel < 0f) Selected = (Selected + 9) % 10;
         }
-        if (Selected != before) Refresh();
+        if (Selected != before) { Sfx.Play(SfxId.UiSelect); Refresh(); }
         return Input.None;
     }
 

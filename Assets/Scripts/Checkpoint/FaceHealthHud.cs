@@ -20,6 +20,17 @@ public class FaceHealthHud : MonoBehaviour
     PlayerHealth health;
     int shown = -1;
 
+    // DraftHud: 48px face art drawn at 2x (96 reference px) in place of the 64px placeholder box; the stage-name label goes away.
+    void Awake()
+    {
+        Sprite[] art = DraftHud.Faces;
+        if (art == null || face == null) return;
+        stages = art;
+        face.rectTransform.sizeDelta = new Vector2(96f, 96f);
+        face.preserveAspect = true;
+        if (label != null) { label.gameObject.SetActive(false); label = null; }
+    }
+
     void Update()
     {
         if (health == null)

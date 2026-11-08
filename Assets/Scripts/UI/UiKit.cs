@@ -122,7 +122,7 @@ public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, 
     bool selected, hover;
 
     public void Init(Image b, TMP_Text l, UiTheme t) { border = b; label = l; theme = t; Apply(); }
-    public void OnSelect(BaseEventData e) { selected = true; Apply(); }
+    public void OnSelect(BaseEventData e) { selected = true; Sfx.Play(SfxId.UiSelect); Apply(); }
     public void OnDeselect(BaseEventData e) { selected = false; Apply(); }
     public void OnPointerEnter(PointerEventData e) { hover = true; Apply(); }
     public void OnPointerExit(PointerEventData e) { hover = false; Apply(); }

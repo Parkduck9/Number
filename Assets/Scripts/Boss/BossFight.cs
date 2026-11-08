@@ -29,8 +29,8 @@ public class BossFight : MonoBehaviour
     [SerializeField] float betweenWavesSeconds = 1.5f; // (T) pause after a wave is cleared
     [SerializeField] Wave[] waves =                  // (T) wave table
     {
-        new Wave { broadcastNumber = 3, citizens = 4, bugs = 0, androids = 0, announceEn = "WAVE 1 - LUCKY 3", announceKo = "1차 - 행운의 3" },
-        new Wave { broadcastNumber = 7, citizens = 3, bugs = 2, androids = 0, announceEn = "WAVE 2 - LUCKY 7", announceKo = "2차 - 행운의 7" },
+        new Wave { broadcastNumber = 3, citizens = 3, bugs = 1, androids = 0, announceEn = "WAVE 1 - LUCKY 3", announceKo = "1차 - 행운의 3" }, // review 06 #6: one shot line so wave 1 is not four clicks
+        new Wave { broadcastNumber = 7, citizens = 4, bugs = 2, androids = 0, announceEn = "WAVE 2 - LUCKY 7", announceKo = "2차 - 행운의 7" },
         new Wave { broadcastNumber = 0, citizens = 3, bugs = 0, androids = 2, announceEn = "WAVE 3 - LUCKY 0", announceKo = "3차 - 행운의 0" },
     };
 
@@ -101,6 +101,7 @@ public class BossFight : MonoBehaviour
         spawnTotal = w.androids + w.bugs + w.citizens;
         clearedFired = false;
         board.SetAiNumber(w.broadcastNumber);
+        if (i == 0) Bgm.Play(BgmId.Boss); // fight start
         Enter(State.Announce);
         WaveStarted?.Invoke(i);
     }
@@ -146,6 +147,7 @@ public class BossFight : MonoBehaviour
     void Unlock()
     {
         Enter(State.Unlocked);
+        Bgm.Play(BgmId.Field); // the fight is won
         if (stopButton != null) stopButton.SetActive(true); // sticky: State.Unlocked has no way out
         Unlocked?.Invoke();
     }

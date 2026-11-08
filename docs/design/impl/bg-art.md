@@ -83,3 +83,8 @@ When done, list the 6 saved paths and the pixel size of each file. Final answer 
 
 ## 5. 크레딧
 - 이 그림들은 **AI 생성(Codex CLI / OpenAI GPT 이미지 생성) + Claude 스크립트 도트화**다. 게임에 쓰게 되면 [CREDITS.md](../../../CREDITS.md)의 AI 생성 에셋·AI 공개 항목에 반드시 추가한다 (공식 규칙 7(d)). 시안 단계라 아직 CREDITS.md에는 넣지 않았다.
+
+## 6. 연결됨 (2026-11-08, 테스트용)
+- 6장을 _draft 없이 Assets/Art/Backgrounds/로 옮겼다 (git mv). 임포트는 Assets/Editor/DraftSpriteImporter.cs의 BackgroundImporter가 자동 적용 (Sprite Single, PPU 32, 피벗 왼쪽 아래, Point, 무압축, Max 2048).
+- Stg02/03/04Builder는 StageBuildKit.BuildImageBackground(그림이 없으면 단색)로, Stg05Builder는 직접 스프라이트를 깐다. 배율 1.0. 씬을 다시 만들어야 보인다 (NUMBER/Build STG-02 ... 05).
+- 3절의 문제(발판 높이 불일치 등)는 아직 손보지 않았다. CREDITS.md에 6장을 넣었다.

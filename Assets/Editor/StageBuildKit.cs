@@ -270,8 +270,7 @@ public static class StageBuildKit
             SetFloat(te, "lastStrikeDelay", 0.5f);
             SetInt(te, "unparryableNumber", 7);
             SetInt(te, "maxHp", 5);
-            if (f.fixedNumber <= 0) { SetInt(number, "minValue", 1); SetInt(number, "maxValue", 7); }
-            else Todo.Add($"{f.id}: TestEnemy.kind missing");
+            if (f.fixedNumber <= 0) { SetInt(number, "minValue", 1); SetInt(number, "maxValue", 7); } // fixed-number androids keep the pin set above
         }
     }
 
@@ -398,6 +397,19 @@ public static class StageBuildKit
     public static void BuildSolidBackground(Transform root, float width, float height, Color color)
     {
         AddSquare(root, "Background (PLACEHOLDER solid)", new Vector2(width * 0.5f, height * 0.5f), new Vector2(width, height), color, -100);
+    }
+
+    // Final background art (Assets/Art/Backgrounds, 1 px = 1/32 u, so it is not scaled); falls back to the solid colour when the image is missing.
+    public static void BuildImageBackground(Transform root, string assetPath, float width, float height, Color fallback)
+    {
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (sprite == null)
+        {
+            Todo.Add("Background image missing (" + assetPath + "): solid colour used");
+            BuildSolidBackground(root, width, height, fallback);
+            return;
+        }
+        BuildSpriteBackground(root, sprite, width);
     }
 
     // Image background placed bottom-left (the sprite's pivot is BottomLeft), scaled to the segment width.

@@ -46,11 +46,28 @@ public class DialoguePlayer : MonoBehaviour
         BuildUi();
     }
 
+    void OnEnable() { Loc.Changed += OnLanguageChanged; }
+    void OnDisable() { Loc.Changed -= OnLanguageChanged; }
+
     void OnDestroy()
     {
         if (Instance != this) return;
         Instance = null;
         GameFlow.InputLocked = false;
+    }
+
+    // Language toggled mid-line: redraw the lines on screen in the new language, keeping the typewriter position.
+    void OnLanguageChanged()
+    {
+        if (radioLine != null) Reshow(radioBox, radioLine);
+        if (talkLine != null) Reshow(talkBox, talkLine);
+    }
+
+    void Reshow(Box box, DialogueLine line)
+    {
+        int visible = box.body.maxVisibleCharacters;
+        Show(box, line);
+        box.body.maxVisibleCharacters = visible;
     }
 
     public void Play(TextAsset file)

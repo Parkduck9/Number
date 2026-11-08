@@ -315,6 +315,7 @@ public static class BugSwarmBootstrap
     public static void TryAttach(TestEnemy e)
     {
         if (e.GetComponent<BugSwarmVisual>() != null || !IsBug(e)) return;
+        if (IsRanged(e) && DraftSprites.Use && DraftSprites.CitizenRanged != null) return; // draft ranged-citizen art replaces the swarm (draft-sprites.md)
         e.gameObject.AddComponent<BugSwarmVisual>();
     }
 

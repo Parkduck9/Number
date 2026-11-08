@@ -25,7 +25,7 @@ public static class Stg02Builder
         new Box("GROUND-B", B, Kind.Solid, 0f, 50.625f, 0f, 1.0f),
         new Box("STEP-B1",  B, Kind.OneWay, 3f, 6f,   2.25f, 2.5f),
         new Box("STEP-B2",  B, Kind.OneWay, 5f, 8f,   3.55f, 3.8f),
-        new Box("RAIL-B",   B, Kind.OneWay, 8f, 44f,  4.75f, 5.0f),
+        new Box("RAIL-B",   B, Kind.OneWay, 8f, 28f,  4.75f, 5.0f), // ends before the x 30-38 group so the rail cannot skip the NUM-7 fight (review 06 #5)
     };
 
     static readonly Pt PlayerStart = new Pt("P-START", A, 3f, 1.0f);
@@ -44,7 +44,7 @@ public static class Stg02Builder
         new Foe("E-B2", B, 30f, 1.0f, 0, 0.6f, 8f),                  // 5+ allowed from here (late STG-02)
         new Foe("E-B3", B, 33f, 1.0f, 0, 0.6f, 8f),                  // pair with E-B2, ranged E-B5 behind
         new Foe("E-B5", B, 38f, 1.0f, 1, 0f,   12f, false, true),
-        new Foe("E-B4", B, 40f, 5.0f, 0, 0.6f, 8f),                  // on the rail
+        new Foe("E-B4", B, 43f, 1.0f, 0, 0.6f, 8f),                  // ground, behind ranged E-B5 (was on the rail; review 06 #5)
     };
 
     // Billboards (segment-local center): A shows 3 (review), B shows 7 (first time). Zone = the whole segment.
@@ -65,7 +65,7 @@ public static class Stg02Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            BuildSolidBackground(roots[i], SegWidth, SegHeight, SegColor[i]);
+            BuildImageBackground(roots[i], i == A ? "Assets/Art/Backgrounds/bg_stg02_segA_rooftops.png" : "Assets/Art/Backgrounds/bg_stg02_segB_elevated_rail.png", SegWidth, SegHeight, SegColor[i]);
             foreach (var w in Walls(i == A ? "A" : "B", i)) BuildCollider(roots[i], w, true);
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);

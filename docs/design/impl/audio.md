@@ -108,3 +108,10 @@ GameAudio.BreathStop(1.5f);     // N초 동안 모두 끊었다가 돌아옴
 2. **`BroadcastBoard`에 정적 이벤트 `AnyNumberChanged`:** 지금은 오디오가 `All` 목록을 매 프레임 훑어 새 전광판을 찾는다 (전광판 수가 적어 비용은 무시할 만함). 정적 이벤트가 있으면 폴링이 필요 없다.
 3. **숫자 0 = 숨 멈춤 연출 일원화:** 시민 굳음(enemy-rules 세션)과 소리 정적(여기)이 따로 0을 감지한다. 나중에 "Zero 상태 시작/끝" 이벤트 하나로 묶으면 타이밍이 어긋나지 않는다.
 4. **음량 설정:** 일시정지 메뉴에 음량 슬라이더를 넣으려면 `GameAudio`에 `SetVolume(sfx, bgm)` 하나만 추가하면 된다 (지금은 요청이 없어 안 만듦).
+
+## 6. 연결됨 (2026-11-08, 테스트용)
+세션이 3절 목록을 모두 연결했다. 위치는 이름으로 찾았다.
+- 플레이어: PlayerController (Swing/Hit/Parry/Dash/Hurt). 적: TestEnemy.EnterState (Windup→EnemyTell/LastTell, Stunned, Open→Stunned 0.6).
+- 해킹 다이얼 UiSelect는 NumberDial.Read(숫자가 바뀔 때)에, 메뉴 UiSelect는 ButtonHighlight.OnSelect에 넣었다. 충격파는 Shockwave.Fire.
+- 필드 BGM: StageFlow.OnSceneLoaded (타이틀과 STG00~05 로드 때 Field). 보스 BGM: BossFight.StartWave(0)에서 Boss, Unlock에서 Field로 복귀.
+- 숨 멈춤: BreathZero.Run이 GameAudio.BreathStop(holdSeconds)를 부른다 (자체 음소거 삭제). OpeningSequence는 라디오의 0이 먼저 자동 침묵을 일으키지 않도록 BreathStopOnZero를 잠시 끈다.

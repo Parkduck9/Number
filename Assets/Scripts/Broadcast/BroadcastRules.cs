@@ -3,7 +3,7 @@
 public static class BroadcastRules
 {
     // NUM-3: melee enemies chain faster and stay open longer
-    public static float Num3ChainWindupTime = 0.10f; // windup of chain strikes after the first (base chainWindupTime 0.15)
+    public static float Num3ChainWindupTime = 0.15f; // windup of chain strikes after the first. 0.10 x NormalTimeMul 0.65 blurred the 3 strikes into one (review 06); 0.15 keeps them countable
     public static float Num3OpenTime = 1.5f;         // counter window after the chain (base openTime 1)
     public static int Num3Number = 3;                // melee enemies' number is pinned to this (ranged keep theirs)
 

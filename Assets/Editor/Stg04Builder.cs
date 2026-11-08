@@ -38,12 +38,12 @@ public static class Stg04Builder
         new Foe("E-A1", A, 16f, 1.0f, 0, 0.7f, 8f),
         new Foe("E-A2", A, 19f, 3.6f, 0, 0.7f, 8f), // catwalk, above E-A1
         new Foe("E-A3", A, 33f, 1.0f, 0, 0.7f, 8f),
-        new Foe("E-A4", A, 38f, 1.0f, 0, 0.7f, 8f, true),
-        new Foe("E-A5", A, 44f, 1.0f, 1, 0f,   12f, false, true), // ranged behind melee + android
+        new Foe("E-A4", A, 38f, 1.0f, 3, 0f,   8f, true),         // first android: fixed 3 = "parry the 3rd strike" lesson (review 06 #1)
+        new Foe("E-A5", A, 44f, 1.0f, 1, 0f,   6f, false, true),  // ranged behind melee + android; wakes only past x 38 so the android is read 1:1 (review 06 #2)
         new Foe("E-B1", B, 15f, 1.0f, 0, 0.8f, 8f),
-        new Foe("E-B2", B, 18f, 1.0f, 0, 0.8f, 8f, true),
+        new Foe("E-B2", B, 18f, 1.0f, 4, 0f,   8f, true), // androids 3 -> 4 -> 6; no 7 outside the boss (review 06 #3)
         new Foe("E-B3", B, 26f, 3.6f, 0, 0.8f, 8f), // catwalk
-        new Foe("E-B4", B, 30f, 1.0f, 0, 0.8f, 8f, true),
+        new Foe("E-B4", B, 30f, 1.0f, 6, 0f,   8f, true),
         new Foe("E-B5", B, 34f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B6", B, 40f, 1.0f, 1, 0f,   12f, false, true), // ranged behind
     };
@@ -66,7 +66,7 @@ public static class Stg04Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            BuildSolidBackground(roots[i], SegWidth, SegHeight, SegColor[i]);
+            BuildImageBackground(roots[i], i == A ? "Assets/Art/Backgrounds/bg_stg04_segA_production_line.png" : "Assets/Art/Backgrounds/bg_stg04_segB_inspection_hall.png", SegWidth, SegHeight, SegColor[i]);
             foreach (var w in Walls(i == A ? "A" : "B", i)) BuildCollider(roots[i], w, true);
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);

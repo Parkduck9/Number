@@ -10,6 +10,20 @@ public static class StageFlow
     public const string TitleScene = "Title"; // Card D's title scene; loaded by name if it exists
     public static readonly System.Collections.Generic.IReadOnlyList<string> Stages = new[] { "STG00", "STG01", "STG02", "STG03", "STG04", "STG05" };
 
+    // Field BGM for the title and every stage scene (a scene reload after a death switches the boss track back). Test scenes stay silent.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void InitBgm()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == TitleScene || System.Linq.Enumerable.Contains(Stages, scene.name)) Bgm.Play(BgmId.Field);
+    }
+
     // Loads the next existing stage after the current scene. Returns false (and logs) when there is none.
     public static bool LoadNext()
     {

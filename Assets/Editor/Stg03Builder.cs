@@ -35,14 +35,18 @@ public static class Stg03Builder
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var root = new GameObject("ROOM").transform;
-        BuildSolidBackground(root, RoomWidth, SegHeight, BgColor);
+        BuildImageBackground(root, "Assets/Art/Backgrounds/bg_stg03_hideout_room.png", RoomWidth, SegHeight, BgColor);
         foreach (var b in Boxes) BuildCollider(root, b, true);
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);
         BuildCheckpoint(root, Checkpoint);
 
-        AddSquare(root, "LUDDITE (PLACEHOLDER)", new Vector2(LudditeX, 2f), new Vector2(1f, 2f), NpcColor, 2);
+        var luddite = new GameObject("LUDDITE").transform; // DraftIdleAnim swaps the square for the draft idle art (feet at the floor)
+        luddite.SetParent(root, false);
+        luddite.localPosition = new Vector3(LudditeX, 2f, 0f);
+        AddSquare(luddite, "LUDDITE (PLACEHOLDER)", Vector2.zero, new Vector2(1f, 2f), NpcColor, 2);
+        luddite.gameObject.AddComponent<DraftIdleAnim>();
         AddSquare(root, "Door (PLACEHOLDER)", new Vector2((Exit.x1 + Exit.x2) * 0.5f, 2.5f), new Vector2(Exit.x2 - Exit.x1, 3f), DoorColor, 1);
 
         var exit = BuildTrigger(root, Exit);

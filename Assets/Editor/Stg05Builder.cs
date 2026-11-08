@@ -53,6 +53,16 @@ public static class Stg05Builder
         Directory.CreateDirectory("Assets/Scenes");
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+        // Background image (30 x 16.875 u at PPU 32, pivot bottom-left, behind everything); no image = the camera's solid colour shows.
+        var bgSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Backgrounds/bg_stg05_boss_room.png");
+        if (bgSprite != null)
+        {
+            var bg = new GameObject("Background (boss room)").AddComponent<SpriteRenderer>();
+            bg.sprite = bgSprite;
+            bg.sortingOrder = -100;
+        }
+        else Todo.Add("Background image missing (Assets/Art/Backgrounds/bg_stg05_boss_room.png)");
+
         // Room: ground + walls (layer Ground; walls invisible, visible floor strip so the room reads).
         BuildCollider("GROUND", 0f, RoomW, 0f, 2f, new Color32(0x3A, 0x3F, 0x4B, 0xFF));
         BuildCollider("WALL-L", -1f, 0f, 0f, RoomH, null);

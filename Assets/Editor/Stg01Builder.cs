@@ -89,7 +89,7 @@ public static class Stg01Builder
     {
         new Foe("E-A1", A, 18f, 2.85f, 1, 0f, 10f, true), // FIRST enemy: gold ranged 1 on LEDGE-A1 (wakes at player x 8). Parry the shot (RMB) or dash past. Its 9u range ends near x 31.
         new Foe("E-A2", A, 37f, 2.25f, 2, 0f, 6f),        // tutorial melee 1:1, fixed 2; wakes at player x 31, outside E-A1's range
-        new Foe("E-A3", A, 40f, 2.25f, 3, 0f, 5f),        // fixed 3 melee with a gold ranged 1 behind it (wakes after the tutorial fight)
+        new Foe("E-A3", A, 40f, 2.25f, 3, 0f, 9f),        // fixed 3 melee; detect 9 = wakes with E-A2 at player x 31 -> 2+3 pair (auto-approach makes a 1:1 a single click; review 06 #4)
         new Foe("E-A4", A, 42f, 2.25f, 1, 0f, 8f, true),
         new Foe("E-B3", B, 22f, 7.5f,  0, 0.3f, 8f, false, 4), // on the roof (D2 roof-edge rule)
         new Foe("E-B1", B, 30f, 1.0f,  0, 0.3f, 8f, false, 4), // pincer pair with E-B2 + ranged E-B4 behind
@@ -100,6 +100,9 @@ public static class Stg01Builder
     // Trigger boxes (segment-local x1..x2, y1..y2).
     static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 43.2f, 46.8f, 2.25f, 5f);
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 42f, 47f, 1.0f, 5f);
+    // Control hint (review 06 #5): one radio line just after the start, before E-A1 wakes at player x 8.
+    static readonly Box HintA = new Box("TR-A-HINT", A, Kind.Solid, 7f, 8f, 2.25f, 5f);
+    const string HintLines = "Assets/Data/Dialogue/stg01_hint_combat.txt";
 
     // DECISIONS 5-B: SEG-B has one broadcast board (SEG-A none). Its zone is the whole segment, so the HUD "3" appears on arrival through the door.
     const int BoardSeg = B, BoardNumber = 3;
@@ -169,6 +172,8 @@ public static class Stg01Builder
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud();
         BuildBoard(roots[BoardSeg]); // SEG-B only (5-B); the HUD (BuildHud) shows the board of the player's zone
+        StageBuildKit.BuildDialoguePlayer(); // radio hint needs DialoguePlayer.Instance
+        BuildHint(roots[HintA.seg]);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         StageBuildKit.SyncBuildSettings();
@@ -277,6 +282,14 @@ public static class Stg01Builder
             sr.sortingOrder = 5;
         }
         return go;
+    }
+
+    static void BuildHint(Transform root)
+    {
+        var go = BuildTrigger(root, HintA);
+        var lines = AssetDatabase.LoadAssetAtPath<TextAsset>(HintLines);
+        if (lines == null) { Todo.Add("hint line file missing: " + HintLines); return; }
+        SetObj(go.AddComponent<DialogueTrigger>(), "lines", lines);
     }
 
     static GameObject BuildTrigger(Transform root, Box b)
