@@ -90,7 +90,7 @@ public static class Stg02Builder
         BuildLight(1f, Color.white);
         BuildCamera(playerGo.transform, new[] { SegRect(SegX[A]), SegRect(SegX[B]) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
-        BuildHud(false); // hack tool is obtained in STG-03
+        BuildHud(false); // number HUD shown, no hack dial: the device is obtained in STG-03
         SaveScene(scene, Tag, ScenePath);
     }
 }

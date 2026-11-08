@@ -318,8 +318,8 @@ public static class StageBuildKit
         return go;
     }
 
-    // Face-portrait health HUD (top-left) + optional broadcast hack UI.
-    public static void BuildHud(bool hackUi)
+    // Face-portrait health HUD (top-left) + broadcast number HUD (always); allowHack = dial and [E] prompt (STG-04/05 only, DECISIONS 01-fixes #5).
+    public static void BuildHud(bool allowHack)
     {
         var font = LoadFont();
         var canvasGo = new GameObject("HUD Canvas");
@@ -354,9 +354,9 @@ public static class StageBuildKit
         SetObj(hud, "face", img);
         SetObj(hud, "label", label);
 
-        if (!hackUi) return;
         var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
         if (font != null) SetObj(ui, "font", font);
+        SetBool(ui, "allowHack", allowHack);
     }
 
     public static void BuildDialoguePlayer()

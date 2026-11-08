@@ -382,6 +382,7 @@ public static class Stg01Builder
 
         var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
         if (font != null) SetObj(ui, "font", font);
+        StageBuildKit.SetBool(ui, "allowHack", false); // HUD only: the hack device is obtained in STG-03 (01-fixes #5)
     }
 
     static void BuildBoard(Transform root)

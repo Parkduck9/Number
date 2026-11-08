@@ -14,6 +14,7 @@ public class BroadcastHackUi : MonoBehaviour
     [SerializeField] TMP_FontAsset font;
     [SerializeField] float interactRange = 3f;
     [SerializeField] bool showCounterHackBar = true; // progress bar next to the number (DECISIONS 3-A)
+    [SerializeField] bool allowHack = true; // false before STG-03 (no device yet): HUD only, no dial / [E] prompt (01-fixes #5)
 
     // ---- Style (placeholder; restyle here) ----
     static readonly Vector2 RefResolution = new Vector2(960f, 540f);
@@ -57,7 +58,7 @@ public class BroadcastHackUi : MonoBehaviour
         BroadcastBoard hud = player != null ? BroadcastBoard.At(player.transform.position) : null; // only the player's zone
         UpdateHud(hud);
 
-        BroadcastBoard near = player != null ? Nearest(interactRange) : null;
+        BroadcastBoard near = player != null && allowHack ? Nearest(interactRange) : null; // no near board = no prompt, no dial
         if (dialBoard != null)
         {
             if (GameFlow.InputLocked || near != dialBoard || PlayerDead()) Close(); // walked away / dialogue took over
