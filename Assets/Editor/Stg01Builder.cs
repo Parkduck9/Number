@@ -93,6 +93,11 @@ public static class Stg01Builder
     static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 43.2f, 46.8f, 2.25f, 5f);
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 42f, 47f, 1.0f, 5f);
 
+    // DECISIONS 5-B: SEG-B has one broadcast board (SEG-A none). Its zone is the whole segment, so the HUD "3" appears on arrival through the door.
+    const int BoardSeg = B, BoardNumber = 3;
+    const float BoardSize = 2.5f;
+    static readonly Vector2 BoardPos = new Vector2(6f, 3.5f); // segment-local centre: feet y 1.0 + 2.5u, near the arrival point P-B (2, 1) so it can be hacked at once
+
     // ------------------------------------------------------------------ BUILD
 
     static readonly List<string> Todo = new List<string>();
@@ -155,7 +160,7 @@ public static class Stg01Builder
         var cam = BuildCamera(playerGo.transform, roots);
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud();
-        // Broadcast boards are NOT placed (broadcast "3" timing is undecided, D3). BroadcastHackUi alone shows nothing without a board.
+        BuildBoard(roots[BoardSeg]); // SEG-B only (5-B); the HUD (BuildHud) shows the board of the player's zone
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         SetBuildScene();
@@ -364,6 +369,35 @@ public static class Stg01Builder
 
         var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
         if (font != null) SetObj(ui, "font", font);
+    }
+
+    static void BuildBoard(Transform root)
+    {
+        var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/Mulmaru/Mulmaru SDF.asset");
+        var go = new GameObject("BroadcastBoard");
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(BoardPos.x, BoardPos.y, 0f);
+        go.transform.localScale = new Vector3(BoardSize, BoardSize, 1f) / square.bounds.size.x;
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = square;
+        sr.color = new Color32(0x1A, 0x1F, 0x33, 0xFF);
+        sr.sortingOrder = 1;
+
+        var textGo = new GameObject("Number");
+        textGo.transform.SetParent(go.transform, false);
+        textGo.transform.localScale = new Vector3(1f / go.transform.localScale.x, 1f / go.transform.localScale.y, 1f); // undo the board's scale
+        var tmp = textGo.AddComponent<TextMeshPro>();
+        if (font != null) tmp.font = font;
+        tmp.text = BoardNumber.ToString();
+        tmp.fontSize = 18f * BoardSize / 3f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = new Color32(0xFF, 0xD2, 0x4A, 0xFF);
+        tmp.sortingOrder = 5;
+
+        var board = go.AddComponent<BroadcastBoard>();
+        SetInt(board, "aiNumber", BoardNumber);
+        SetObj(board, "label", tmp);
+        Apply(board, "zoneX", p => p.vector2Value = new Vector2(Segs[BoardSeg].worldX, Segs[BoardSeg].worldX + SegWidth));
     }
 
     static void BuildLight()

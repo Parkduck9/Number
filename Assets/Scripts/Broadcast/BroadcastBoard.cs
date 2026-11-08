@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-// Hook for anything that reacts to the zone's broadcast number (enemies later: NUM-3 / NUM-7 / NUM-0 rules are still [proposal]).
-// Implement this and call board.AddListener(this). No rule is implemented here on purpose.
+// Optional hook for anything that reacts to the zone's broadcast number.
+// Implement this and call board.AddListener(this). The enemy rules (NUM-3 / NUM-7 / NUM-0) live in TestEnemy + BroadcastRules and subscribe to NumberChanged instead.
 public interface IBroadcastListener
 {
     void OnBroadcastChanged(BroadcastBoard board, int newNumber, int oldNumber);
@@ -20,10 +20,27 @@ public class BroadcastBoard : MonoBehaviour
     [SerializeField, Range(0, 9)] int aiNumber = 3;
     [SerializeField] TMP_Text label; // optional world-space text on the billboard
 
-    [Header("Counter-hack hold time (Q-09 UNDECIDED - provisional GDD proposal values, tune after playtest)")]
-    // TODO(Q-09): user decides the real hold times. GDD proposal: default 8s, 0 shorter (5s).
+    [Tooltip("World x range (min,max) this board's broadcast covers. (0,0) = whole scene.")]
+    [SerializeField] Vector2 zoneX;
+
+    [Header("Counter-hack hold time (confirmed DECISIONS 3-A: 8s, 0 shorter 5s; tune after playtest)")]
     [SerializeField] float holdSeconds = 8f;
     [SerializeField] float holdSecondsForZero = 5f;
+
+    // The board whose zone contains pos.x (nearest if several), or null when pos is outside every zone.
+    public static BroadcastBoard At(Vector2 pos)
+    {
+        BroadcastBoard best = null;
+        float bestD = float.MaxValue;
+        foreach (BroadcastBoard b in All)
+        {
+            bool whole = b.zoneX.x == 0f && b.zoneX.y == 0f;
+            if (!whole && (pos.x < b.zoneX.x || pos.x > b.zoneX.y)) continue;
+            float d = Vector2.Distance(pos, b.transform.position);
+            if (d < bestD) { bestD = d; best = b; }
+        }
+        return best;
+    }
 
     public int Number { get; private set; }
     public int AiNumber => aiNumber;

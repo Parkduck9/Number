@@ -16,6 +16,11 @@ public class EnemyProjectile : MonoBehaviour
 
     public static void Spawn(Vector2 position, int dir, float speed, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color)
     {
+        Spawn(position, new Vector2(dir * speed, 0f), playerMask, groundMask, info, color);
+    }
+
+    public static void Spawn(Vector2 position, Vector2 velocity, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color)
+    {
         GameObject go = new GameObject("EnemyProjectile");
         go.transform.position = position;
         go.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
@@ -24,7 +29,7 @@ public class EnemyProjectile : MonoBehaviour
         sr.color = color;
         sr.sortingOrder = 50;
         EnemyProjectile p = go.AddComponent<EnemyProjectile>();
-        p.velocity = new Vector2(dir * speed, 0f);
+        p.velocity = velocity;
         p.playerMask = playerMask;
         p.groundMask = groundMask;
         p.info = info;

@@ -26,6 +26,7 @@ public class EnemyNumber : MonoBehaviour
 
     public int Value { get; private set; }
 
+    int pinned; // > 0 = forced number (broadcast rule), wins over fixedNumber
     bool pulsing;
     bool flameOn;
     GameObject flame;
@@ -44,11 +45,14 @@ public class EnemyNumber : MonoBehaviour
 
     public void SetProgress(float p) { progress = Mathf.Clamp01(p); }
 
+    // Pins the number for later rerolls (0 = none). Does not reroll by itself.
+    public void Pin(int n) { pinned = n; }
+
     public void Reroll()
     {
-        if (fixedNumber > 0)
+        if (pinned > 0 || fixedNumber > 0)
         {
-            Value = fixedNumber;
+            Value = pinned > 0 ? pinned : fixedNumber;
             SetPulse(false);
             SetFlame(false);
             Refresh();
