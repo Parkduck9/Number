@@ -1,0 +1,324 @@
+// Offline sound generator for "Lucky Number" (Unity Game Jam 2026).
+// Plain Node 18+, no dependencies. Writes 16-bit mono WAVs; Unity re-encodes to Vorbis on import.
+// Everything here is synthesized from scratch (sfxr-style oscillators + noise, modal bells,
+// Karplus-Strong plucks). No samples. Output is released CC0 by the team.
+// Usage: node gen-audio.mjs <outDir>
+import fs from 'node:fs';
+import path from 'node:path';
+
+const SR = 32000;
+const OUT = process.argv[2] || 'out';
+fs.mkdirSync(OUT, { recursive: true });
+
+// ---------- helpers ----------
+let seed = 12345;
+const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+const noise = () => rnd() * 2 - 1;
+const buf = (sec) => new Float32Array(Math.ceil(sec * SR));
+const TAU = Math.PI * 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+const expEnv = (t, attack, decay) => (t < attack ? t / attack : Math.exp(-(t - attack) / decay));
+const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+function mix(dst, src, at = 0, gain = 1) {
+  const o = Math.round(at * SR);
+  for (let i = 0; i < src.length; i++) {
+    const j = o + i;
+    if (j >= 0 && j < dst.length) dst[j] += src[i] * gain;
+  }
+  return dst;
+}
+// Loop-safe mix: wraps the tail past the end back to the start.
+function mixWrap(dst, src, at = 0, gain = 1) {
+  const o = Math.round(at * SR);
+  for (let i = 0; i < src.length; i++) dst[(o + i) % dst.length] += src[i] * gain;
+}
+function onePoleLP(x, cutoff) {
+  const a = 1 - Math.exp(-TAU * cutoff / SR); let y = 0;
+  for (let i = 0; i < x.length; i++) { y += a * (x[i] - y); x[i] = y; }
+  return x;
+}
+function onePoleHP(x, cutoff) {
+  const a = Math.exp(-TAU * cutoff / SR); let y = 0, px = 0;
+  for (let i = 0; i < x.length; i++) { y = a * (y + x[i] - px); px = x[i]; x[i] = y; }
+  return x;
+}
+// RBJ biquad band-pass with per-sample centre frequency (function of t).
+function bandpass(x, freqFn, q) {
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < x.length; i++) {
+    const f = typeof freqFn === 'function' ? freqFn(i / SR) : freqFn;
+    const w = TAU * Math.min(f, SR * 0.45) / SR, al = Math.sin(w) / (2 * q), c = Math.cos(w);
+    const a0 = 1 + al;
+    const b0 = al / a0, b2 = -al / a0, a1 = -2 * c / a0, a2 = (1 - al) / a0;
+    const y = b0 * x[i] + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = x[i]; y2 = y1; y1 = y; x[i] = y;
+  }
+  return x;
+}
+// Small Schroeder reverb (tail sized in seconds of extra buffer).
+function reverb(x, wet = 0.25, size = 1) {
+  const combs = [1557, 1617, 1491, 1422].map((d) => ({ d: Math.round(d * size * SR / 44100), b: null, i: 0 }));
+  combs.forEach((c) => (c.b = new Float32Array(c.d)));
+  const aps = [225, 556].map((d) => ({ d: Math.round(d * SR / 44100), b: null, i: 0 }));
+  aps.forEach((a) => (a.b = new Float32Array(a.d)));
+  const out = new Float32Array(x.length);
+  for (let n = 0; n < x.length; n++) {
+    let s = 0;
+    for (const c of combs) { const v = c.b[c.i]; c.b[c.i] = x[n] + v * 0.80; c.i = (c.i + 1) % c.d; s += v; }
+    s *= 0.25;
+    for (const a of aps) { const v = a.b[a.i]; const o = -s + v; a.b[a.i] = s + v * 0.5; a.i = (a.i + 1) % a.d; s = o; }
+    out[n] = x[n] * (1 - wet) + s * wet;
+  }
+  return out;
+}
+function normalize(x, peak = 0.89) {
+  let m = 0; for (const v of x) m = Math.max(m, Math.abs(v));
+  if (m > 0) for (let i = 0; i < x.length; i++) x[i] *= peak / m;
+  return x;
+}
+function fadeOut(x, sec) {
+  const n = Math.min(x.length, Math.round(sec * SR));
+  for (let i = 0; i < n; i++) x[x.length - 1 - i] *= i / n;
+  return x;
+}
+// Loop-safe reverb: render with a tail, then fold the tail back onto the start.
+function loopReverb(x, wet, size) {
+  const ext = new Float32Array(x.length + SR * 2); ext.set(x);
+  const r = reverb(ext, wet, size); const out = r.slice(0, x.length);
+  for (let i = x.length; i < r.length; i++) out[i - x.length] += r[i] - 0; // previous loop's tail
+  return out;
+}
+// Loop-safe high-pass: warm the filter up on one pass of the loop first.
+function loopHP(x, c) { const d = new Float32Array(x.length * 2); d.set(x); d.set(x, x.length); onePoleHP(d, c); return d.slice(x.length); }
+function finishSfx(x) { onePoleHP(x, 25); const n = Math.round(0.003 * SR); for (let i = 0; i < n; i++) x[i] *= i / n; return fadeOut(x, 0.01); }
+const softClip = (x, drive = 1) => { for (let i = 0; i < x.length; i++) x[i] = Math.tanh(x[i] * drive); return x; };
+
+// Oscillator with frequency as a function of time; shape: sine|square|saw|tri.
+function osc(sec, freqFn, shape, envFn, duty = 0.5) {
+  const x = buf(sec); let ph = 0;
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR; ph = (ph + freqFn(t) / SR) % 1;
+    let v;
+    if (shape === 'sine') v = Math.sin(ph * TAU);
+    else if (shape === 'square') v = ph < duty ? 1 : -1;
+    else if (shape === 'saw') v = ph * 2 - 1;
+    else v = 1 - 4 * Math.abs(ph - 0.5);
+    x[i] = v * envFn(t);
+  }
+  return x;
+}
+function noiseBurst(sec, envFn) { const x = buf(sec); for (let i = 0; i < x.length; i++) x[i] = noise() * envFn(i / SR); return x; }
+// Modal bell: inharmonic partials [ratio, gain, decay].
+function bell(sec, f0, partials, attack = 0.002) {
+  const x = buf(sec);
+  for (const [r, g, d] of partials) {
+    const f = f0 * r, ph0 = rnd() * TAU;
+    for (let i = 0; i < x.length; i++) { const t = i / SR; x[i] += g * Math.sin(ph0 + TAU * f * t) * expEnv(t, attack, d); }
+  }
+  return x;
+}
+// Korean bronze bell (pyeonjong-like) and gongs.
+const JONG = [[1, 1, 0.9], [2.0, 0.5, 0.5], [2.76, 0.35, 0.35], [5.4, 0.18, 0.15], [8.9, 0.08, 0.06]];
+const KKWAENG = [[1, 1, 0.18], [1.48, 0.7, 0.14], [2.23, 0.6, 0.1], [3.1, 0.45, 0.07], [4.7, 0.3, 0.05]]; // small bright gong
+// Karplus-Strong pluck (gayageum-ish: soft, with slight pitch bend down at attack = nonghyeon).
+function pluck(sec, f, bright = 0.5, bend = 0.0) {
+  const x = buf(sec); const N0 = SR / f; const len = Math.ceil(N0 * 1.1) + 2;
+  const line = new Float32Array(len); for (let i = 0; i < len; i++) line[i] = noise() * (0.5 + bright * 0.5);
+  onePoleLP(line, 1200 + bright * 5000);
+  let idx = 0, prev = 0;
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR;
+    const N = N0 * (1 + bend * Math.exp(-t / 0.08)); // starts sharp then settles
+    const rd = (idx - N + len * 4) % len; const i0 = Math.floor(rd), fr = rd - i0;
+    const s = lerp(line[i0 % len], line[(i0 + 1) % len], fr);
+    const y = 0.5 * (s + prev) * 0.996; prev = s;
+    line[idx] = y; idx = (idx + 1) % len; x[i] = y;
+  }
+  return x;
+}
+function crush(x, bits, hold) { const q = Math.pow(2, bits - 1); let h = 0; for (let i = 0; i < x.length; i++) { if (i % hold === 0) h = Math.round(x[i] * q) / q; x[i] = h; } return x; }
+
+function writeWav(name, x) {
+  const n = x.length, b = Buffer.alloc(44 + n * 2);
+  b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVE', 8); b.write('fmt ', 12);
+  b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(SR, 24);
+  b.writeUInt32LE(SR * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+  for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.max(-1, Math.min(1, x[i])) * 32767), 44 + i * 2);
+  fs.writeFileSync(path.join(OUT, name + '.wav'), b);
+  console.log(name, (n / SR).toFixed(2) + 's', (b.length / 1024).toFixed(0) + 'KB');
+}
+
+// ---------- SFX ----------
+const sfx = {};
+
+sfx.sfx_swing = () => { // sword whoosh: band-passed noise sweeping up
+  const x = noiseBurst(0.2, (t) => Math.sin(Math.PI * Math.min(1, t / 0.18)) ** 2);
+  bandpass(x, (t) => 700 + 3200 * (t / 0.2), 1.6);
+  return fadeOut(normalize(x, 0.7), 0.02);
+};
+
+sfx.sfx_hit = () => { // thump + wooden "bak" clapper crack
+  const x = buf(0.28);
+  mix(x, osc(0.25, (t) => 150 * Math.exp(-t * 18) + 45, 'sine', (t) => expEnv(t, 0.002, 0.07)), 0, 1.0);
+  const crack = noiseBurst(0.06, (t) => expEnv(t, 0.0005, 0.012)); bandpass(crack, 1900, 2.5);
+  mix(x, crack, 0, 2.2);
+  mix(x, bell(0.12, 820, [[1, 1, 0.03], [2.4, 0.5, 0.02]]), 0, 0.5); // wood body
+  return normalize(softClip(x, 1.6), 0.9);
+};
+
+sfx.sfx_parry = () => { // bright kkwaenggwari-like clang
+  const x = buf(0.7);
+  mix(x, bell(0.7, 1180, KKWAENG), 0, 1);
+  mix(x, onePoleHP(noiseBurst(0.03, (t) => expEnv(t, 0.0005, 0.006)), 3000), 0, 0.8);
+  return fadeOut(normalize(reverb(x, 0.2, 0.7), 0.85), 0.05);
+};
+
+sfx.sfx_dash = () => { // short air burst, pitch rising + faint digital glitch
+  const x = noiseBurst(0.16, (t) => expEnv(t, 0.01, 0.05));
+  bandpass(x, (t) => 1200 + 4000 * t / 0.16, 0.9);
+  mix(x, crush(osc(0.08, (t) => 600 + t * 9000, 'square', (t) => expEnv(t, 0.001, 0.03)), 4, 6), 0, 0.12);
+  return normalize(x, 0.6);
+};
+
+sfx.sfx_hurt = () => { // crunchy descending square + noise
+  const x = osc(0.3, (t) => 420 * Math.exp(-t * 6) + 90, 'square', (t) => expEnv(t, 0.002, 0.1), 0.35);
+  mix(x, noiseBurst(0.12, (t) => expEnv(t, 0.001, 0.03)), 0, 0.5);
+  crush(x, 5, 3); onePoleLP(x, 4500);
+  return normalize(x, 0.75);
+};
+
+sfx.sfx_enemy_tell = () => { // enemy strike wind-up: two quick rising beeps
+  const x = buf(0.2);
+  const beep = (f) => osc(0.07, () => f, 'square', (t) => expEnv(t, 0.002, 0.03), 0.25);
+  mix(x, beep(880), 0, 1); mix(x, beep(1320), 0.08, 1);
+  onePoleLP(x, 6000);
+  return normalize(x, 0.5);
+};
+
+sfx.sfx_last_tell = () => { // last strike: buk drum hit + urgent red alarm sweep
+  const x = buf(0.5);
+  mix(x, osc(0.4, (t) => 95 * Math.exp(-t * 6) + 55, 'sine', (t) => expEnv(t, 0.002, 0.14)), 0, 1.0); // buk
+  mix(x, bandpass(noiseBurst(0.05, (t) => expEnv(t, 0.0005, 0.01)), 700, 1.5), 0, 0.9);
+  mix(x, osc(0.32, (t) => 700 + 900 * Math.sin(Math.PI * t / 0.32), 'saw', (t) => expEnv(t, 0.01, 0.15)), 0.04, 0.35);
+  return normalize(softClip(onePoleLP(x, 5000), 1.4), 0.85);
+};
+
+sfx.sfx_stunned = () => { // dizzy: wobbling down-sweep + tiny bell tings
+  const x = buf(0.75);
+  mix(x, osc(0.6, (t) => (700 - 500 * t) * (1 + 0.06 * Math.sin(TAU * 11 * t)), 'tri', (t) => expEnv(t, 0.01, 0.25)), 0, 0.6);
+  [0.05, 0.2, 0.35].forEach((at, k) => mix(x, bell(0.35, [2093, 1760, 2349][k], JONG), at, 0.25));
+  return fadeOut(normalize(x, 0.7), 0.05);
+};
+
+sfx.sfx_broadcast = () => { // SFX-01: pyeonjong chime (3 notes) + flat mechanical voice-like tone
+  const x = buf(1.9);
+  // Korean pentatonic (hwang-tae-jung-im-nam ~ C D F G A): G4 - C5 - A4
+  [[67, 0], [72, 0.18], [69, 0.36]].forEach(([m, at]) => mix(x, bell(1.4, midi(m), JONG), at, 0.55));
+  // monotone "voice": buzzy saw at fixed 118 Hz through two vowel formants, syllable-gated
+  const v = osc(0.85, () => 118, 'saw', (t) => {
+    const syl = 0.5 + 0.5 * Math.sign(Math.sin(TAU * 5.5 * t)); // 5.5 syllables/s, flat pitch
+    return Math.min(1, t / 0.02) * Math.min(1, (0.85 - t) / 0.05) * (0.35 + 0.65 * syl);
+  });
+  const f1 = bandpass(Float32Array.from(v), (t) => (Math.floor(t * 5.5) % 2 ? 700 : 450), 4);
+  const f2 = bandpass(Float32Array.from(v), (t) => (Math.floor(t * 5.5) % 2 ? 1150 : 900), 6);
+  const voice = new Float32Array(v.length); for (let i = 0; i < v.length; i++) voice[i] = f1[i] + f2[i] * 0.7;
+  crush(voice, 6, 2);
+  mix(x, normalize(voice, 0.4), 0.95, 1);
+  return fadeOut(normalize(reverb(x, 0.22, 1), 0.85), 0.08);
+};
+
+sfx.sfx_hack_ok = () => { // hack success: gayageum pentatonic run up + digital sparkle
+  const x = buf(1.0);
+  [62, 65, 67, 69, 72, 74].forEach((m, k) => mix(x, pluck(0.6, midi(m), 0.6, 0.02), k * 0.06, 0.5));
+  [0.36, 0.42].forEach((at) => mix(x, osc(0.12, () => midi(98), 'square', (t) => expEnv(t, 0.001, 0.04), 0.125), at, 0.08));
+  return fadeOut(normalize(reverb(x, 0.25, 0.9), 0.85), 0.1);
+};
+
+sfx.sfx_shockwave = () => { // low boom + jing gong tail
+  const x = buf(1.8);
+  mix(x, osc(0.8, (t) => 90 * Math.exp(-t * 5) + 32, 'sine', (t) => expEnv(t, 0.003, 0.25)), 0, 1);
+  mix(x, onePoleLP(noiseBurst(0.6, (t) => expEnv(t, 0.002, 0.15)), 500), 0, 0.9);
+  // jing: low gong with slow upward pitch wobble
+  const jing = buf(1.8); const f = 196; const parts = [[1, 1, 0.9], [1.52, 0.4, 0.6], [2.31, 0.25, 0.4]];
+  for (const [r, g, d] of parts) for (let i = 0; i < jing.length; i++) {
+    const t = i / SR; jing[i] += g * Math.sin(TAU * f * r * (t + 0.004 * Math.sin(TAU * 3 * t))) * expEnv(t, 0.01, d);
+  }
+  mix(x, jing, 0.02, 0.35);
+  return fadeOut(normalize(softClip(x, 1.3), 0.9), 0.3);
+};
+
+sfx.sfx_ui_select = () => { // tiny wood tick + bell glint
+  const x = buf(0.12);
+  mix(x, bandpass(noiseBurst(0.03, (t) => expEnv(t, 0.0005, 0.005)), 2500, 3), 0, 1.5);
+  mix(x, bell(0.12, 1568, [[1, 1, 0.04], [2.76, 0.3, 0.02]]), 0, 0.4);
+  return normalize(x, 0.5);
+};
+
+// ---------- BGM ----------
+// Both loops are in 12/8 (Korean triple-feel rhythms: gutgeori ~ slow, hwimori-ish ~ fast).
+function drums(dst, beatSec, bars, pattern, gains) {
+  const step = beatSec / 3; // 12 steps per bar
+  const deong = () => { const d = osc(0.35, (t) => 110 * Math.exp(-t * 9) + 60, 'sine', (t) => expEnv(t, 0.002, 0.11)); return mix(d, bandpass(noiseBurst(0.05, (t) => expEnv(t, 0.0005, 0.01)), 900, 1.2), 0, 0.5); };
+  const deok = () => bandpass(noiseBurst(0.06, (t) => expEnv(t, 0.0005, 0.012)), 2600, 2.2);
+  const kung = () => osc(0.3, (t) => 75 * Math.exp(-t * 5) + 48, 'sine', (t) => expEnv(t, 0.003, 0.12));
+  const kk = () => bell(0.15, 1250, KKWAENG.map(([r, g, d]) => [r, g, d * 0.4]));
+  const smp = { D: deong(), d: deok(), K: kung(), k: kk() };
+  for (let b = 0; b < bars; b++) for (const [lane, str] of Object.entries(pattern)) {
+    for (let s = 0; s < 12; s++) { const c = str[s]; if (c && c !== '.') mixWrap(dst, smp[c], (b * 12 + s) * step, gains[c] * (s % 3 === 0 ? 1 : 0.7)); }
+  }
+}
+function pad(dst, chords, barSec, gain, cutoff) { // soft detuned saw pad, loop-safe
+  chords.forEach((ch, k) => {
+    for (const m of ch) for (const det of [-0.12, 0.12]) {
+      const p = osc(barSec + 0.4, () => midi(m + det), 'saw', (t) => Math.min(1, t / 0.4) * Math.min(1, (barSec + 0.4 - t) / 0.4));
+      mixWrap(dst, onePoleLP(p, cutoff), k * barSec, gain);
+    }
+  });
+}
+function bass(dst, notes, stepSec, gain, cutoff, drive) {
+  notes.forEach((m, k) => { if (m == null) return;
+    const b = osc(stepSec * 0.95, () => midi(m), 'saw', (t) => expEnv(t, 0.005, stepSec * 0.6));
+    mixWrap(dst, softClip(onePoleLP(b, cutoff), drive), k * stepSec, gain);
+  });
+}
+
+function bgmField() {
+  // gutgeori-ish, dotted-quarter = 70 bpm, 8 bars of 12/8 (~27s). D pentatonic-ish minor (D F G A C).
+  const beat = 60 / 70, bar = beat * 4, bars = 8, x = buf(bar * bars);
+  const chords = [[50, 57, 60], [48, 55, 62], [53, 57, 60], [50, 55, 57], [50, 57, 60], [48, 55, 62], [46, 53, 57], [45, 52, 57]];
+  pad(x, chords, bar, 0.035, 900);
+  const roots = [38, 36, 41, 38, 38, 36, 34, 33];
+  const bn = []; roots.forEach((r) => bn.push(r, null, r + 7, null)); bass(x, bn, beat, 0.22, 500, 1.5);
+  drums(x, beat, bars, { a: 'D..d.dD..d..', b: '....K.......' }, { D: 0.5, d: 0.25, K: 0.35 });
+  // gayageum melody (MIDI, step = 1/3 beat, '-' = rest)
+  const mel = [74, null, null, 72, null, 69, 72, null, null, null, null, null, 69, null, 67, 65, null, null, 67, null, null, null, null, null,
+    65, null, 67, 69, null, null, 72, null, 69, 67, null, null, 69, null, null, null, null, null, null, null, null, null, null, null,
+    74, null, null, 77, null, 74, 72, null, null, 69, null, null, 72, null, 69, 67, null, null, 65, null, null, null, null, null,
+    62, null, 65, 67, null, null, 69, null, 67, 65, null, null, 62, null, null, null, null, null, null, null, null, null, null, null];
+  mel.forEach((m, k) => { if (m != null) mixWrap(x, pluck(1.6, midi(m), 0.45, 0.025), k * beat / 3, 0.32); });
+  return normalize(loopHP(loopReverb(x, 0.18, 1), 25), 0.8);
+}
+
+function bgmBoss() {
+  // faster, darker: dotted-quarter = 100 bpm, 8 bars 12/8 (~19s). Driving bass, kkwaenggwari, buzz arp.
+  const beat = 60 / 100, bar = beat * 4, bars = 8, x = buf(bar * bars);
+  const chords = [[50, 53, 57], [50, 53, 57], [49, 52, 56], [49, 52, 56], [46, 50, 53], [46, 50, 53], [45, 49, 52], [45, 49, 52]];
+  pad(x, chords, bar, 0.03, 1400);
+  const roots = [38, 38, 37, 37, 34, 34, 33, 33];
+  const bn = []; roots.forEach((r) => { for (let s = 0; s < 12; s++) bn.push(s % 3 === 2 ? null : (s === 6 ? r + 12 : r)); });
+  bass(x, bn, beat / 3, 0.2, 900, 3);
+  drums(x, beat, bars, { a: 'D.dD.dD.dDdd', b: 'K.....K..K..', c: 'k.k.kk.k.k.k' }, { D: 0.5, d: 0.25, K: 0.5, k: 0.09 });
+  // buzzy pulse arpeggio over chord tones
+  chords.forEach((ch, b) => { for (let s = 0; s < 12; s++) {
+    const m = ch[[0, 1, 2, 1][s % 4]] + 24;
+    mixWrap(x, onePoleLP(osc(beat / 3, () => midi(m), 'square', (t) => expEnv(t, 0.002, 0.06), 0.2), 3000), (b * 12 + s) * beat / 3, 0.05);
+  } });
+  // short gayageum stabs every 2 bars
+  [[0, 74], [2, 73], [4, 70], [6, 69]].forEach(([b, m]) => [0, 1.5].forEach((o) => mixWrap(x, pluck(1.2, midi(m), 0.8, 0.03), (b * 4 + o) * beat, 0.35)));
+  return normalize(loopHP(softClip(loopReverb(x, 0.12, 0.8), 1.2), 25), 0.8);
+}
+
+for (const [name, fn] of Object.entries(sfx)) writeWav(name, normalize(finishSfx(fn()), 0.9));
+writeWav('bgm_field', bgmField());
+writeWav('bgm_boss', bgmBoss());

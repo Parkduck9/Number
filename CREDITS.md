@@ -23,6 +23,7 @@
 | Control-hint stencil icons (8 blank-key / mouse DRAFTs), strip and 4x previews — 손으로 설계한 픽셀 배열, Python 표준 라이브러리 생성; 게임 미연결 | AI 생성 (Codex gpt-6.1-sol) | Assets/Art/Drafts/UI/ctrl_*.png; source: Assets/Art/Drafts/UI/_gen/gen_ui_icons.py |
 | Shockwave HUD ready / cooldown DRAFT icons and 4x preview — 링 버스트, 팔레트 제한; 게임 미연결 | AI 생성 (Codex gpt-6.1-sol) | Assets/Art/Drafts/UI/shockwave_*.png; source: Assets/Art/Drafts/UI/_gen/gen_ui_icons.py |
 | Embector AI broadcast-screen idle / angry DRAFTs and 4x preview — 기하학 단일 눈, 텍스트·로고 없음; 게임 미연결 | AI 생성 (Codex gpt-6.1-sol) | Assets/Art/Drafts/UI/boss_embector_*.png; source: Assets/Art/Drafts/UI/_gen/gen_ui_icons.py |
+| Sound effects ×12 + BGM ×2 (field, boss) — synthesized from scratch by a generator script Claude wrote (oscillators/noise, modal bells, Karplus-Strong plucks; no samples). Released CC0 by the team. Source: Assets/Audio/Source/gen-audio.mjs.txt | Claude Opus (Claude Code) | Assets/Audio/Resources/Sfx/, Assets/Audio/Resources/Bgm/ |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
