@@ -116,7 +116,7 @@ public class TestEnemy : MonoBehaviour
 
     bool IsActive()
     {
-        return activationRange <= 0f || (player.transform.position - transform.position).sqrMagnitude <= activationRange * activationRange;
+        return activationRange <= 0f || Mathf.Abs(player.transform.position.x - transform.position.x) <= activationRange; // height ignored
     }
 
     // Ranged: player closer than keepDistance (same height band) and we have not been backing off too long.
