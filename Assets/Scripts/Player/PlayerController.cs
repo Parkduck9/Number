@@ -482,7 +482,7 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             TestEnemy enemy = enemyHits[i].GetComponentInParent<TestEnemy>();
-            if (enemy == null || !enemy.MeleeThreatens(pos)) continue;
+            if (enemy == null || !enemy.MeleeThreatens(pos, parryActiveTime)) continue;
             float dist = Vector2.Distance(enemy.transform.position, pos);
             if (dist >= bestDist) continue;
             bestDist = dist;

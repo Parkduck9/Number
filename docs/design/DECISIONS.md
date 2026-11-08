@@ -194,3 +194,5 @@
 - NUM-3 연타 간격 `Num3ChainWindupTime` 0.10→**0.15**(유효 0.0975초, 3타가 셀 수 있게). NUM-3의 차이는 반격 창 1.5초로 남는다.
 - 씬 재생성 필요: `NUMBER/Build STG-01`, `Build STG-02`, `Build STG-04`, `Build STG-05`.
 
+
+- **예고 중 좌클릭 (2026-11-08 밤, 사용자 선택):** 근접 패링은 적의 공격이 **0.2초(parryActiveTime) 안에 닿을 때만** 나간다. 그보다 일찍 누르면 돌진 처치·제자리 공격이다. 구현: TestEnemy.WindupWait / MeleeThreatens(pos, imminentWindow).

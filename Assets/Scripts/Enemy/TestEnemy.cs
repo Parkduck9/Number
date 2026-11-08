@@ -246,11 +246,7 @@ public class TestEnemy : MonoBehaviour
                 }
                 break;
             case State.Windup:
-                float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
-                float wait = chainStarted ? chainWait * TimeMul : Mathf.Max(windupTime * TimeMul, Normal ? Juice.MinFirstWindup : 0f);
-                if (Doped) wait /= BroadcastRules.Num7SpeedMul;
-                if (strikesLeft == 1) wait += lastStrikeDelay; // flame is already on for the last strike
-                if (t >= wait) EnterState(State.Strike);
+                if (t >= WindupWait()) EnterState(State.Strike);
                 break;
             case State.Strike:
                 DoStrike();
@@ -462,10 +458,21 @@ public class TestEnemy : MonoBehaviour
         if (Mathf.Abs(dx) > 0.01f) facing = dx > 0f ? 1 : -1;
     }
 
-    // LMB parry merge (DECISIONS 12-B): a parryable melee strike is winding up / landing and its box overlaps a player (0.9 x 2) centred at playerPos.
-    public bool MeleeThreatens(Vector2 playerPos)
+    float WindupWait()
+    {
+        float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
+        float wait = chainStarted ? chainWait * TimeMul : Mathf.Max(windupTime * TimeMul, Normal ? Juice.MinFirstWindup : 0f);
+        if (Doped) wait /= BroadcastRules.Num7SpeedMul;
+        if (strikesLeft == 1) wait += lastStrikeDelay; // flame is already on for the last strike
+        return wait;
+    }
+
+    // LMB parry merge (DECISIONS 12-B): a parryable melee strike is about to land (Windup with <= imminentWindow left, or Strike)
+    // and its box overlaps a player (0.9 x 2) centred at playerPos. Earlier in the windup LMB stays a lunge/swing (user: "직전에만 패링").
+    public bool MeleeThreatens(Vector2 playerPos, float imminentWindow)
     {
         if (ranged || (state != State.Windup && state != State.Strike) || !gameObject.activeInHierarchy) return false;
+        if (state == State.Windup && WindupWait() - (Time.time - stateEnteredAt) > imminentWindow) return false;
         if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;
