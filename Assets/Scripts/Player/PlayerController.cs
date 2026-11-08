@@ -41,14 +41,15 @@ public class PlayerController : MonoBehaviour
     [SerializeField] Vector2 knockback = new Vector2(5f, 4f);
     [SerializeField] float hurtDuration = 0.25f;
 
-    [Header("Parry FX (T, placeholder)")]
+    [Header("Parry FX (T)")]
     [SerializeField] float hitStopTime = 0.06f;
     [SerializeField] float parryFlashTime = 0.1f;
-    [SerializeField] int sparkCount = 6;
-    [SerializeField] float sparkLife = 0.2f;
-    [SerializeField] float sparkSpeed = 6f;
-    [SerializeField] float sparkSize = 0.15f;
 
+    [Header("Dash afterimage (T)")]
+    [SerializeField] float afterimageInterval = 0.04f;
+    [SerializeField] float afterimageLife = 0.2f;
+
+    static readonly Color AfterimageColor = new Color(0.298f, 0.909f, 0.847f, 0.6f); // #4CE8D8
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float parryFlashUntil;
@@ -67,6 +68,7 @@ public class PlayerController : MonoBehaviour
     float jumpBufferedUntil = -999f;
     float attackBufferedUntil = -999f;
     float dashCooldownUntil;
+    float nextAfterimageAt;
     bool jumpCut;
     bool attackHitDone;
 
@@ -131,6 +133,11 @@ public class PlayerController : MonoBehaviour
                 if (elapsed >= parryDuration) EnterState(State.Locomotion);
                 break;
             case State.Dash:
+                if (visual != null && now >= nextAfterimageAt)
+                {
+                    nextAfterimageAt = now + afterimageInterval;
+                    SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife);
+                }
                 if (elapsed >= dashDuration) EnterState(State.Locomotion);
                 break;
             case State.Hurt:
@@ -224,12 +231,19 @@ public class PlayerController : MonoBehaviour
     void DoAttackHit()
     {
         attackHitDone = true;
-        ParryFx.Swing(AttackCenter(), attackSize, Color.white, visual != null ? visual.transform : null, Facing);
+        ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
         Collider2D col = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyMask);
         if (col == null) return;
         TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
         if (enemy == null) return;
-        enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
+        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
+        if (damaged) PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
+    }
+
+    // hit-spark's pivot is a feet point: shift so its core (+12,+16 px) lands on the contact point. dir = blow direction.
+    static void PlayHitSpark(Vector2 point, float dir)
+    {
+        SpriteFx.Play("hit-spark", point - new Vector2(dir * 12f, 16f) / SpriteFx.Ppu, dir < 0f);
     }
 
     Vector2 AttackCenter() => (Vector2)transform.position + new Vector2(Facing * attackOffset.x, attackOffset.y);
@@ -245,10 +259,10 @@ public class PlayerController : MonoBehaviour
         bool fromFront = Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
         if (ParryActive && fromFront && !info.Unparryable)
         {
-            // No knockback for either side. Hit-stop + flash + sparks (placeholder FX).
+            // No knockback for either side. Hit-stop + flash + parry FX.
             EnterState(State.Locomotion);
             parryFlashUntil = Time.time + parryFlashTime;
-            ParryFx.SpawnSparks((Vector2)transform.position + new Vector2(Facing * 0.8f, 0f), sparkCount, sparkLife, sparkSpeed, sparkSize);
+            SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
             if (hitStopTime > 0f)
             {
                 hitStopEndsAt = Time.unscaledTime + hitStopTime;
@@ -260,6 +274,7 @@ public class PlayerController : MonoBehaviour
         health.TakeDamage(info.Damage);
         EnterState(State.Hurt);
         float away = dx > 0f ? -1f : 1f;
+        PlayHitSpark(transform.position, away); // blow travels away from the source
         rb.linearVelocity = new Vector2(away * knockback.x, knockback.y);
         return HitResult.Hit;
     }

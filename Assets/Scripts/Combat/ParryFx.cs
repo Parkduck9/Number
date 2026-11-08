@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Placeholder combat FX (code-made pixel squares). Replaced by real art later.
+// Combat FX helpers: shared 1x1 square, enemy swing placeholder, player slash. Sprite-sheet FX live in SpriteFx.
 public static class ParryFx
 {
     static Sprite square;
@@ -21,22 +21,6 @@ public static class ParryFx
         }
     }
 
-    public static void SpawnSparks(Vector2 point, int count, float life, float speed, float size)
-    {
-        for (int i = 0; i < count; i++)
-        {
-            GameObject go = new GameObject("ParrySpark");
-            go.transform.position = point;
-            go.transform.localScale = new Vector3(size, size, 1f);
-            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Square;
-            sr.color = Color.white;
-            sr.sortingOrder = 100;
-            go.AddComponent<Spark>().velocity = Random.insideUnitCircle.normalized * speed * Random.Range(0.6f, 1f);
-            Object.Destroy(go, life);
-        }
-    }
-
     // Swing placeholder: short flash over the attack box + attacker's visual steps forward for that moment.
     public static void Swing(Vector2 center, Vector2 size, Color color, Transform attackerVisual, int facing, float time = 0.08f, float nudge = 0.125f)
     {
@@ -50,16 +34,24 @@ public static class ParryFx
         sr.sortingOrder = 90;
         Object.Destroy(go, time);
 
+        NudgeVisual(attackerVisual, facing, time, nudge);
+    }
+
+    // Player swing: sword-slash sprite FX with its arc centered on the attack box + the attacker's visual steps forward.
+    public static void Slash(Vector2 center, Transform attackerVisual, int facing, float time = 0.08f, float nudge = 0.125f)
+    {
+        // The arc's center is this far from the sheet pivot (facing right); x mirrors when facing left.
+        Vector2 arcCenter = new Vector2(14f, 30f) / SpriteFx.Ppu;
+        SpriteFx.Play("sword-slash", center - new Vector2(facing * arcCenter.x, arcCenter.y), facing < 0, 90);
+        NudgeVisual(attackerVisual, facing, time, nudge);
+    }
+
+    static void NudgeVisual(Transform attackerVisual, int facing, float time, float nudge)
+    {
         if (attackerVisual == null) return;
         Nudge n = attackerVisual.GetComponent<Nudge>();
         if (n == null) n = attackerVisual.gameObject.AddComponent<Nudge>();
         n.Begin(facing * nudge, time);
-    }
-
-    class Spark : MonoBehaviour
-    {
-        public Vector2 velocity;
-        void Update() { transform.position += (Vector3)(velocity * Time.deltaTime); }
     }
 
     class Nudge : MonoBehaviour

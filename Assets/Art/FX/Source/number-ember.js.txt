@@ -1,0 +1,55 @@
+// The layered flame tongue is adapted from Sprite Fusion's open-source fire
+// (https://www.spritefusion.com/pixel-art-vfx/fire), MIT License, Copyright (c) 2026 Hugo Duprez.
+import { fit, mix, clamp, WHITE } from "../../core/index.js";
+import { noiseFor, hotFirst, flameTongue, looped } from "./_lib.js";
+
+export const meta = {
+  name: "Number ember",
+  desc: "A faint warning fire on a glowing digit: a row of small red licks along its top edge that flicker and lean, a dim red haze, and a red spark now and then. Sits on the digit's top.",
+  tags: ["fire", "warning", "telegraph", "ui", "small", "loop"],
+  size: [40, 32],
+  origin: [20, 24],
+  duration: 2,
+  loop: true,
+  fps: 30,
+  bg: "dark",
+  options: {
+    palette: ["#2a0608", "#5a0c12", "#8e1418", "#c8201e", "#ff3a2a", "#ff7a5a"],
+    width: 14,
+    height: 11,
+    strength: 1,
+    seed: 3,
+  },
+};
+
+const D = meta.duration, NL = noiseFor(D);
+// no white core: dark rim, red body, a hot red-orange heart low down
+const LAYERS = [[1, 1, 4], [0.75, 0.82, 3], [0.5, 0.6, 2], [0.28, 0.34, 1]];
+
+export function draw(p, t, o) {
+  const F = fit(o.palette, 6), H = hotFirst(F), S = o.seed, W = o.width, k = o.strength;
+  const N = (rate, seed = 0, off = 0) => NL(t, rate * 0.5, seed, off);
+  const n = Math.max(2, Math.round(W / 5));
+  const pulse = 0.8 + 0.2 * NL(t, 1.5, S + 1);
+
+  // a dim red haze behind the digit top
+  p.glow(0, -2, W * 0.9, F[3], 0.18 * k * pulse);
+
+  // a row of small licks along the edge, each with its own height and flicker
+  for (let i = 0; i < n; i++) {
+    const x = -W / 2 + (i + 0.5) * (W / n);
+    const f = 0.35 + 0.65 * clamp(0.5 + 0.8 * NL(t, 2 + i * 0.7, S + 10 + i));
+    const h = o.height * f * k * (i === 0 || i === n - 1 ? 0.7 : 1);
+    const sway = NL(t, 1, S + 30 + i) * 1.5 + NL(t, 0.5, S + 3) * 1;
+    flameTongue(p, x, 0, h, 2.4, sway, N, S * 17 + i * 5, H, LAYERS, 0.2, 0.9);
+  }
+
+  // a red spark now and then, rising and going out
+  looped(t, D, 5, S + 200, (r) => ({ x: r.range(-W / 2, W / 2), vx: r.range(-3, 3), vy: -r.range(10, 16), life: r.range(0.5, 0.9) }), (q, age) => {
+    const u = age / q.life, x = q.x + q.vx * age, y = -o.height * 0.5 + q.vy * age;
+    p.px(x, y, u < 0.4 ? F[5] : u < 0.75 ? F[4] : F[2]);
+  });
+
+  // a touch of hot light low on the licks
+  p.glow(0, -1, W * 0.45, mix(F[4], WHITE, 0.1), 0.12 * k * pulse);
+}

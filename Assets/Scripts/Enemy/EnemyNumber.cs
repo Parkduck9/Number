@@ -21,22 +21,14 @@ public class EnemyNumber : MonoBehaviour
     [SerializeField] float pulseSpeed = 2.5f; // (T) pulses per second
     [SerializeField] float pulseScale = 1.3f; // (T)
 
-    [Header("Last-strike flame (T, placeholder)")]
-    [SerializeField] int flameCount = 4;
-    [SerializeField] float flameSize = 0.12f;
-    [SerializeField] float flameHeight = 0.6f; // above label center (enemy-local units)
-    [SerializeField] float flameSpread = 0.3f;
-    [SerializeField] float flameFlicker = 12f;
-
+    const float EmberDigitWidth = 14f; // px: the digit width number-ember was drawn for
     static readonly Color Red = new Color(1f, 0.1647f, 0.1647f); // #FF2A2A
-    static readonly Color DarkRed = new Color(0.55f, 0.05f, 0.05f);
 
     public int Value { get; private set; }
 
     bool pulsing;
     bool flameOn;
-    Transform[] flame;
-    SpriteRenderer[] flameSr;
+    GameObject flame;
 
     void Awake()
     {
@@ -48,7 +40,6 @@ public class EnemyNumber : MonoBehaviour
         if (label == null) return;
         float s = pulsing ? Mathf.Lerp(1f, pulseScale, Mathf.PingPong(Time.time * pulseSpeed, 1f)) : 1f;
         label.transform.localScale = new Vector3(s, s, 1f);
-        if (flameOn) UpdateFlame();
     }
 
     public void SetProgress(float p) { progress = Mathf.Clamp01(p); }
@@ -103,48 +94,27 @@ public class EnemyNumber : MonoBehaviour
         Refresh();
     }
 
-    // Faint red pixel flame above the number = "next strike is the last one".
+    // Faint red flame on top of the number = "next strike is the last one".
     public void SetFlame(bool on)
     {
         if (on == flameOn) return;
         flameOn = on;
-        if (on && flame == null && label != null) BuildFlame();
-        if (flame != null)
-            foreach (Transform t in flame) t.gameObject.SetActive(on);
-        Refresh(); // non-red numbers (gold) look redder while the flame burns
+        Refresh(); // non-red numbers (gold) look redder while the flame burns; also re-activates a hidden label
+        if (on && label != null) BuildFlame();
+        else if (flame != null) { Destroy(flame); flame = null; }
     }
 
+    // Looping number-ember scaled to the label width (sheet is drawn for a 14px digit). Sibling of the label: unaffected by its pulse scale.
     void BuildFlame()
     {
-        flame = new Transform[flameCount];
-        flameSr = new SpriteRenderer[flameCount];
-        for (int i = 0; i < flameCount; i++)
-        {
-            GameObject go = new GameObject("Flame");
-            go.transform.SetParent(label.transform.parent, false); // sibling of the label: unaffected by its scale
-            go.transform.localScale = new Vector3(flameSize, flameSize, 1f);
-            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = ParryFx.Square;
-            sr.sortingOrder = 21;
-            flame[i] = go.transform;
-            flameSr[i] = sr;
-        }
-    }
-
-    void UpdateFlame()
-    {
+        label.ForceMeshUpdate();
+        Bounds b = label.textBounds;
+        Vector3 top = label.transform.localPosition + new Vector3(b.center.x, b.max.y, 0f);
+        float scale = Mathf.Max(1f, Mathf.Round(b.size.x / (EmberDigitWidth / SpriteFx.Ppu))); // integer keeps the pixel grid
+        flame = SpriteFx.Play("number-ember", Vector2.zero, false, 21, scale);
         if (flame == null) return;
-        float step = Mathf.Floor(Time.time * flameFlicker); // jumpy pixel flicker, not smooth
-        for (int i = 0; i < flame.Length; i++)
-        {
-            float h = Mathf.Abs(Mathf.Sin((step + i * 3.1f) * 12.9898f) * 43758.5453f) % 1f;
-            float h2 = Mathf.Abs(Mathf.Sin((step + i * 7.7f) * 78.233f) * 12345.678f) % 1f;
-            float x = (i - (flame.Length - 1) * 0.5f) / Mathf.Max(1, flame.Length - 1) * 2f * flameSpread;
-            flame[i].localPosition = label.transform.localPosition + new Vector3(x, flameHeight + h * flameSize * 4f, 0f);
-            Color c = h2 > 0.5f ? Red : DarkRed;
-            c.a = 0.55f;
-            flameSr[i].color = c;
-        }
+        flame.transform.SetParent(label.transform.parent, false);
+        flame.transform.localPosition = top;
     }
 
     void Refresh()
