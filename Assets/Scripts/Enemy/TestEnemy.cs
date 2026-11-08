@@ -69,12 +69,14 @@ public class TestEnemy : MonoBehaviour
     float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
     BroadcastBoard zoneBoard;
     int broadcast = -1;       // number of the zone's broadcast board (-1 = no board)
-    float dopedUntil;         // NUM-7: dope runs until this time; reaching it starts the exhaustion
-    float exhaustUntil;       // NUM-7: exhausted (Open) until this time
+    int exhaustedCycle = -1;  // NUM-7: index of the dope/exhaust cycle (from the board's change time) already punished
     float nextSpecialAt;      // Android fan cooldown
     float openDuration;       // length of the current Open state
 
-    bool Doped => broadcast == 7 && Time.time < dopedUntil && Time.time >= exhaustUntil;
+    // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
+    float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
+    static float Num7Cycle => BroadcastRules.Num7DopeSeconds + BroadcastRules.Num7ExhaustSeconds;
+    bool Doped => broadcast == 7 && zoneBoard != null && Num7Phase % Num7Cycle < BroadcastRules.Num7DopeSeconds;
     float Speed => moveSpeed * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
 
     void Awake()
@@ -112,8 +114,6 @@ public class TestEnemy : MonoBehaviour
             stateEnteredAt += Time.deltaTime;
             flashUntil += Time.deltaTime;
             if (backoffSince >= 0f) backoffSince += Time.deltaTime;
-            dopedUntil += Time.deltaTime;
-            exhaustUntil += Time.deltaTime;
             nextSpecialAt += Time.deltaTime;
             return;
         }
@@ -156,7 +156,7 @@ public class TestEnemy : MonoBehaviour
             strikesLeft = number.Value;
         }
         // NUM-7: doping starts. Leaving 7 early just clears it (no exhaustion when the number is hacked away).
-        if (n == 7) dopedUntil = Time.time + BroadcastRules.Num7DopeSeconds;
+        if (n == 7) exhaustedCycle = -1;
         // NUM-0: citizens stop breathing; the number changing away releases them.
         if (n == 0 && kind == Kind.Citizen) EnterState(State.Frozen);
         else if (old == 0 && state == State.Frozen) FinishReset();
@@ -166,15 +166,16 @@ public class TestEnemy : MonoBehaviour
     void UpdateDope()
     {
         // NUM-7: dope ran out -> exhausted (hittable); a zone that stays on 7 cycles dope / exhaustion.
-        if (broadcast == 7 && Time.time >= dopedUntil && state != State.Stunned && state != State.Frozen)
-        {
-            exhaustUntil = Time.time + BroadcastRules.Num7ExhaustSeconds;
-            dopedUntil = exhaustUntil + BroadcastRules.Num7DopeSeconds;
-            strikesLeft = 0;
-            number.SetPulse(false);
-            EnterState(State.Open);
-            openDuration = BroadcastRules.Num7ExhaustSeconds;
-        }
+        if (broadcast != 7 || zoneBoard == null || state == State.Stunned || state == State.Frozen) return;
+        float phase = Num7Phase;
+        int cycle = Mathf.FloorToInt(phase / Num7Cycle);
+        float inCycle = phase - cycle * Num7Cycle;
+        if (cycle == exhaustedCycle || inCycle < BroadcastRules.Num7DopeSeconds) return;
+        exhaustedCycle = cycle;
+        strikesLeft = 0;
+        number.SetPulse(false);
+        EnterState(State.Open);
+        openDuration = Num7Cycle - inCycle; // rest of the shared exhaustion window
     }
 
     bool IsActive()
@@ -236,7 +237,7 @@ public class TestEnemy : MonoBehaviour
                 if (t >= turnTime) { FacePlayer(); NextAfterChain(); }
                 break;
             case State.Staggered:
-                if (t >= staggerTime) FinishReset();
+                if (t >= openDuration) FinishReset(); // NUM-3 melee: 1.5s counter window (set in EnterState)
                 break;
             case State.Open:
                 if (t >= openDuration) FinishReset();
@@ -246,7 +247,11 @@ public class TestEnemy : MonoBehaviour
                 {
                     FireFan();
                     nextSpecialAt = Time.time + BroadcastRules.AndroidFanCooldown;
-                    EnterState(State.Windup); // continue the chain
+                    // Continue the chain, but re-check facing and range first (the player may have moved during the tell).
+                    FacePlayer();
+                    Vector2 sd = player.transform.position - transform.position;
+                    bool inRange = Mathf.Abs(sd.x) <= attackRangeX && Mathf.Abs(sd.y) <= attackRangeY;
+                    EnterState(inRange ? State.Windup : State.Charge);
                 }
                 break;
         }
@@ -368,6 +373,7 @@ public class TestEnemy : MonoBehaviour
             case State.Special:
                 FacePlayer();
                 number.SetPulse(true);
+                number.SetFlame(false); // no last-strike flame during the fan; Windup re-lights it
                 break;
             case State.Stunned:
                 number.Hide();
@@ -439,6 +445,6 @@ public class TestEnemy : MonoBehaviour
         strikesLeft = 0;
         number.SetPulse(false);
         EnterState(State.Staggered);
-        stateEnteredAt = Time.time - (staggerTime - seconds); // Staggered ends at staggerTime; shift so it lasts `seconds`
+        stateEnteredAt = Time.time - (openDuration - seconds); // Staggered ends at openDuration; shift so it lasts `seconds`
     }
 }

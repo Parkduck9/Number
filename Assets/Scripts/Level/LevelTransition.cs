@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // Trigger that fades out when the player touches it.
@@ -15,7 +16,37 @@ public class LevelTransition : MonoBehaviour
     [SerializeField] float fadeTime = 0.3f; // (T) seconds per fade direction
 
     static Image fadeImage;
+    static bool fadeInPending; // set before a stage change; the next scene starts black and fades in
     bool busy;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void Hook()
+    {
+        fadeInPending = false;
+        fadeImage = null;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!fadeInPending) return;
+        fadeInPending = false;
+        EnsureFader();
+        SetAlpha(1f);
+        fadeImage.gameObject.AddComponent<FadeIn>();
+    }
+
+    class FadeIn : MonoBehaviour
+    {
+        float t;
+        void Update()
+        {
+            t += Mathf.Min(Time.unscaledDeltaTime, 1f / 30f); // a load hitch must not skip the fade
+            SetAlpha(Mathf.Clamp01(1f - t / 0.3f));
+            if (t >= 0.3f) Destroy(this);
+        }
+    }
 
     void Awake() => GetComponent<Collider2D>().isTrigger = true;
 
@@ -23,7 +54,7 @@ public class LevelTransition : MonoBehaviour
     {
         if (busy) return;
         PlayerController pc = other.GetComponentInParent<PlayerController>();
-        if (pc == null) return;
+        if (pc == null || GameFlow.IsPlayerDead(pc)) return;
         StartCoroutine(Run(pc));
     }
 
@@ -35,6 +66,7 @@ public class LevelTransition : MonoBehaviour
 
         if (mode == Mode.Goal)
         {
+            fadeInPending = true;
             if (!StageFlow.LoadNext()) StageFlow.LoadTitle(); // both unlock input when they load
             yield break;
         }

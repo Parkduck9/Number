@@ -9,11 +9,13 @@ public class TitleScreen : MonoBehaviour
 
     void Start()
     {
+        RespawnManager.ResetState(); // new game: no checkpoint record / pending respawn from the last run
         Shockwave.SetUnlocked(false); // new game: the Luddite upgrade must not leak in
         Time.timeScale = 1f;
         GameFlow.InputLocked = false;
         var cam = Camera.main;
         if (cam != null) cam.backgroundColor = UiTheme.Current.background;
+        if (cam != null && FindFirstObjectByType<AudioListener>() == null) cam.gameObject.AddComponent<AudioListener>(); // old Title scenes have none
 
         UiKit.EnsureEventSystem(out _);
         var t = UiTheme.Current;
@@ -28,6 +30,7 @@ public class TitleScreen : MonoBehaviour
         if (Application.platform != RuntimePlatform.WebGLPlayer)
             UiKit.AddButton(column, "Quit", "종료", i++, Quit);
 
+        UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, 70f));
         EventSystem.current.SetSelectedGameObject(start.gameObject);
     }
 

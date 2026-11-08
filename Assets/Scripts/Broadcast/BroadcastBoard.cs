@@ -48,6 +48,9 @@ public class BroadcastBoard : MonoBehaviour
     // 0 right after the hack -> 1 when the AI takes the number back. 0 when not hacked.
     public float CounterHackProgress => IsHacked ? Mathf.Clamp01((Time.time - hackedAt) / hackDuration) : 0f;
 
+    // Game time the shown number last changed: shared clock for NUM-7 doping (all enemies of the zone exhaust together).
+    public float NumberChangedAt { get; private set; }
+
     public event Action<BroadcastBoard, int, int> NumberChanged; // board, new, old
     readonly List<IBroadcastListener> listeners = new List<IBroadcastListener>();
 
@@ -59,6 +62,7 @@ public class BroadcastBoard : MonoBehaviour
 
     void Update()
     {
+        if (GameFlow.InputLocked) { hackedAt += Time.deltaTime; NumberChangedAt += Time.deltaTime; return; } // counter-hack timer pauses during dialogue/ending choice
         if (IsHacked && Time.time - hackedAt >= hackDuration)
         {
             IsHacked = false; // [confirmed] number returns to the AI's number
@@ -92,6 +96,7 @@ public class BroadcastBoard : MonoBehaviour
         Number = n;
         Refresh();
         if (n == old) return;
+        NumberChangedAt = Time.time;
         NumberChanged?.Invoke(this, n, old);
         for (int i = listeners.Count - 1; i >= 0; i--)
             if (i < listeners.Count) listeners[i].OnBroadcastChanged(this, n, old); // a listener may remove several listeners

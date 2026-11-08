@@ -18,7 +18,10 @@ public class RespawnManager : MonoBehaviour
     float deadSince = -1f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { hasRecord = false; recordScene = null; respawnPending = false; }
+    static void ResetStatics() => ResetState();
+
+    // New game / back to title: nothing from the previous run may leak into the next one.
+    public static void ResetState() { hasRecord = false; recordScene = null; respawnPending = false; }
 
     public static void SetCheckpoint(Vector2 pos)
     {
@@ -30,7 +33,7 @@ public class RespawnManager : MonoBehaviour
     // Pause menu: reload the scene and put the player at the last checkpoint (same path as after death).
     public static void RestartFromCheckpoint()
     {
-        respawnPending = true;
+        if (FindFirstObjectByType<RespawnManager>() != null) respawnPending = true; // scenes without one (STG00) would leak the flag
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

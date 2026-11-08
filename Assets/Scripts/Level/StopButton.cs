@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 // The AI stop button (GDD ch.10, both endings [confirmed]). Press E near it -> choose END-01 or END-02 -> the ending
 // plays through the dialogue system (talk mode) -> back to the title.
-// Pick: 1 / 2 keys (Esc cancels). Input stays locked while choosing.
+// Pick: 1 / 2 keys (Esc / P / Backspace cancels). Input stays locked while choosing.
 // The ending lines are PLACEHOLDER text files (Assets/Data/Dialogue/ending_0x_placeholder.txt) for the user to rewrite.
 public class StopButton : MonoBehaviour
 {
@@ -37,7 +37,7 @@ public class StopButton : MonoBehaviour
         switch (phase)
         {
             case Phase.Idle:
-                bool near = player != null && !GameFlow.InputLocked &&
+                bool near = player != null && !GameFlow.IsPlayerDead(player) && !GameFlow.InputLocked &&
                             Vector2.Distance(player.transform.position, transform.position) <= interactRange;
                 SetPrompt(near);
                 // !lockedLastFrame: the E that closes a talk scene must not also open this menu
@@ -46,7 +46,7 @@ public class StopButton : MonoBehaviour
             case Phase.Choosing:
                 if (kb.digit1Key.wasPressedThisFrame) Play(ending01);
                 else if (kb.digit2Key.wasPressedThisFrame) Play(ending02);
-                else if (kb.escapeKey.wasPressedThisFrame) { panel.SetActive(false); GameFlow.InputLocked = false; phase = Phase.Idle; }
+                else if (kb.escapeKey.wasPressedThisFrame || kb.pKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame) { GameFlow.EscConsumedFrame = Time.frameCount; panel.SetActive(false); GameFlow.InputLocked = false; phase = Phase.Idle; }
                 break;
             case Phase.Playing:
                 // Input stays locked from the choice through the talk scene; DialoguePlayer clears it after the last line.
@@ -119,8 +119,8 @@ public class StopButton : MonoBehaviour
         TMP_Text t = NewText(fill.transform, TextSize, TextAlignmentOptions.Center);
         t.textWrappingMode = TextWrappingModes.Normal;
         t.color = Color.white;
-        t.text = T("<color=#4CE0FF>[1]</color> Press the stop button\n\n<color=#FFD24A>[2]</color> Press it, and set the lucky number yourself\n\nEsc: back",
-                   "<color=#4CE0FF>[1]</color> 정지 버튼을 누른다\n\n<color=#FFD24A>[2]</color> 누르되, 행운의 숫자를 직접 정한다\n\nEsc: 돌아가기");
+        t.text = T("<color=#4CE0FF>[1]</color> Press the stop button\n\n<color=#FFD24A>[2]</color> Press it, and set the lucky number yourself\n\nEsc / P: back",
+                   "<color=#4CE0FF>[1]</color> 정지 버튼을 누른다\n\n<color=#FFD24A>[2]</color> 누르되, 행운의 숫자를 직접 정한다\n\nEsc / P: 돌아가기");
         panel.SetActive(false);
     }
 

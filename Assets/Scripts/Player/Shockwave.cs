@@ -77,6 +77,7 @@ public class Shockwave : MonoBehaviour
 
     Vector2 Center(int facing) => (Vector2)transform.position + new Vector2(facing * range * 0.5f, 0f);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     // Prototype indicator (same style as PrototypeDebug). Replace with a HUD element that reads CooldownRemaining / listens to Used.
     void OnGUI()
     {
@@ -86,6 +87,7 @@ public class Shockwave : MonoBehaviour
         GUI.skin.label.fontSize = 20;
         GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text);
     }
+#endif
 
     void OnDrawGizmosSelected()
     {

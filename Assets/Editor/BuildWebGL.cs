@@ -24,13 +24,13 @@ public static class BuildWebGL
         Set(changes, "decompressionFallback", PlayerSettings.WebGL.decompressionFallback, true, v => PlayerSettings.WebGL.decompressionFallback = v);
         // Threads are not allowed on itch.io (no cross-origin isolation).
         Set(changes, "threadsSupport", PlayerSettings.WebGL.threadsSupport, false, v => PlayerSettings.WebGL.threadsSupport = v);
-        // Default template (has a fullscreen button). The canvas is a fixed WxH px, so set the itch.io viewport to the same size.
+        // Default template (has a fullscreen button). The canvas is a fixed WxH px, so set the itch.io viewport to 960x540 + fullscreen button.
         Set(changes, "template", PlayerSettings.WebGL.template, "APPLICATION:Default", v => PlayerSettings.WebGL.template = v);
-        // Default canvas 1920x1080 (2x the 960x540 reference).
-        Set(changes, "defaultWebScreenWidth", PlayerSettings.defaultWebScreenWidth, 1920, v => PlayerSettings.defaultWebScreenWidth = v);
-        Set(changes, "defaultWebScreenHeight", PlayerSettings.defaultWebScreenHeight, 1080, v => PlayerSettings.defaultWebScreenHeight = v);
-        // Exceptions: keep explicit throws only (cheaper than full; None would hide errors).
-        Set(changes, "exceptionSupport", PlayerSettings.WebGL.exceptionSupport, WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly, v => PlayerSettings.WebGL.exceptionSupport = v);
+        // Default canvas 960x540 (16:9, matches the UI reference; fits an itch.io embed, fullscreen button stays).
+        Set(changes, "defaultWebScreenWidth", PlayerSettings.defaultWebScreenWidth, 960, v => PlayerSettings.defaultWebScreenWidth = v);
+        Set(changes, "defaultWebScreenHeight", PlayerSettings.defaultWebScreenHeight, 540, v => PlayerSettings.defaultWebScreenHeight = v);
+        // Exceptions: full without stacktrace, so null refs / range errors are catchable instead of corrupting memory (small size cost; stacktraces would be bigger/slower).
+        Set(changes, "exceptionSupport", PlayerSettings.WebGL.exceptionSupport, WebGLExceptionSupport.FullWithoutStacktrace, v => PlayerSettings.WebGL.exceptionSupport = v);
         // Smaller download over faster build / peak speed.
         Set(changes, "codeOptimization", UserBuildSettings.codeOptimization, WasmCodeOptimization.DiskSize, v => UserBuildSettings.codeOptimization = v);
         // Managed stripping: Medium (High risks stripping reflection users such as TMP/Input System).

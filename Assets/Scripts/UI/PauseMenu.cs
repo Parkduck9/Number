@@ -13,6 +13,7 @@ using UnityEngine.SceneManagement;
 public class PauseMenu : MonoBehaviour
 {
     static PauseMenu instance;
+    public static bool IsOpen => instance != null && instance.open;
 
     GameObject root;
     GameObject createdEventSystem;
@@ -70,6 +71,13 @@ public class PauseMenu : MonoBehaviour
         else if (CanOpen) Open();
     }
 
+    void OnApplicationFocus(bool hasFocus)
+    {
+#if !UNITY_EDITOR
+        if (!hasFocus && !open && CanOpen) Open(); // browser tab/canvas lost focus: pause instead of leaving the player defenseless with stuck keys
+#endif
+    }
+
     void LateUpdate()
     {
         if (open && Time.timeScale != 0f) Time.timeScale = 0f; // hit-stop end must not unpause
@@ -106,7 +114,8 @@ public class PauseMenu : MonoBehaviour
         UiKit.FilledImage(dim, t.dimmer, true); // also blocks clicks to anything below
 
         var panelSize = new Vector2(t.buttonSize2.x + 96f, 4 * t.buttonStep + 96f);
-        var fill = UiKit.Frame("Panel", canvas.transform, new Vector2(0.5f, 0.5f), Vector2.zero, panelSize, out _);
+        var fill = UiKit.Frame("Panel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), panelSize, out _);
+        UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f - panelSize.y / 2f - 60f));
         UiKit.Label("Title", fill, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(panelSize.x, 36f), "PAUSED", "일시정지", t.buttonSize, t.text);
 
         var column = UiKit.Rect("Menu", fill, new Vector2(0.5f, 1f), new Vector2(0f, -72f), new Vector2(t.buttonSize2.x, 0f));

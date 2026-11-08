@@ -53,7 +53,8 @@ public class EnemyProjectile : MonoBehaviour
         if (col == null) return;
         PlayerController pc = col.GetComponentInParent<PlayerController>();
         if (pc == null) return;
-        info.SourcePosition = pos; // front/back parry test uses where the shot is
+        info.SourcePosition = pos;
+        info.TravelDirX = Mathf.Abs(velocity.x) > 0.01f ? Mathf.Sign(velocity.x) : 0f; // front/back parry test uses travel direction
         HitResult result = pc.ReceiveEnemyHit(info);
         if (result == HitResult.Dodged) passedPlayer = true;
         else Destroy(gameObject);

@@ -112,7 +112,7 @@ public class BossFight : MonoBehaviour
             : spawned < w.androids + w.bugs ? bugTemplate : citizenTemplate;
         Transform point = spawnPoints[spawned % spawnPoints.Length];
         if (player != null && spawnPoints.Length > 1 &&
-            Vector2.Distance(player.transform.position, point.position) < spawnSafeRadius)
+            Mathf.Abs(player.transform.position.x - point.position.x) < spawnSafeRadius) // x only: spawn y is high above the floor
             point = spawnPoints[(spawned + 1) % spawnPoints.Length];
         spawned++;
         if (template == null) return;

@@ -20,6 +20,8 @@ public class PlayerHealth : MonoBehaviour
         if (!IsDead) hp = maxHp;
     }
 
+    public void ShiftInvulnerability(float dt) { invulnerableUntil += dt; } // frozen while input is locked
+
     // Returns true if damage was applied. Caller checks Invulnerable first for result priority.
     public bool TakeDamage(int amount)
     {

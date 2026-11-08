@@ -9,37 +9,41 @@ public class BossBoardView : MonoBehaviour
     [SerializeField] TMP_Text message;
 
     bool unlocked;
+    string shownEn, shownKo; // last message, re-shown on a language switch
 
     void OnEnable()
     {
         if (fight != null) { fight.WaveStarted += OnWaveStarted; fight.Unlocked += OnUnlocked; }
         if (board != null) board.NumberChanged += OnNumberChanged;
-        Show(Loc.T("EMBECTOR", "엠벡터"));
+        Loc.Changed += Redraw;
+        Show("EMBECTOR", "엠벡터");
     }
 
     void OnDisable()
     {
         if (fight != null) { fight.WaveStarted -= OnWaveStarted; fight.Unlocked -= OnUnlocked; }
         if (board != null) board.NumberChanged -= OnNumberChanged;
+        Loc.Changed -= Redraw;
     }
 
     void OnWaveStarted(int i)
     {
         var w = fight.Waves[i];
-        Show(Loc.T(w.announceEn, w.announceKo));
+        Show(w.announceEn, w.announceKo);
     }
 
     void OnNumberChanged(BroadcastBoard b, int n, int old)
     {
         if (unlocked || !b.IsHacked) return;
-        Show(Loc.T("...cute.", "...귀엽군."));
+        Show("...cute.", "...귀엽군.");
     }
 
     void OnUnlocked()
     {
         unlocked = true;
-        Show(Loc.T("STOP BUTTON UNLOCKED", "정지 버튼 열림"));
+        Show("STOP BUTTON UNLOCKED", "정지 버튼 열림");
     }
 
-    void Show(string s) { if (message != null) message.text = s; }
+    void Show(string en, string ko) { shownEn = en; shownKo = ko; Redraw(); }
+    void Redraw() { if (message != null) message.text = Loc.T(shownEn, shownKo); }
 }

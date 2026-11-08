@@ -38,13 +38,29 @@ public class BroadcastHackUi : MonoBehaviour
     bool hudWasShown;
     float punchAt = -10f; // unscaled time of the last number punch
 
-    TMP_Text hudText, promptText, dialNumber, dialDigits, dialHint, dialWarn;
+    TMP_Text titleText, hudText, promptText, dialNumber, dialDigits, dialHint, dialWarn;
     GameObject dialRoot, barRoot, promptRoot;
     RectTransform barFill;
 
     void Awake() { BuildUi(); }
 
     void Start() { player = FindFirstObjectByType<PlayerController>(); }
+
+    void OnEnable() { Loc.Changed += RefreshTexts; }
+    void OnDisable() { Loc.Changed -= RefreshTexts; }
+
+    bool PlayerDead() { return GameFlow.IsPlayerDead(player); }
+
+    // Language switch: re-apply the code-built static texts; the HUD string has no words, the dial digits are language-free.
+    void RefreshTexts()
+    {
+        if (promptText == null) return;
+        promptText.text = T("[E] HACK", "[E] 해킹");
+        titleText.text = T("BROADCAST HACK", "방송 해킹");
+        dialHint.text = T("0-9 / UP DOWN / wheel: pick    E: confirm    Esc: cancel",
+                          "0-9 / 위 아래 / 휠: 선택    E: 확정    Esc: 취소");
+        if (dialBoard != null) RefreshDial();
+    }
 
     void Update()
     {
@@ -55,14 +71,14 @@ public class BroadcastHackUi : MonoBehaviour
         BroadcastBoard near = player != null ? Nearest(interactRange) : null;
         if (dialBoard != null)
         {
-            if (GameFlow.InputLocked || near != dialBoard) Close(); // walked away / dialogue took over
+            if (GameFlow.InputLocked || near != dialBoard || PlayerDead()) Close(); // walked away / dialogue took over
             else UpdateDial();
         }
-        else if (near != null && !GameFlow.InputLocked && !lockedLastFrame)
+        else if (near != null && !GameFlow.InputLocked && !lockedLastFrame && !PlayerDead())
         {
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) Open(near);
         }
-        promptRoot.SetActive(dialBoard == null && near != null && !GameFlow.InputLocked);
+        promptRoot.SetActive(dialBoard == null && near != null && !GameFlow.InputLocked && !PlayerDead());
         lockedLastFrame = GameFlow.InputLocked;
     }
 
@@ -201,7 +217,7 @@ public class BroadcastHackUi : MonoBehaviour
         Stretch((RectTransform)panel.transform, 2f, 2f, 2f, 2f);
         panel.AddComponent<Image>().color = BoxColor;
 
-        TMP_Text title = NewText("Title", panel.transform, TextSize, TextAlignmentOptions.Top);
+        TMP_Text title = titleText = NewText("Title", panel.transform, TextSize, TextAlignmentOptions.Top);
         Stretch((RectTransform)title.transform, 12f, 12f, 12f, 12f);
         title.text = T("BROADCAST HACK", "방송 해킹");
         title.color = Dim;

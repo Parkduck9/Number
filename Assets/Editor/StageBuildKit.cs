@@ -146,6 +146,7 @@ public static class StageBuildKit
         SetLayer(layers, EnemyLayer, "Enemy");
         tagManager.ApplyModifiedProperties();
         Physics2D.IgnoreLayerCollision(PlayerLayer, EnemyLayer, true);
+        Physics2D.IgnoreLayerCollision(EnemyLayer, EnemyLayer, true);
     }
 
     static void SetLayer(SerializedProperty layers, int index, string name)
@@ -246,6 +247,11 @@ public static class StageBuildKit
         if (f.android)
         {
             if (HasProp(te, "kind")) SetInt(te, "kind", 2); // TestEnemy.Kind.Android
+            // Strong-enemy rules, same as Stg05Builder's android template: number 1~7, 7th strike dash-only, 0.5s last-strike delay.
+            SetFloat(te, "lastStrikeDelay", 0.5f);
+            SetInt(te, "unparryableNumber", 7);
+            SetInt(te, "maxHp", 5);
+            if (f.fixedNumber <= 0) { SetInt(number, "minValue", 1); SetInt(number, "maxValue", 7); }
             else Todo.Add($"{f.id}: TestEnemy.kind missing");
         }
     }

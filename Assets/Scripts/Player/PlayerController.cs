@@ -31,6 +31,7 @@ public class PlayerController : MonoBehaviour
     [Header("Parry (T)")]
     [SerializeField] float parryActiveTime = 0.20f;
     [SerializeField] float parryDuration = 0.35f;
+    [SerializeField] float parryGuardTime = 0.2f; // after a successful parry, further frontal hits are parried too
 
     [Header("Dash (T)")]
     [SerializeField] float dashSpeed = 24f;
@@ -53,6 +54,7 @@ public class PlayerController : MonoBehaviour
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float parryFlashUntil;
+    float parryGuardUntil;
 
     Rigidbody2D rb;
     PlayerInputReader input;
@@ -71,6 +73,7 @@ public class PlayerController : MonoBehaviour
     float nextAfterimageAt;
     bool jumpCut;
     bool attackHitDone;
+    readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
@@ -104,6 +107,21 @@ public class PlayerController : MonoBehaviour
         {
             if (Time.unscaledTime >= hitStopEndsAt) EndHitStop();
             else { UpdateVisual(Time.time); return; } // frozen; still show the parry flash
+        }
+        if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
+        {
+            float dt = Time.deltaTime;
+            stateEnteredAt += dt;
+            dashCooldownUntil += dt;
+            parryFlashUntil += dt;
+            parryGuardUntil += dt;
+            jumpBufferedUntil += dt;
+            attackBufferedUntil += dt;
+            lastGroundedAt += dt;
+            health.ShiftInvulnerability(dt);
+            if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
+            UpdateVisual(Time.time);
+            return;
         }
         float now = Time.time;
         float elapsed = now - stateEnteredAt;
@@ -183,6 +201,7 @@ public class PlayerController : MonoBehaviour
     bool TryDash(float now)
     {
         if (!input.DashPressed || now < dashCooldownUntil) return false;
+        if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1; // dash toward the held direction (also cancels an attack/parry)
         dashCooldownUntil = now + dashCooldown;
         EnterState(State.Dash);
         return true;
@@ -212,7 +231,7 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = new Vector2(Facing * dashSpeed, 0f);
                 break;
             case State.Dead:
-                rb.linearVelocity = Vector2.zero;
+                rb.linearVelocity = Vector2.zero; // FixedUpdate does not write velocity in Dead, so the corpse stays put
                 break;
         }
     }
@@ -234,12 +253,15 @@ public class PlayerController : MonoBehaviour
     {
         attackHitDone = true;
         ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
-        Collider2D col = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyMask);
-        if (col == null) return;
-        TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
-        if (enemy == null) return;
-        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
-        if (damaged) PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
+        Collider2D[] cols = Physics2D.OverlapBoxAll(AttackCenter(), attackSize, 0f, enemyMask);
+        swingHits.Clear();
+        foreach (Collider2D col in cols)
+        {
+            TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
+            if (enemy == null || !swingHits.Add(enemy)) continue; // one hit per enemy per swing
+            bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
+            if (damaged) PlayHitSpark(col.ClosestPoint(AttackCenter()), Facing);
+        }
     }
 
     // hit-spark's pivot is a feet point: shift so its core (+12,+16 px) lands on the contact point. dir = blow direction.
@@ -258,12 +280,16 @@ public class PlayerController : MonoBehaviour
         if (health.Invulnerable) return HitResult.Dodged;
 
         float dx = info.SourcePosition.x - transform.position.x;
-        bool fromFront = Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
-        if (ParryActive && fromFront && !info.Unparryable)
+        // projectiles judge by travel direction (a shot spawned inside the player's box has no meaningful position side)
+        bool fromFront = !Mathf.Approximately(info.TravelDirX, 0f)
+            ? Mathf.Sign(info.TravelDirX) == -Facing
+            : Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
+        if ((ParryActive || Time.time < parryGuardUntil) && fromFront && !info.Unparryable)
         {
             // No knockback for either side. Hit-stop + flash + parry FX.
             EnterState(State.Locomotion);
             parryFlashUntil = Time.time + parryFlashTime;
+            parryGuardUntil = Time.time + parryGuardTime;
             SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
             if (hitStopTime > 0f)
             {
@@ -275,15 +301,16 @@ public class PlayerController : MonoBehaviour
 
         health.TakeDamage(info.Damage);
         EnterState(State.Hurt);
-        float away = dx > 0f ? -1f : 1f;
+        float away = Mathf.Approximately(dx, 0f) ? -Facing : (dx > 0f ? -1f : 1f); // dx==0: knock back behind the player
         PlayHitSpark(transform.position, away); // blow travels away from the source
-        rb.linearVelocity = new Vector2(away * knockback.x, knockback.y);
+        rb.linearVelocity = new Vector2(health.IsDead ? 0f : away * knockback.x, knockback.y); // dying: no sideways push (could carry the corpse into an exit)
         return HitResult.Hit;
     }
 
     void UpdateVisual(float now)
     {
         if (visual == null) return;
+        visual.flipX = Facing < 0;
         Color c = BaseColor;
         if (state == State.Dash) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);

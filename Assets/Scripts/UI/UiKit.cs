@@ -96,6 +96,16 @@ public static class UiKit
         return btn;
     }
 
+    // Compact in-game controls guide (EN/KO): 4 lines at size 18 in a 600x104 frame.
+    public static void ControlsPanel(Transform parent, Vector2 anchor, Vector2 pos)
+    {
+        var fill = Frame("Controls", parent, anchor, pos, new Vector2(600f, 104f), out _);
+        Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
+            "A/D  Move      W  Jump\nShift  Dash      E  Interact / hack\nLeft click  Attack      Right click  Parry\nSpace  Shockwave (after unlock)      Esc / P  Pause",
+            "A/D  이동      W  점프\nShift  대시      E  상호작용 / 해킹\n좌클릭  공격      우클릭  패링\nSpace  충격파(해금 후)      Esc / P  일시정지",
+            18, UiTheme.Current.dim);
+    }
+
     public static void EnsureEventSystem(out GameObject created)
     {
         created = null;

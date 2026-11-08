@@ -36,6 +36,7 @@ public static class TitleSceneBuilder
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = theme.background;
         camGo.transform.position = new Vector3(0f, 0f, -10f);
+        camGo.AddComponent<AudioListener>();
         new GameObject("TitleScreen").AddComponent<TitleScreen>();
         EditorSceneManager.SaveScene(scene, ScenePath);
 

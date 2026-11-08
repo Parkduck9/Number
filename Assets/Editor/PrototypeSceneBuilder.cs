@@ -62,6 +62,7 @@ public static class PrototypeSceneBuilder
         tagManager.ApplyModifiedProperties();
 
         Physics2D.IgnoreLayerCollision(PlayerLayer, EnemyLayer, true);
+        Physics2D.IgnoreLayerCollision(EnemyLayer, EnemyLayer, true);
     }
 
     static void SetLayer(SerializedProperty layers, int index, string name)

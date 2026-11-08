@@ -61,7 +61,10 @@ public class DialoguePlayer : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenu.IsOpen) return; // radio and talk freeze while paused
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Keyboard.current != null && Keyboard.current.lKey.wasPressedThisFrame) Loc.SetKorean(!Loc.Korean);
+#endif
         UpdateRadio();
         UpdateTalk();
     }
