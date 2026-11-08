@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -34,9 +35,16 @@ public class Shockwave : MonoBehaviour
     public bool Ready => Unlocked && CooldownRemaining <= 0f;
 
     static readonly HashSet<TestEnemy> hitEnemies = new HashSet<TestEnemy>();
+    static readonly Color ReadyColor = new Color(0.298f, 0.909f, 0.847f); // #4CE8D8
     PlayerController player;
     PlayerInputReader input;
     float readyAt;
+    bool pendingPress; // Space during a hit-stop: fired on the first unfrozen frame instead of being dropped
+
+    // Runtime HUD (bottom-left, code-built, no scene change): visible once unlocked, shows READY or the cooldown.
+    GameObject hudRoot;
+    TMP_Text hudText;
+    int shownTenths = -1;
 
     void Awake()
     {
@@ -44,9 +52,14 @@ public class Shockwave : MonoBehaviour
         input = GetComponent<PlayerInputReader>();
     }
 
+    void OnEnable() { Loc.Changed += OnLanguageChanged; }
+    void OnDisable() { Loc.Changed -= OnLanguageChanged; }
+    void OnDestroy() { if (hudRoot != null) Destroy(hudRoot); }
+
     void Update()
     {
-        if (Time.timeScale == 0f) return; // parry hit-stop / pause
+        if (Time.timeScale == 0f) { pendingPress |= input.ShockwavePressed; return; } // hit-stop / pause: keep the press
+        if (GameFlow.InputLocked) pendingPress = false;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (Keyboard.current != null && Keyboard.current.f9Key.wasPressedThisFrame)
         {
@@ -54,9 +67,12 @@ public class Shockwave : MonoBehaviour
             Debug.Log($"[Shockwave] debug unlock: {Unlocked}");
         }
 #endif
-        if (input.ShockwavePressed && Ready &&
+        bool pressed = input.ShockwavePressed || pendingPress;
+        pendingPress = false;
+        if (pressed && Ready &&
             player.CurrentState != PlayerController.State.Hurt && player.CurrentState != PlayerController.State.Dead)
             Fire();
+        UpdateHud();
     }
 
     void Fire()
@@ -77,17 +93,36 @@ public class Shockwave : MonoBehaviour
 
     Vector2 Center(int facing) => (Vector2)transform.position + new Vector2(facing * range * 0.5f, 0f);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    // Prototype indicator (same style as PrototypeDebug). Replace with a HUD element that reads CooldownRemaining / listens to Used.
-    void OnGUI()
+    // ---- HUD ----
+    void OnLanguageChanged() { shownTenths = -1; }
+
+    void UpdateHud()
     {
+        if (hudRoot == null) BuildHud();
+        if (hudRoot.activeSelf != Unlocked) hudRoot.SetActive(Unlocked);
         if (!Unlocked) return;
-        float cd = CooldownRemaining;
-        string text = cd <= 0f ? Loc.T("SPACE Shockwave: READY", "SPACE 충격파: 준비") : Loc.T($"SPACE Shockwave: {cd:0.0}s", $"SPACE 충격파: {cd:0.0}초");
-        GUI.skin.label.fontSize = 20;
-        GUI.Label(new Rect(10, Screen.height - 40, 600, 30), text);
+        int tenths = Mathf.CeilToInt(CooldownRemaining * 10f); // rebuild the string only when the shown value changes
+        if (tenths == shownTenths) return;
+        shownTenths = tenths;
+        bool ready = tenths <= 0;
+        hudText.text = ready ? Loc.T("SPACE  Shockwave: READY", "SPACE  충격파: 준비")
+                             : Loc.T($"SPACE  Shockwave: {tenths / 10f:0.0}s", $"SPACE  충격파: {tenths / 10f:0.0}초");
+        hudText.color = ready ? ReadyColor : UiTheme.Current.dim;
     }
-#endif
+
+    void BuildHud()
+    {
+        var canvas = UiKit.CreateCanvas("ShockwaveHud", null, 40); // below the broadcast HUD (50)
+        hudRoot = canvas.gameObject;
+        var rt = UiKit.Rect("Text", canvas.transform, Vector2.zero, new Vector2(16f + 180f, 24f), new Vector2(360f, 24f));
+        hudText = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        if (UiTheme.Current.font != null) hudText.font = UiTheme.Current.font;
+        hudText.fontSize = 18;
+        hudText.alignment = TextAlignmentOptions.Left;
+        hudText.textWrappingMode = TextWrappingModes.NoWrap;
+        hudText.raycastTarget = false;
+        hudRoot.SetActive(false);
+    }
 
     void OnDrawGizmosSelected()
     {

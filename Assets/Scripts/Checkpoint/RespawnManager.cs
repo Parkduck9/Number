@@ -30,6 +30,13 @@ public class RespawnManager : MonoBehaviour
         recordScene = SceneManager.GetActiveScene().name;
     }
 
+    // True during a respawn reload when the record is this scene's and at pos (Checkpoint uses it to stay lit).
+    // respawnPending is still set in Checkpoint.Awake (cleared in our Start); other loads reset to the start point.
+    public static bool IsRecordedAt(Vector2 pos)
+    {
+        return respawnPending && hasRecord && recordScene == SceneManager.GetActiveScene().name && (recordPos - pos).sqrMagnitude < 0.01f;
+    }
+
     // Pause menu: reload the scene and put the player at the last checkpoint (same path as after death).
     public static void RestartFromCheckpoint()
     {

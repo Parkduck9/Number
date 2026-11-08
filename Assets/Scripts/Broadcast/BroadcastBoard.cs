@@ -56,7 +56,7 @@ public class BroadcastBoard : MonoBehaviour
 
     float hackedAt, hackDuration;
 
-    void Awake() { Number = aiNumber; Refresh(); }
+    void Awake() { Number = aiNumber; NumberChangedAt = Time.time; Refresh(); } // a zone that starts on 7 starts its dope clock now, not at Time.time 0
     void OnEnable() { All.Add(this); }
     void OnDisable() { All.Remove(this); }
 

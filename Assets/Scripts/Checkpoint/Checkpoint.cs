@@ -12,7 +12,8 @@ public class Checkpoint : MonoBehaviour
     void Awake()
     {
         GetComponent<Collider2D>().isTrigger = true;
-        if (marker != null) marker.color = inactiveColor;
+        // After a respawn reload the recorded checkpoint is this one: keep it lit.
+        if (marker != null) marker.color = RespawnManager.IsRecordedAt(transform.position) ? activeColor : inactiveColor;
     }
 
     void OnTriggerEnter2D(Collider2D other)

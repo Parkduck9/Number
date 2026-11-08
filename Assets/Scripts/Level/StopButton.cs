@@ -26,9 +26,22 @@ public class StopButton : MonoBehaviour
     PlayerController player;
     GameObject panel;
     GameObject prompt;
+    TMP_Text promptText, choiceText;
     bool lockedLastFrame;
 
     void Start() { player = FindFirstObjectByType<PlayerController>(); }
+
+    void OnEnable() { Loc.Changed += RefreshTexts; }
+    void OnDisable() { Loc.Changed -= RefreshTexts; }
+
+    // Language switch: re-apply the code-built texts (same as BroadcastHackUi).
+    void RefreshTexts()
+    {
+        if (promptText == null) return;
+        promptText.text = T("[E] STOP BUTTON", "[E] 정지 버튼");
+        choiceText.text = T("<color=#4CE0FF>[1]</color> Press the stop button\n\n<color=#FFD24A>[2]</color> Press it, and set the lucky number yourself\n\nEsc / P: back",
+                            "<color=#4CE0FF>[1]</color> 정지 버튼을 누른다\n\n<color=#FFD24A>[2]</color> 누르되, 행운의 숫자를 직접 정한다\n\nEsc / P: 돌아가기");
+    }
 
     void Update()
     {
@@ -107,8 +120,7 @@ public class StopButton : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
 
         prompt = NewRect("Prompt", canvasGo.transform, new Vector2(0.5f, 0f), new Vector2(0f, 180f), new Vector2(480f, 36f));
-        TMP_Text p = NewText(prompt.transform, TextSize, TextAlignmentOptions.Center);
-        p.text = T("[E] STOP BUTTON", "[E] 정지 버튼");
+        TMP_Text p = promptText = NewText(prompt.transform, TextSize, TextAlignmentOptions.Center);
         p.color = Gold;
         prompt.SetActive(false);
 
@@ -116,12 +128,11 @@ public class StopButton : MonoBehaviour
         panel.AddComponent<Image>().color = BorderColor;
         GameObject fill = NewRect("Fill", panel.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(716f, 196f));
         fill.AddComponent<Image>().color = BoxColor;
-        TMP_Text t = NewText(fill.transform, TextSize, TextAlignmentOptions.Center);
+        TMP_Text t = choiceText = NewText(fill.transform, TextSize, TextAlignmentOptions.Center);
         t.textWrappingMode = TextWrappingModes.Normal;
         t.color = Color.white;
-        t.text = T("<color=#4CE0FF>[1]</color> Press the stop button\n\n<color=#FFD24A>[2]</color> Press it, and set the lucky number yourself\n\nEsc / P: back",
-                   "<color=#4CE0FF>[1]</color> 정지 버튼을 누른다\n\n<color=#FFD24A>[2]</color> 누르되, 행운의 숫자를 직접 정한다\n\nEsc / P: 돌아가기");
         panel.SetActive(false);
+        RefreshTexts();
     }
 
     TMP_Text NewText(Transform parent, int size, TextAlignmentOptions align)

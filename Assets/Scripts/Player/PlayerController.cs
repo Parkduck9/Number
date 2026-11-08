@@ -74,6 +74,7 @@ public class PlayerController : MonoBehaviour
     float nextAfterimageAt;
     bool jumpCut;
     bool attackHitDone;
+    bool pendingParry, pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
     public int Facing { get; private set; } = 1;
@@ -82,6 +83,8 @@ public class PlayerController : MonoBehaviour
     public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveTime;
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
     public LayerMask EnemyMask => enemyMask;
+    bool ParryPressed => input.ParryPressed || pendingParry;
+    bool DashPressed => input.DashPressed || pendingDash;
 
     void Awake()
     {
@@ -116,10 +119,11 @@ public class PlayerController : MonoBehaviour
         if (hitStopEndsAt >= 0f)
         {
             if (Time.unscaledTime >= hitStopEndsAt) EndHitStop();
-            else { UpdateVisual(Time.time); return; } // frozen; still show the parry flash
+            else { BufferDuringHitStop(); UpdateVisual(Time.time); return; } // frozen; keep the presses, still show the parry flash
         }
         if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
         {
+            pendingParry = pendingDash = false;
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
@@ -175,8 +179,18 @@ public class PlayerController : MonoBehaviour
                 break;
         }
 
+        pendingParry = pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
         if (state == State.Locomotion || state == State.Attack || state == State.Parry) UpdateJumpCut();
         UpdateVisual(now);
+    }
+
+    // Hit-stop freezes Time.time, so a buffer set now starts counting when it ends; WasPressedThisFrame is true for this frame only.
+    void BufferDuringHitStop()
+    {
+        if (input.JumpPressed) jumpBufferedUntil = Time.time + jumpBuffer;
+        if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Time.time + attackBuffer;
+        pendingParry |= input.ParryPressed;
+        pendingDash |= input.DashPressed;
     }
 
     void UpdateLocomotion(float now)
@@ -184,7 +198,7 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
         if (TryDash(now)) return;
-        if (input.ParryPressed) { EnterState(State.Parry); return; }
+        if (ParryPressed) { EnterState(State.Parry); return; }
         if (input.AttackPressed || now <= attackBufferedUntil) { EnterState(State.Attack); return; }
 
         // jump with coyote + buffer
@@ -210,7 +224,7 @@ public class PlayerController : MonoBehaviour
 
     bool TryDash(float now)
     {
-        if (!input.DashPressed || now < dashCooldownUntil) return false;
+        if (!DashPressed || now < dashCooldownUntil) return false;
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1; // dash toward the held direction (also cancels an attack/parry)
         dashCooldownUntil = now + dashCooldown;
         EnterState(State.Dash);

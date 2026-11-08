@@ -167,7 +167,7 @@ public class BroadcastHackUi : MonoBehaviour
         for (int i = 0; i < 10; i++)
             digits += i == selected ? "<color=#4CE0FF>" + i + "</color>" : "<color=#8A90A0>" + i + "</color>";
         dialDigits.text = digits.Replace("</color><color", "</color> <color");
-        dialWarn.text = selected == 0 ? "EVERYONE STOPS BREATHING" : "";
+        dialWarn.text = selected == 0 ? T("EVERYONE STOPS BREATHING", "모두 숨을 멈춘다") : "";
     }
 
     static string T(string en, string ko) { return DialogueLanguage.Korean ? ko : en; }

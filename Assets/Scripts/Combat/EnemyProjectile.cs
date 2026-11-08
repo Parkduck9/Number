@@ -40,16 +40,21 @@ public class EnemyProjectile : MonoBehaviour
     {
         if (GameFlow.InputLocked) { dieAt += Time.deltaTime; return; }
         if (Time.time >= dieAt) { Destroy(gameObject); return; }
+        Vector2 prev = transform.position;
         transform.position += (Vector3)(velocity * Time.deltaTime);
         Vector2 pos = transform.position;
+        // Sweep from the old to the new position (a long frame must not tunnel through ground or the player).
+        Vector2 step = pos - prev;
+        float dist = step.magnitude;
+        Vector2 dir = dist > 0f ? step / dist : Vector2.right;
 
-        if (groundMask.value != 0 && Physics2D.OverlapBox(pos, size, 0f, groundMask) != null)
+        if (groundMask.value != 0 && Physics2D.BoxCast(prev, size, 0f, dir, dist, groundMask).collider != null)
         {
             Destroy(gameObject);
             return;
         }
         if (passedPlayer) return;
-        Collider2D col = Physics2D.OverlapBox(pos, size, 0f, playerMask);
+        Collider2D col = Physics2D.BoxCast(prev, size, 0f, dir, dist, playerMask).collider;
         if (col == null) return;
         PlayerController pc = col.GetComponentInParent<PlayerController>();
         if (pc == null) return;

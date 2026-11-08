@@ -9,6 +9,9 @@ public static class GameFlow
     public static int EscConsumedFrame = -1;
     public static bool EscConsumed => EscConsumedFrame == Time.frameCount;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { InputLocked = false; EscConsumedFrame = -1; } // Domain Reload is off: a lock from the last Play session must not leak
+
     // True while the player is dying/dead: stage exits, the stop button and the like must ignore it.
     public static bool IsPlayerDead(PlayerController pc)
     {

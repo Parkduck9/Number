@@ -38,8 +38,8 @@ public static class Stg01Builder
     {
         // 14 pixel-native is 810x270: PPU 16 -> exactly 50.625u wide.
         new Seg { id = "SEG-A", worldX = 0f,  srcImage = "docs/design/concept/14_bg_stg01_pixel_native.png", dstName = "PLACEHOLDER_stg01_segA_bg.png", ppu = 16f, filter = FilterMode.Point },
-        // 13 is a 1600x533 hi-res frame (not pixel art): PPU 32 then scaled x1.0125; bilinear so the odd scale does not shimmer.
-        new Seg { id = "SEG-B", worldX = 60f, srcImage = "docs/design/concept/13_style_frame_v2.jpg",          dstName = "PLACEHOLDER_stg01_segB_bg.jpg",  ppu = 32f, filter = FilterMode.Bilinear },
+        // SEG-B: no background yet (the 13_style_frame_v2 concept had a fake HUD / fake enemies drawn in; final art pending). null = none.
+        new Seg { id = "SEG-B", worldX = 60f, srcImage = null, dstName = null, ppu = 32f, filter = FilterMode.Point },
     };
 
     enum Kind { Solid, OneWay }
@@ -192,6 +192,7 @@ public static class Stg01Builder
     // Copies the concept image into Assets/Art/Placeholder (if not there yet) and applies the import settings.
     static Sprite ImportBackground(Seg s)
     {
+        if (s.srcImage == null) return null; // segment without a background
         Directory.CreateDirectory(PlaceholderDir);
         string dst = PlaceholderDir + "/" + s.dstName;
         if (!File.Exists(dst))
