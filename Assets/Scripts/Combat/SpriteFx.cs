@@ -66,19 +66,55 @@ public static class SpriteFx
     {
         Clip clip = Load(name);
         if (clip == null) return null;
-        GameObject go = new GameObject("Fx_" + name);
-        go.transform.position = position;
-        go.transform.localScale = new Vector3(scale, scale, 1f);
-        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        Fx fx = Get(position, Quaternion.identity, new Vector3(scale, scale, 1f));
+        SpriteRenderer sr = fx.sr;
         sr.flipX = flipX;
         sr.sortingOrder = sortingOrder;
         sr.sprite = clip.frames[0];
-        var player = go.AddComponent<Player>();
-        player.sr = sr;
-        player.frames = clip.frames;
-        player.fps = clip.fps;
-        player.loop = clip.loop;
-        return go;
+        fx.frames = clip.frames;
+        fx.fps = clip.fps;
+        fx.loop = clip.loop;
+        return fx.gameObject;
+    }
+
+    // Pool: finished one-shots / afterimages are disabled and reused (no GameObject churn per run-dust / speed-line / spark).
+    // Pooled objects live in the scene, so a scene change destroys them; Get skips those. Callers that Destroy a returned loop are fine.
+    static readonly Stack<Fx> pool = new Stack<Fx>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => pool.Clear(); // Domain Reload is off
+
+    static Fx Get(Vector3 position, Quaternion rotation, Vector3 scale)
+    {
+        Fx fx = null;
+        while (pool.Count > 0 && fx == null) fx = pool.Pop();
+        if (fx == null)
+        {
+            var go = new GameObject("Fx");
+            fx = go.AddComponent<Fx>();
+            fx.sr = go.AddComponent<SpriteRenderer>();
+        }
+        Transform t = fx.transform;
+        t.SetPositionAndRotation(position, rotation);
+        t.localScale = scale;
+        SpriteRenderer sr = fx.sr;
+        sr.flipX = sr.flipY = false;
+        sr.color = Color.white;
+        sr.sortingLayerID = 0;
+        sr.enabled = true;
+        fx.frames = null;
+        fx.t = 0f;
+        fx.enabled = true;
+        return fx;
+    }
+
+    static void Release(Fx fx)
+    {
+        fx.enabled = false;
+        fx.sr.enabled = false;
+        fx.sr.sprite = null;
+        if (fx.transform.parent != null) fx.transform.SetParent(null, false);
+        pool.Push(fx);
     }
 
     // Same, drawn just behind 'behind' (its sorting layer, order - 1), rotated by 'angle' degrees, and parented to 'follow' if given.
@@ -95,55 +131,45 @@ public static class SpriteFx
     // Dash afterimage: copy of the visual's current sprite, tinted and fading out, just behind it.
     public static void Afterimage(SpriteRenderer source, Color tint, float life)
     {
-        GameObject go = new GameObject("Afterimage");
-        go.transform.position = source.transform.position;
-        go.transform.rotation = source.transform.rotation;
-        go.transform.localScale = source.transform.lossyScale;
-        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        Transform src = source.transform;
+        Fx fx = Get(src.position, src.rotation, src.lossyScale);
+        SpriteRenderer sr = fx.sr;
         sr.sprite = source.sprite;
         sr.flipX = source.flipX;
         sr.flipY = source.flipY;
         sr.color = tint;
         sr.sortingLayerID = source.sortingLayerID;
         sr.sortingOrder = source.sortingOrder - 1;
-        var fade = go.AddComponent<Fade>();
-        fade.sr = sr;
-        fade.life = life;
-        fade.startAlpha = tint.a;
+        fx.life = life;
+        fx.startAlpha = tint.a;
     }
 
-    class Player : MonoBehaviour
+    // frames != null: sprite-sheet player; else afterimage fade.
+    class Fx : MonoBehaviour
     {
         public SpriteRenderer sr;
         public Sprite[] frames;
         public float fps;
         public bool loop;
-        float t;
-
-        void Update()
-        {
-            t += Time.deltaTime;
-            int i = (int)(t * fps);
-            if (i >= frames.Length)
-            {
-                if (!loop) { Destroy(gameObject); return; }
-                i %= frames.Length;
-            }
-            sr.sprite = frames[i];
-        }
-    }
-
-    class Fade : MonoBehaviour
-    {
-        public SpriteRenderer sr;
         public float life;
         public float startAlpha;
-        float t;
+        public float t;
 
         void Update()
         {
             t += Time.deltaTime;
-            if (t >= life) { Destroy(gameObject); return; }
+            if (frames != null)
+            {
+                int i = (int)(t * fps);
+                if (i >= frames.Length)
+                {
+                    if (!loop) { Release(this); return; }
+                    i %= frames.Length;
+                }
+                sr.sprite = frames[i];
+                return;
+            }
+            if (t >= life) { Release(this); return; }
             Color c = sr.color;
             c.a = startAlpha * (1f - t / life);
             sr.color = c;

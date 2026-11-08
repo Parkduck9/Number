@@ -12,6 +12,7 @@ public static class DashRules
     public const float LungeStopInFront = 1.0f; // end point in front of the target: non-overloaded Android (blocked) or a pit behind it
     public const float LungeSweepWidth = 1.4f;  // thickness of the kill sweep (= attack box height)
     public const int LungeMaxHitStops = 2;      // hit-stop + shake only for the first N blows of one swing (many kills must not freeze the game)
+    public const float HitStopGap = 0.25f;      // s (real time): a hit/kill hit-stop never starts within this after the previous one ended (parry exempt)
     public const int LungeKillSparks = 2;       // extra hit-sparks on a lunge kill (cheap "shatter")
 
     // ---- LMB parry merge (PlayerController.FaceParryThreat): parry wins over the lunge when a threat is about to land ----

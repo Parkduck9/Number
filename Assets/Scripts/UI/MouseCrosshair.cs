@@ -50,7 +50,7 @@ public class MouseCrosshair : MonoBehaviour
     void LateUpdate()
     {
         bool ui = GameFlow.InputLocked || PauseMenu.IsOpen;
-        Cursor.visible = ui;
+        if (Cursor.visible != ui) Cursor.visible = ui; // set only on change: an OS cursor call every frame
         Vector2 mouse = default;
         bool show = !ui && player != null && player.isActiveAndEnabled && MouseWorld(out mouse);
         cross.enabled = show;

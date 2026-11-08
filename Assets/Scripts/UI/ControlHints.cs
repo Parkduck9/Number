@@ -93,9 +93,12 @@ public class ControlHints : MonoBehaviour
         }
     }
 
+    PlayerController player;
+
     void Update()
     {
-        if (root == null || GameFlow.InputLocked || FindFirstObjectByType<PlayerController>() == null) return;
+        if (player == null) player = FindFirstObjectByType<PlayerController>(); // cached: was a full scene search every frame
+        if (root == null || GameFlow.InputLocked || player == null) return;
         visibleFor += Time.unscaledDeltaTime;
         if (visibleFor >= ShowSeconds) Destroy(gameObject);
     }

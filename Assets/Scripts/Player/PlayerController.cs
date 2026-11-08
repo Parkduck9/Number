@@ -66,6 +66,7 @@ public class PlayerController : MonoBehaviour
     static readonly Color AfterimageColor = new Color(0.298f, 0.909f, 0.847f, 0.6f); // #4CE8D8
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
+    float hitStopEndedAt = -10f; // real time the last hit-stop ended (DashRules.HitStopGap)
     float parryFlashUntil;
     float parryGuardUntil;
 
@@ -131,9 +132,12 @@ public class PlayerController : MonoBehaviour
     void OnDisable() { EndHitStop(); }
 
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
-    void StartHitStop(float seconds)
+    bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
+
+    void StartHitStop(float seconds, bool countsForGap = true)
     {
         if (seconds <= 0f || GameFlow.InputLocked || PauseMenu.IsOpen) return;
+        hitStopCountsForGap = (hitStopEndsAt >= 0f && hitStopCountsForGap) || countsForGap;
         hitStopEndsAt = Mathf.Max(hitStopEndsAt, Time.unscaledTime + seconds);
         Time.timeScale = 0f;
     }
@@ -142,6 +146,7 @@ public class PlayerController : MonoBehaviour
     {
         if (hitStopEndsAt < 0f) return;
         hitStopEndsAt = -1f;
+        if (hitStopCountsForGap) hitStopEndedAt = Time.unscaledTime;
         Time.timeScale = 1f;
     }
 
@@ -649,7 +654,9 @@ public class PlayerController : MonoBehaviour
         if (swingHitStops < DashRules.LungeMaxHitStops)
         {
             swingHitStops++;
-            StartHitStop(down ? Juice.HitStopKill : Juice.HitStopHit);
+            // a blow landing right after a hit-stop ended (2nd lunge kill, chained swings) gets no new freeze: back-to-back stops read as lag
+            if (hitStopEndsAt >= 0f || Time.unscaledTime - hitStopEndedAt >= DashRules.HitStopGap)
+                StartHitStop(down ? Juice.HitStopKill : Juice.HitStopHit);
             Juice.Shake(down ? Juice.ShakeKillAmp : Juice.ShakeHitAmp, down ? Juice.ShakeKillTime : Juice.ShakeHitTime);
         }
         return true;
@@ -683,7 +690,7 @@ public class PlayerController : MonoBehaviour
             parryGuardUntil = Time.time + parryGuardTime;
             SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
             Sfx.Play(SfxId.Parry);
-            StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop));
+            StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
         }
