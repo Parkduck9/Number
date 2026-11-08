@@ -331,4 +331,15 @@ public class TestEnemy : MonoBehaviour
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(p, new Vector3(attackRangeX * 2f, attackRangeY * 2f, 0f));
     }
+
+    // Upgrade 8-A shockwave: interrupt the chain and enter the existing Staggered state for `seconds`.
+    // strikesLeft = 0 opens the punish window, same as the dash-through stagger.
+    public void ForceStagger(float seconds)
+    {
+        if (state == State.Stunned) return;
+        strikesLeft = 0;
+        number.SetPulse(false);
+        EnterState(State.Staggered);
+        stateEnteredAt = Time.time - (staggerTime - seconds); // Staggered ends at staggerTime; shift so it lasts `seconds`
+    }
 }
