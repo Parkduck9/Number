@@ -17,7 +17,7 @@ public static class StreetBackdropKit
     const float GroundRow = 34f;               // px from the bottom of the 268 px parts to the street surface (stall feet) in the manifest composition
     const float CamHalfW = 15f;                // 960 / 2 / 32
     const float SkylineLift = 82f;             // px: the manifest composition puts the skyline 82 px above the mid layer's bottom (towers stand above the roofs)
-    static Vector2 camMax;
+    internal static Vector2 camMax; // shared with PartsBackdropKit (STG-02..05)
 
     // x / y camera-follow fractions
     static readonly Vector2 SkyF = new Vector2(0.9f, 0.3f), SkylineF = new Vector2(0.6f, 0.25f), MidF = new Vector2(0.3f, 0.2f);
@@ -27,9 +27,9 @@ public static class StreetBackdropKit
     const int OSkyFill = -112, OSky = -111, OCloud = -110, OSkyline = -109, OTwinkle = -108, OGroundFill = -107, OMid = -106, OGlow = -105, ONumber = -104, OProp = -103, OFx = -102;
 
     static Sprite Load(string file) => AssetDatabase.LoadAssetAtPath<Sprite>(Dir + file + ".png");
-    static Sprite[] Frames(string file)
+    internal static Sprite[] Frames(string file, string dir = Dir)
     {
-        var all = AssetDatabase.LoadAllAssetsAtPath(Dir + file + ".png").OfType<Sprite>()
+        var all = AssetDatabase.LoadAllAssetsAtPath(dir + file + ".png").OfType<Sprite>()
             .OrderBy(s => int.Parse(s.name.Substring(s.name.LastIndexOf('_') + 1))).ToArray();
         return all.Length > 0 ? all : null;
     }
@@ -109,7 +109,7 @@ public static class StreetBackdropKit
 
     // ------------------------------------------------------------------ pieces
 
-    static Transform Group(Transform root, string name, Vector2 factor, Vector2 camOrigin)
+    internal static Transform Group(Transform root, string name, Vector2 factor, Vector2 camOrigin)
     {
         var go = new GameObject(name);
         go.transform.SetParent(root, false);
@@ -122,7 +122,7 @@ public static class StreetBackdropKit
         return go.transform;
     }
 
-    static Transform Sprite1(Transform parent, string name, Sprite s, Vector2 pos, bool flip, int order)
+    internal static Transform Sprite1(Transform parent, string name, Sprite s, Vector2 pos, bool flip, int order)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
@@ -135,7 +135,7 @@ public static class StreetBackdropKit
         return go.transform;
     }
 
-    static void Loop(GameObject go, Sprite[] frames, float fps)
+    internal static void Loop(GameObject go, Sprite[] frames, float fps)
     {
         var loop = go.AddComponent<SpriteLoop>();
         var so = new SerializedObject(loop);
@@ -148,7 +148,7 @@ public static class StreetBackdropKit
 
     // Tile centres cx0 + k * TileW covering the segment-local range [min, max]. mirror: odd tiles are flipped (pixel-continuous seams for art
     // that does not tile); the overlay copies flip with their base. Returns tile 0 (k = 0). frames != null: animated overlay at fps.
-    static Transform Tiles(Transform parent, string name, Sprite single, Sprite[] frames, float fps, float cx0, float y0, float min, float max, bool mirror, int order)
+    internal static Transform Tiles(Transform parent, string name, Sprite single, Sprite[] frames, float fps, float cx0, float y0, float min, float max, bool mirror, int order)
     {
         if (single == null && frames == null) return null;
         int kMin = Mathf.FloorToInt((min - cx0) / TileW + 0.5f), kMax = Mathf.CeilToInt((max - cx0) / TileW - 0.5f);
@@ -165,7 +165,7 @@ public static class StreetBackdropKit
 
     // Segment-local x range a layer with horizontal factor f must cover so the 30 u view is always full while the camera moves camMin..camMax
     // (the layer sits at its authored place when the camera is at camMin and drifts by f * camera travel).
-    static void Range(float f, float camMin, float camMax, out float min, out float max)
+    internal static void Range(float f, float camMin, float camMax, out float min, out float max)
     {
         min = camMin - CamHalfW - 1f;
         max = camMax * (1f - f) + camMin * f + CamHalfW + 1f;
@@ -225,7 +225,7 @@ public static class StreetBackdropKit
 
     // Runs of equal colour along one column (column 0, bottom -> top: rows) or along the bottom row (left -> right: columns).
     // Returned as (start, end, colour); end exclusive.
-    static List<(int start, int end, Color32 c)> Runs(string path, bool bottomRow)
+    internal static List<(int start, int end, Color32 c)> Runs(string path, bool bottomRow)
     {
         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         tex.LoadImage(File.ReadAllBytes(path));

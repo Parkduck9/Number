@@ -1,0 +1,160 @@
+﻿{
+    "png":  [
+                {
+                    "name":  "land-dust",
+                    "sheet":  [
+                                  384,
+                                  320
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "grapple-hit",
+                    "sheet":  [
+                                  256,
+                                  192
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "spawner-break",
+                    "sheet":  [
+                                  640,
+                                  672
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "enemy-warp-in",
+                    "sheet":  [
+                                  480,
+                                  480
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "sniper-muzzle",
+                    "sheet":  [
+                                  192,
+                                  192
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "checkpoint",
+                    "sheet":  [
+                                  576,
+                                  480
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "player-glitch-death",
+                    "sheet":  [
+                                  448,
+                                  480
+                              ],
+                    "terminalAlpha":  0
+                },
+                {
+                    "name":  "hack-pulse",
+                    "sheet":  [
+                                  448,
+                                  480
+                              ],
+                    "terminalAlpha":  0
+                }
+            ],
+    "gif":  [
+                {
+                    "name":  "checkpoint.gif",
+                    "dimensions":  [
+                                       288,
+                                       240
+                                   ],
+                    "frames":  31,
+                    "milliseconds":  780,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "enemy-warp-in.gif",
+                    "dimensions":  [
+                                       240,
+                                       240
+                                   ],
+                    "frames":  31,
+                    "milliseconds":  780,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "grapple-hit.gif",
+                    "dimensions":  [
+                                       192,
+                                       192
+                                   ],
+                    "frames":  11,
+                    "milliseconds":  280,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "hack-pulse.gif",
+                    "dimensions":  [
+                                       336,
+                                       288
+                                   ],
+                    "frames":  17,
+                    "milliseconds":  430,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "land-dust.gif",
+                    "dimensions":  [
+                                       288,
+                                       192
+                                   ],
+                    "frames":  19,
+                    "milliseconds":  480,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "overview.gif",
+                    "dimensions":  [
+                                       1632,
+                                       1344
+                                   ],
+                    "frames":  48,
+                    "milliseconds":  1200,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "player-glitch-death.gif",
+                    "dimensions":  [
+                                       336,
+                                       240
+                                   ],
+                    "frames":  21,
+                    "milliseconds":  530,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "sniper-muzzle.gif",
+                    "dimensions":  [
+                                       192,
+                                       192
+                                   ],
+                    "frames":  7,
+                    "milliseconds":  180,
+                    "decoded":  "all frames"
+                },
+                {
+                    "name":  "spawner-break.gif",
+                    "dimensions":  [
+                                       384,
+                                       288
+                                   ],
+                    "frames":  33,
+                    "milliseconds":  830,
+                    "decoded":  "all frames"
+                }
+            ]
+}

@@ -11,7 +11,7 @@ public static class Stg03Builder
     const string TalkPath = "Assets/Data/Dialogue/stg03_luddite_placeholder.txt";
     const float RoomWidth = 30f;
 
-    static readonly Color BgColor = new Color32(0x2A, 0x2F, 0x24, 0xFF);
+
     static readonly Color NpcColor = new Color32(0x8F, 0xBF, 0x6A, 0xFF);
     static readonly Color DoorColor = new Color32(0x5A, 0x4A, 0x3A, 0xFF);
 
@@ -35,10 +35,9 @@ public static class Stg03Builder
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var root = new GameObject("ROOM").transform;
-        BuildImageBackground(root, "Assets/Art/Backgrounds/bg_stg03_hideout_room.png", RoomWidth, SegHeight, BgColor);
+        PartsBackdropKit.Hideout(root, RoomWidth, 1f); // layered parts (DECISIONS 17); one fixed screen
         foreach (var b in Boxes) BuildCollider(root, b, true);
-        // px on bg_stg03_hideout_room.png: brazier (warm, flickers), the two old monitors on the left shelf (teal)
-        AddLamps(root, RoomWidth, new Lamp(430f, 445f, LampWarm, 5f, 0.25f), new Lamp(105f, 235f, LampTeal, 3f), new Lamp(105f, 360f, LampTeal, 3f));
+
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);

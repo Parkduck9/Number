@@ -53,17 +53,11 @@ public static class Stg05Builder
         Directory.CreateDirectory("Assets/Scenes");
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        // Background image (30 x 16.875 u at PPU 32, pivot bottom-left, behind everything); no image = the camera's solid colour shows.
-        var bgSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/Backgrounds/bg_stg05_boss_room.png");
-        if (bgSprite != null)
-        {
-            var bg = new GameObject("Background (boss room)").AddComponent<SpriteRenderer>();
-            bg.sprite = bgSprite;
-            bg.sortingOrder = -100;
-            // spill light from the big broadcast screen (gold) + the stone lantern right of the stairs (warm), px on the image
-            StageBuildKit.AddLamps(bg.transform, RoomW, new StageBuildKit.Lamp(480f, 230f, StageBuildKit.LampWarm, 8f, 0.1f), new StageBuildKit.Lamp(750f, 420f, StageBuildKit.LampWarm, 4f));
-        }
-        else Todo.Add("Background image missing (Assets/Art/Backgrounds/bg_stg05_boss_room.png)");
+        // Layered background parts (DECISIONS 17, 30 x 16.875 u one fixed screen, floor top y = 2); the kit reports missing parts through StageBuildKit.Todo.
+        StageBuildKit.Square = square;
+        StageBuildKit.Todo.Clear();
+        PartsBackdropKit.Palace(new GameObject("Background (boss room)").transform, RoomW, 2f);
+        Todo.AddRange(StageBuildKit.Todo);
 
         // Room: ground + walls (layer Ground; walls invisible, visible floor strip so the room reads).
         BuildCollider("GROUND", 0f, RoomW, 0f, 2f, new Color32(0x3A, 0x3F, 0x4B, 0xFF));

@@ -12,7 +12,7 @@ public static class DraftSprites
 
     static Sprite[] hero, heroRun, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
         heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
-        bug, bugWalk, bugFlyer, bugFlyerAttack;
+        bug, bugWalk, bugFlyer, bugFlyerAttack, heroGrapple;
     public static Sprite[] Hero => hero ??= Load("hero_walk_3f", 3);
     public static Sprite[] HeroRun => heroRun ??= Load("hero_run_6f", 6);                   // test strip (Codex); null = walk
     public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_2f", 2);
@@ -24,6 +24,7 @@ public static class DraftSprites
     public static Sprite[] Android => android ??= Load("android_attack_3f", 3);
     public static Sprite[] Luddite => luddite ??= Load("luddite_npc_idle_2f", 2);
     public static Sprite[] HeroJump => heroJump ??= Load("hero_jump_2f", 2);                 // 0 rising, 1 falling
+    public static Sprite[] HeroGrapple => heroGrapple ??= Load("hero_grapple_1f", 1);        // pulled by the rope (Codex); null = jump
     public static Sprite[] HeroParry => heroParry ??= Load("hero_parry_2f", 2);
     public static Sprite[] CitizenWalk => citizenWalk ??= Load("citizen_walk_2f", 2);
     public static Sprite[] CitizenStunned => citizenStunned ??= Load("citizen_stunned_1f", 1);

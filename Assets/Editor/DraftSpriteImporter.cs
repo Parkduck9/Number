@@ -73,7 +73,7 @@ public class BackgroundImporter : AssetPostprocessor
 
     void OnPreprocessTexture()
     {
-        if (!assetPath.StartsWith("Assets/Art/Backgrounds/") || assetPath.StartsWith(Stg01LayerImporter.Dir)) return; // the layered parts have their own importer
+        if (!assetPath.StartsWith("Assets/Art/Backgrounds/") || Stg01LayerImporter.Handles(assetPath)) return; // the layered parts have their own importer
         var ti = (TextureImporter)assetImporter;
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;

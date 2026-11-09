@@ -1,0 +1,281 @@
+{
+ "frames": [
+  {
+   "filename": "number-grapple-hit 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 1",
+   "frame": {
+    "x": 64,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 2",
+   "frame": {
+    "x": 128,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 3",
+   "frame": {
+    "x": 192,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 4",
+   "frame": {
+    "x": 0,
+    "y": 64,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 5",
+   "frame": {
+    "x": 64,
+    "y": 64,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 6",
+   "frame": {
+    "x": 128,
+    "y": 64,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 7",
+   "frame": {
+    "x": 192,
+    "y": 64,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 8",
+   "frame": {
+    "x": 0,
+    "y": 128,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 9",
+   "frame": {
+    "x": 64,
+    "y": 128,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-grapple-hit 10",
+   "frame": {
+    "x": 128,
+    "y": 128,
+    "w": 64,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 64,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 64,
+    "h": 64
+   },
+   "duration": 25
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "grapple-hit.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 256,
+   "h": 192
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "number-grapple-hit",
+    "from": 0,
+    "to": 10,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "impacts/number-grapple-hit",
+   "name": "grapple-hit",
+   "fps": 40,
+   "loop": false,
+   "frames": 11,
+   "frameSize": [
+    64,
+    64
+   ],
+   "pivot": [
+    24,
+    32
+   ],
+   "columns": 4
+  }
+ }
+}

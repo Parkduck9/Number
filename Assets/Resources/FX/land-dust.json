@@ -1,0 +1,457 @@
+{
+ "frames": [
+  {
+   "filename": "number-land-dust 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 1",
+   "frame": {
+    "x": 96,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 2",
+   "frame": {
+    "x": 192,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 3",
+   "frame": {
+    "x": 288,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 4",
+   "frame": {
+    "x": 0,
+    "y": 64,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 5",
+   "frame": {
+    "x": 96,
+    "y": 64,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 6",
+   "frame": {
+    "x": 192,
+    "y": 64,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 7",
+   "frame": {
+    "x": 288,
+    "y": 64,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 8",
+   "frame": {
+    "x": 0,
+    "y": 128,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 9",
+   "frame": {
+    "x": 96,
+    "y": 128,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 10",
+   "frame": {
+    "x": 192,
+    "y": 128,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 11",
+   "frame": {
+    "x": 288,
+    "y": 128,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 12",
+   "frame": {
+    "x": 0,
+    "y": 192,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 13",
+   "frame": {
+    "x": 96,
+    "y": 192,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 14",
+   "frame": {
+    "x": 192,
+    "y": 192,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 15",
+   "frame": {
+    "x": 288,
+    "y": 192,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 16",
+   "frame": {
+    "x": 0,
+    "y": 256,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 17",
+   "frame": {
+    "x": 96,
+    "y": 256,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-land-dust 18",
+   "frame": {
+    "x": 192,
+    "y": 256,
+    "w": 96,
+    "h": 64
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 96,
+    "h": 64
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 64
+   },
+   "duration": 25
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "land-dust.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 384,
+   "h": 320
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "number-land-dust",
+    "from": 0,
+    "to": 18,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "impacts/number-land-dust",
+   "name": "land-dust",
+   "fps": 40,
+   "loop": false,
+   "frames": 19,
+   "frameSize": [
+    96,
+    64
+   ],
+   "pivot": [
+    48,
+    54
+   ],
+   "columns": 4
+  }
+ }
+}

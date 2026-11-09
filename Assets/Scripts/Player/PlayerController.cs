@@ -958,7 +958,7 @@ public class PlayerController : MonoBehaviour
         if (state == State.Dash || lunging) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
-        else if (state == State.Dead) c = Color.gray;
+        else if (state == State.Dead) c = Color.clear; // the player-glitch-death FX takes the body away (MomentFx)
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
         SpriteFlash.Apply(visual, c, now < parryFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
@@ -973,7 +973,7 @@ public class PlayerController : MonoBehaviour
             case State.Attack: return DraftSprites.Pick(DraftSprites.HeroAttack, t, DraftSprites.Hero);
             case State.Parry: return DraftSprites.Pick(DraftSprites.HeroParry, ParryActive ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero);
             case State.Dash: return DraftSprites.Pick(DraftSprites.HeroDash, t, DraftSprites.Hero);
-            case State.Grapple: return DraftSprites.Pick(DraftSprites.HeroJump, 0, DraftSprites.Hero);
+            case State.Grapple: return DraftSprites.HeroGrapple != null ? DraftSprites.HeroGrapple[0] : DraftSprites.Pick(DraftSprites.HeroJump, 0, DraftSprites.Hero);
             case State.Hurt:
             case State.Dead: return DraftSprites.Pick(DraftSprites.HeroHurt, 0, DraftSprites.Hero);
         }

@@ -7,10 +7,15 @@ using UnityEngine;
 public class Stg01LayerImporter : AssetPostprocessor
 {
     public const string Dir = "Assets/Art/Backgrounds/STG01_Layers/";
+    // STG-02..05 parts (docs/design/concept/bg_assets/parts_manifest.md): same rules; hanging lanterns / cables pivot at the top, strips up to 6480 px.
+    public const string PartsDir = "Assets/Art/Backgrounds/STG02_05_Parts/";
     public override uint GetVersion() => 1;
+
+    public static bool Handles(string path) => path.StartsWith(Dir) || path.StartsWith(PartsDir);
 
     static Vector2 PivotFor(string name)
     {
+        if (name.StartsWith("lantern_hanji") || name.StartsWith("cable_bundle")) return new Vector2(0.5f, 1f);
         if (name.StartsWith("cloud_") || name.StartsWith("holo_board") || name.StartsWith("holo_ring") || name.StartsWith("drone_")) return new Vector2(0.5f, 0.5f);
         if (name.StartsWith("lantern_red")) return new Vector2(0.5f, 1f); // hangs from its top
         return new Vector2(0.5f, 0f);
@@ -18,7 +23,7 @@ public class Stg01LayerImporter : AssetPostprocessor
 
     void OnPreprocessTexture()
     {
-        if (!assetPath.StartsWith(Dir)) return;
+        if (!Handles(assetPath)) return;
         var ti = (TextureImporter)assetImporter;
         ti.textureType = TextureImporterType.Sprite;
         ti.spritePixelsPerUnit = 32f;
@@ -28,7 +33,7 @@ public class Stg01LayerImporter : AssetPostprocessor
         ti.mipmapEnabled = false;
         ti.alphaIsTransparency = true;
         ti.npotScale = TextureImporterNPOTScale.None;
-        ti.maxTextureSize = 4096; // the 3240 px overlay strips
+        ti.maxTextureSize = assetPath.StartsWith(PartsDir) ? 8192 : 4096; // the 3240 px overlay strips (6480 px searchlight strip)
 
         string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
         Vector2 pivot = PivotFor(name);

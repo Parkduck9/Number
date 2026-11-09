@@ -14,17 +14,11 @@ public static class Stg04Builder
     const int A = 0, B = 1;
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C)
     const float H = SegHeight * 1.5f; // 25.3125: 1.5 screens, the camera follows y inside the segment
-    // Spill lights, px on the background images (LIGHTING_DESIGN 3.1). A: hazard plates of the two robot arms (vermilion) + the scanner screen (teal).
-    // B: work lamps on the two ceiling cranes (warm) + the red gate (vermilion).
-    static readonly Lamp[] LampsA = { new Lamp(325f, 480f, LampRed, 4f), new Lamp(1090f, 480f, LampRed, 4f), new Lamp(725f, 430f, LampTeal, 5f, 0.15f) };
-    static readonly Lamp[] LampsB = { new Lamp(425f, 200f, LampWarm, 5f), new Lamp(995f, 200f, LampWarm, 5f), new Lamp(1440f, 420f, LampRed, 5f) };
 
     // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
     static readonly float[] SegX = { 0f, 110f };
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
-    static readonly Color[] SegColor = { new Color32(0x23, 0x26, 0x2B, 0xFF), new Color32(0x2E, 0x2A, 0x26, 0xFF) };
-    // Plain fill above the 16.875u-high images (no new art): average top-row colour of each image.
-    static readonly Color[] CeilColor = { new Color32(0x1C, 0x2F, 0x5E, 0xFF), new Color32(0x20, 0x32, 0x6A, 0xFF) };
+
 
     // Colliders (all drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
     static readonly Box[] Boxes = new[]
@@ -120,10 +114,9 @@ public static class Stg04Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            BuildImageBackground(roots[i], i == A ? "Assets/Art/Backgrounds/bg_stg04_segA_production_line.png" : "Assets/Art/Backgrounds/bg_stg04_segB_inspection_hall.png", W, SegHeight, SegColor[i]);
-            BuildSkyFill(roots[i], W, SegHeight, H, CeilColor[i]);
+            PartsBackdropKit.Factory(roots[i], W, H, 15f, W - 15f, i == B); // layered parts (DECISIONS 17); camera x range [15, W - 15]
             foreach (var w in Walls(i == A ? "A" : "B", i, W, H)) BuildCollider(roots[i], w, true);
-            AddLamps(roots[i], W, i == A ? LampsA : LampsB);
+
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);
 

@@ -13,18 +13,12 @@ public static class Stg02Builder
     const string ScenePath = "Assets/Scenes/STG02.unity";
     const int A = 0, B = 1;
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C)
-    // Spill lights, px on the background images (LIGHTING_DESIGN 3.1). A: two stone lanterns on the street.
-    // B: the lantern by the gate (flickers) + two shop signboards (vermilion, teal) above the shutters.
-    static readonly Lamp[] LampsA = { new Lamp(452f, 450f, LampWarm, 4f), new Lamp(990f, 450f, LampWarm, 4f) };
-    static readonly Lamp[] LampsB = { new Lamp(1403f, 425f, LampWarm, 4f, 0.2f), new Lamp(410f, 390f, LampRed, 5f), new Lamp(905f, 385f, LampTeal, 5f) };
 
     // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
     static readonly float[] SegX = { 0f, 110f };
     static readonly float[] SegH = { TallHeight, SegHeight * 1.5f }; // A climbs to y ~22, B to y ~11.5
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
-    static readonly string[] SegBg = { "Assets/Art/Backgrounds/bg_stg02_segA_rooftops.png", "Assets/Art/Backgrounds/bg_stg02_segB_elevated_rail.png" };
-    static readonly Color[] SegColor = { new Color32(0x2B, 0x24, 0x40, 0xFF), new Color32(0x1F, 0x2A, 0x3A, 0xFF) }; // fallback if an image is missing
-    static readonly Color[] Sky = { new Color32(0x28, 0x3D, 0x7E, 0xFF), new Color32(0x21, 0x32, 0x63, 0xFF) }; // each image's top-row sky
+
 
     // Every step is <= StepUp (1.5u) with <= 1u horizontal gap. Nothing solid hangs over a shaft (a beam above a ledge = bonk-lock).
     static readonly Box[] Boxes = new[]
@@ -127,9 +121,7 @@ public static class Stg02Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            BuildImageBackground(roots[i], SegBg[i], W, SegHeight, SegColor[i]);
-            BuildSkyFill(roots[i], W, SegHeight, SegH[i], Sky[i]);
-            AddLamps(roots[i], W, i == A ? LampsA : LampsB);
+            PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, i == B); // layered parts (DECISIONS 17); camera x range [15, W - 15]
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
 

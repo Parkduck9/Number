@@ -36,6 +36,7 @@
 | AI bug enemy DRAFT sprites — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Resources/DraftSprites/bug_walk_2f.png, bug_attack_3f.png, bug_flyer_2f.png, bug_flyer_attack_3f.png; Assets/Art/Drafts/Sprites/bug_sprites_preview4x.png |
 | Dialogue portraits yudo / citizen / luddite / broadcast (in game, 100x100) — source images made by the user with Google Gemini from the team's character art; grid-snapped and cleaned to native pixel size by Codex, with integer enlargement and transparent margin padding where needed | AI 생성 (Google Gemini, Codex gpt-6.1-sol) | Assets/Resources/Portraits/*.png (yudo, citizen, luddite, broadcast); sources docs/design/concept/portraits/*_gemini.png |
 | STG-01 layered background parts (far/mid layers, 12 props, loop frames) — source images made with Google Gemini (hanok style reference: the old STG-01 background); cut, grid-snapped and animated by Codex | AI 생성 (Google Gemini, Codex gpt-6-astra) | Assets/Art/Backgrounds/STG01_Layers/; sources docs/design/concept/bg_layers/ |
+| Hero idle / walk sprite repairs and new grapple DRAFT (hero_idle_2f, hero_walk_3f, hero_grapple_1f) — facing and sleeve cleanup; grapple built from hero_jump_2f frame 0 pixels, with an OpenAI image generation pose reference | AI-assisted edits (Codex) | Assets/Resources/DraftSprites/; comparison: docs/design/concept/samples/hero_fix_preview_4x.png |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design

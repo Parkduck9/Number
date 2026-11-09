@@ -1,0 +1,721 @@
+{
+ "frames": [
+  {
+   "filename": "number-enemy-warp-in 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 1",
+   "frame": {
+    "x": 80,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 2",
+   "frame": {
+    "x": 160,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 3",
+   "frame": {
+    "x": 240,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 4",
+   "frame": {
+    "x": 320,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 5",
+   "frame": {
+    "x": 400,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 6",
+   "frame": {
+    "x": 0,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 7",
+   "frame": {
+    "x": 80,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 8",
+   "frame": {
+    "x": 160,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 9",
+   "frame": {
+    "x": 240,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 10",
+   "frame": {
+    "x": 320,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 11",
+   "frame": {
+    "x": 400,
+    "y": 80,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 12",
+   "frame": {
+    "x": 0,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 13",
+   "frame": {
+    "x": 80,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 14",
+   "frame": {
+    "x": 160,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 15",
+   "frame": {
+    "x": 240,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 16",
+   "frame": {
+    "x": 320,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 17",
+   "frame": {
+    "x": 400,
+    "y": 160,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 18",
+   "frame": {
+    "x": 0,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 19",
+   "frame": {
+    "x": 80,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 20",
+   "frame": {
+    "x": 160,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 21",
+   "frame": {
+    "x": 240,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 22",
+   "frame": {
+    "x": 320,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 23",
+   "frame": {
+    "x": 400,
+    "y": 240,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 24",
+   "frame": {
+    "x": 0,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 25",
+   "frame": {
+    "x": 80,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 26",
+   "frame": {
+    "x": 160,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 27",
+   "frame": {
+    "x": 240,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 28",
+   "frame": {
+    "x": 320,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 29",
+   "frame": {
+    "x": 400,
+    "y": 320,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  },
+  {
+   "filename": "number-enemy-warp-in 30",
+   "frame": {
+    "x": 0,
+    "y": 400,
+    "w": 80,
+    "h": 80
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 80,
+    "h": 80
+   },
+   "sourceSize": {
+    "w": 80,
+    "h": 80
+   },
+   "duration": 25
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "enemy-warp-in.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 480,
+   "h": 480
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "number-enemy-warp-in",
+    "from": 0,
+    "to": 30,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "scifi/number-enemy-warp-in",
+   "name": "enemy-warp-in",
+   "fps": 40,
+   "loop": false,
+   "frames": 31,
+   "frameSize": [
+    80,
+    80
+   ],
+   "pivot": [
+    40,
+    64
+   ],
+   "columns": 6
+  }
+ }
+}

@@ -1,0 +1,387 @@
+{
+  "official": "ok    impacts/number-land-dust\nok    impacts/number-grapple-hit\nok    explosions/number-spawner-break\nok    scifi/number-enemy-warp-in\nok    projectiles/number-sniper-muzzle\nok    scifi/number-checkpoint\nok    scifi/number-player-glitch-death\nok    scifi/number-hack-pulse\n\n8 effects: 8 pass, 0 fail, 0 with warnings",
+  "configured": [
+    {
+      "name": "land-dust",
+      "options": {
+        "palette": [
+          "#25283B",
+          "#41465B",
+          "#626B81",
+          "#8793A4"
+        ],
+        "seed": 21,
+        "spread": 30,
+        "light": 0
+      },
+      "seeds": [
+        21,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "grapple-hit",
+      "options": {
+        "palette": [
+          "#16425B",
+          "#20758B",
+          "#4FF0FF",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "seed": 23,
+        "radius": 9,
+        "sparks": 5,
+        "light": 0.25
+      },
+      "seeds": [
+        23,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "spawner-break",
+      "options": {
+        "palette": [
+          "#123449",
+          "#20758B",
+          "#25A7BF",
+          "#4FF0FF",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "accent": [
+          "#521A54",
+          "#AF298F",
+          "#FF3FD0",
+          "#FFA6EB"
+        ],
+        "metal": [
+          "#25283B",
+          "#41465B",
+          "#8793A4",
+          "#C0CDD8"
+        ],
+        "seed": 31,
+        "radius": 30,
+        "light": 0.3
+      },
+      "seeds": [
+        31,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "enemy-warp-in",
+      "options": {
+        "palette": [
+          "#351420",
+          "#741E31",
+          "#BE2635",
+          "#FF2A2A",
+          "#FF9999",
+          "#FFF4F4"
+        ],
+        "seed": 37,
+        "height": 44,
+        "width": 15,
+        "light": 0.2
+      },
+      "seeds": [
+        37,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "sniper-muzzle",
+      "options": {
+        "palette": [
+          "#741E31",
+          "#BE2635",
+          "#FF2A2A",
+          "#FFA6A6",
+          "#FFFFFF"
+        ],
+        "seed": 41,
+        "size": 0.8,
+        "light": 0.25
+      },
+      "seeds": [
+        41,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "checkpoint",
+      "options": {
+        "palette": [
+          "#16425B",
+          "#20758B",
+          "#25A7BF",
+          "#4FF0FF",
+          "#97F8FF",
+          "#DFFFFF"
+        ],
+        "seed": 43,
+        "radius": 21,
+        "height": 39,
+        "light": 0.2
+      },
+      "seeds": [
+        43,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "player-glitch-death",
+      "options": {
+        "palette": [
+          "#173447",
+          "#20758B",
+          "#4FF0FF",
+          "#FF3FD0",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "seed": 47,
+        "height": 44,
+        "spread": 26,
+        "light": 0
+      },
+      "seeds": [
+        47,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "hack-pulse",
+      "options": {
+        "palette": [
+          "#351833",
+          "#70225F",
+          "#AF298F",
+          "#FF3FD0",
+          "#FFA6EB",
+          "#FFF0FC"
+        ],
+        "seed": 53,
+        "radius": 36,
+        "light": 0.2
+      },
+      "seeds": [
+        53,
+        2,
+        3,
+        7
+      ],
+      "sampleRate": 120,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    }
+  ],
+  "exports": [
+    {
+      "name": "land-dust",
+      "id": "impacts/number-land-dust",
+      "fps": 40,
+      "loop": false,
+      "frames": 19,
+      "frameSize": [
+        96,
+        64
+      ],
+      "pivot": [
+        48,
+        54
+      ],
+      "columns": 4,
+      "sheetSize": {
+        "w": 384,
+        "h": 320
+      }
+    },
+    {
+      "name": "grapple-hit",
+      "id": "impacts/number-grapple-hit",
+      "fps": 40,
+      "loop": false,
+      "frames": 11,
+      "frameSize": [
+        64,
+        64
+      ],
+      "pivot": [
+        24,
+        32
+      ],
+      "columns": 4,
+      "sheetSize": {
+        "w": 256,
+        "h": 192
+      }
+    },
+    {
+      "name": "spawner-break",
+      "id": "explosions/number-spawner-break",
+      "fps": 40,
+      "loop": false,
+      "frames": 33,
+      "frameSize": [
+        128,
+        96
+      ],
+      "pivot": [
+        64,
+        56
+      ],
+      "columns": 5,
+      "sheetSize": {
+        "w": 640,
+        "h": 672
+      }
+    },
+    {
+      "name": "enemy-warp-in",
+      "id": "scifi/number-enemy-warp-in",
+      "fps": 40,
+      "loop": false,
+      "frames": 31,
+      "frameSize": [
+        80,
+        80
+      ],
+      "pivot": [
+        40,
+        64
+      ],
+      "columns": 6,
+      "sheetSize": {
+        "w": 480,
+        "h": 480
+      }
+    },
+    {
+      "name": "sniper-muzzle",
+      "id": "projectiles/number-sniper-muzzle",
+      "fps": 40,
+      "loop": false,
+      "frames": 7,
+      "frameSize": [
+        64,
+        64
+      ],
+      "pivot": [
+        16,
+        32
+      ],
+      "columns": 3,
+      "sheetSize": {
+        "w": 192,
+        "h": 192
+      }
+    },
+    {
+      "name": "checkpoint",
+      "id": "scifi/number-checkpoint",
+      "fps": 40,
+      "loop": false,
+      "frames": 31,
+      "frameSize": [
+        96,
+        80
+      ],
+      "pivot": [
+        48,
+        67
+      ],
+      "columns": 6,
+      "sheetSize": {
+        "w": 576,
+        "h": 480
+      }
+    },
+    {
+      "name": "player-glitch-death",
+      "id": "scifi/number-player-glitch-death",
+      "fps": 40,
+      "loop": false,
+      "frames": 21,
+      "frameSize": [
+        112,
+        80
+      ],
+      "pivot": [
+        56,
+        64
+      ],
+      "columns": 4,
+      "sheetSize": {
+        "w": 448,
+        "h": 480
+      }
+    },
+    {
+      "name": "hack-pulse",
+      "id": "scifi/number-hack-pulse",
+      "fps": 40,
+      "loop": false,
+      "frames": 17,
+      "frameSize": [
+        112,
+        96
+      ],
+      "pivot": [
+        56,
+        48
+      ],
+      "columns": 4,
+      "sheetSize": {
+        "w": 448,
+        "h": 480
+      }
+    }
+  ]
+}
