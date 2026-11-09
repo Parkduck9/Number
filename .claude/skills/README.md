@@ -3,6 +3,7 @@
 | 스킬 | 출처 | 자동 실행 | 용도 |
 |---|---|---|---|
 | `codex` | 직접 작성 | ✅ | Claude가 Codex(GPT)를 난이도별 모델로 호출 |
+| `unity-2d`, `unity-platforms`, `unity-performance`, `unity-lighting-vfx` | Nice-Wolf-Studio/unity-claude-skills (commit a149d3e, Unity 6.3 LTS 문서 기반, 원본 그대로) | ✅ | 2D 스프라이트·정렬·시차, WebGL 빌드, 성능, 2D 조명·이펙트 |
 | `game-dev-workflow` | Glitch-Gaming-Platform/AI-Prompts-For-Game-Development (README를 잼용으로 각색) | ✅ | 게임 개발 단계·일정 |
 | `grill-me`, `grilling` | mattpocock/skills | grilling ✅ / grill-me는 `/grill-me`로 호출 | 기획을 질문 공세로 다듬기 |
 | `antfu*`, `nitro`, `nuxt`, `pinia`, `pnpm`, `unocss`, `vite`, `vitepress`, `vitest`, `vue` | antfu/skills | ❌ `/이름`으로만 | JS/TS 웹 개발용 (Unity와 무관) |
