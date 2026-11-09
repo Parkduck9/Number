@@ -181,7 +181,8 @@ public class BugSwarmVisual : MonoBehaviour
         bool now = false; // redraw this frame regardless of the rate (a burst / flash must not wait up to 1/RedrawHz)
         if (s != lastState) { Enter(s); lastState = s; stateAt = Time.time; now = true; }
         if (visual != null) swarmTf.localPosition = visual.transform.localPosition; // inherit ParryFx's strike nudge
-        int flash = visual == null ? 0 : visual.color == Color.white ? 1 : visual.color == Color.red ? 2 : 0;
+        Color vc = visual == null ? Color.clear : visual.color; // SpriteFlash tint fallback: parry / block tints, red on a kill
+        int flash = vc == Juice.ParryEnemyTint || vc == Juice.BlockTint || vc == Color.white ? 1 : vc == Color.red ? 2 : 0;
         if (flash != lastFlash) { lastFlash = flash; now = true; }
         pendingDt += Time.deltaTime; // 0 during hit-stop / pause: nothing to redraw
         if (!sr.isVisible && Time.frameCount > firstFrame + 1) return; // off-screen: keep state tracking, skip simulation + upload
@@ -334,6 +335,7 @@ public static class BugSwarmBootstrap
     public static void TryAttach(TestEnemy e)
     {
         if (e.GetComponent<BugSwarmVisual>() != null || !IsBug(e)) return; // ranged bugs get the swarm too; ranged citizens are Kind.Citizen (DECISIONS 14)
+        if (DraftSprites.Use && (IsRanged(e) ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) != null) return; // draft bug sprites (TestEnemy draws them): no swarm
         e.gameObject.AddComponent<BugSwarmVisual>();
     }
 

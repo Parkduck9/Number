@@ -10,7 +10,8 @@ public static class DraftSprites
     public const float IdleFps = 2f;
 
     static Sprite[] hero, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
-        heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned;
+        heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
+        bug, bugWalk, bugFlyer, bugFlyerAttack;
     public static Sprite[] Hero => hero ??= Load("hero_walk_3f", 3);
     public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_2f", 2);
     public static Sprite[] HeroAttack => heroAttack ??= Load("hero_attack_3f", 3);
@@ -27,6 +28,10 @@ public static class DraftSprites
     public static Sprite[] CitizenRangedWalk => citizenRangedWalk ??= Load("citizen_b_walk_2f", 2);
     public static Sprite[] AndroidWalk => androidWalk ??= Load("android_walk_2f", 2);
     public static Sprite[] AndroidStunned => androidStunned ??= Load("android_stunned_1f", 1);
+    public static Sprite[] Bug => bug ??= Load("bug_attack_3f", 3);                          // melee bug (spider): 0 windup, 1 strike, 2 recover
+    public static Sprite[] BugWalk => bugWalk ??= Load("bug_walk_2f", 2);
+    public static Sprite[] BugFlyer => bugFlyer ??= Load("bug_flyer_2f", 2);                 // ranged bug: flap loop (hovers, body ~1.1u above the pivot)
+    public static Sprite[] BugFlyerAttack => bugFlyerAttack ??= Load("bug_flyer_attack_3f", 3); // 0 charge, 1 fire, 2 recover
 
     static Sprite[] Load(string name, int count)
     {

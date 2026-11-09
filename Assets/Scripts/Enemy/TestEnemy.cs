@@ -68,6 +68,7 @@ public class TestEnemy : MonoBehaviour
     Color baseColor = Color.white;
     bool draftSprite; // DraftSprites: attack frames (citizen / ranged citizen / android) instead of the placeholder square
     Sprite[] draftFrames, draftWalk, draftStunned; // attack 3f, walk 2f, stunned 1f (walk / stunned may be null = fall back to the attack strip)
+    bool flyer; // ranged bug with draft frames: flaps all the time and bobs 1 px (visual only; collider unchanged)
     Color flashColor;
     float flashUntil;
     float backoffSince = -1f; // ranged: when the player got too close (-1 = not too close)
@@ -94,11 +95,14 @@ public class TestEnemy : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         number = GetComponent<EnemyNumber>();
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
-        // Bugs (melee and ranged) are drawn by BugSwarmVisual; ranged citizens use the hooded ranged-citizen frames (DECISIONS 14).
-        draftFrames = kind == Kind.Android ? DraftSprites.Android : kind == Kind.Bug ? null : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
+        // Bugs: spider (melee) / flyer (ranged) frames; without them BugSwarmVisual draws the dot swarm. Ranged citizens use the
+        // hooded ranged-citizen frames (DECISIONS 14). Bugs have no stunned frame: the recover frame, tipped over.
+        bool bug = kind == Kind.Bug;
+        draftFrames = kind == Kind.Android ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
         draftSprite = DraftSprites.Setup(visual, draftFrames);
-        draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
-        draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : DraftSprites.CitizenStunned;
+        draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
+        draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
+        flyer = bug && ranged && draftSprite;
         if (visual != null) baseColor = visual.color; // white after the draft sprite swap
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
@@ -550,9 +554,24 @@ public class TestEnemy : MonoBehaviour
     Sprite DraftFrame()
     {
         if ((state == State.Stunned || (state == State.Overload && kind == Kind.Android)) && draftStunned != null) return draftStunned[0];
+        if (flyer && draftWalk != null && state != State.Windup && state != State.Strike && state != State.Recover && state != State.Stunned)
+            return draftWalk[FlapFrame()]; // flyer: flap loop except while shooting (charge / fire / recover)
         if (state == State.Approach && draftWalk != null)
             return draftWalk[Mathf.Abs(rb.linearVelocity.x) > 0.1f ? Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length : 0];
         return draftFrames[state == State.Windup || state == State.Special || state == State.RushWindup ? 0 : state == State.Strike ? 1 : 2];
+    }
+
+    int FlapFrame() => Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length;
+
+    // Flyer hover: lifted FlyerLift so the art's gold mouth sits at the muzzle height (muzzleOffset y 0.3; the shot height itself must
+    // not change: STG-02 shots pass under a roof), plus 1 px up on every other flap frame. Knocked out: back on the ground (-1 = Setup feet offset).
+    const float FlyerLift = 0.3125f; // 10 px
+    void BobFlyer()
+    {
+        Transform v = visual.transform;
+        Vector3 p = v.localPosition;
+        p.y = state == State.Stunned ? -1f : -1f + FlyerLift + (draftWalk != null && FlapFrame() == 0 ? 1f / 32f : 0f);
+        v.localPosition = p;
     }
 
     void ApplyVisual()
@@ -560,6 +579,7 @@ public class TestEnemy : MonoBehaviour
         if (visual == null) return;
         visual.flipX = facing < 0;
         if (draftSprite) visual.sprite = DraftFrame();
+        if (flyer) BobFlyer();
         Color c = baseColor;
         switch (state)
         {
