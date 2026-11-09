@@ -19,6 +19,7 @@
 | 코드 검수 | **Claude Opus** (Claude Code) | Sonnet이 작성한 변경사항 리뷰, 버그·구조 문제 지적·수정 | 리뷰 대상 파일 (필요할 때만 수정) |
 | 에셋 | **Codex CLI** (OpenAI GPT, **Claude가 호출할 때만**) | 스프라이트, 사운드, 머티리얼·셰이더, 폰트, 에셋 임포트 설정, 데이터(ScriptableObject 등) | `Assets/Art/`, `Assets/Audio/`, `Assets/Materials/`, `Assets/Data/` |
 | QA | **Antigravity CLI** (Google) | 플레이 테스트 시나리오, 버그 찾기·재현, 테스트 코드, 빌드 점검, 제출 체크리스트 확인 | `Assets/Tests/`, `docs/qa/` |
+| 초상화 원본 | **Google Gemini** (사용자가 직접 사용) | 대화창 초상화용 고해상도 상반신 원본 (팀 캐릭터 그림을 참고로). 게임용 48×48 변환은 Codex | `docs/design/concept/portraits/` |
 
 - **자기 영역 밖의 파일은 고치지 않는다.** 다른 영역에 수정이 필요하면 고치지 말고 기록으로 남긴다.
   - QA(Antigravity)는 게임 코드를 직접 고치지 않고 `docs/qa/`에 버그 리포트를 쓴다. Sonnet이 고치고 Opus가 검수한다.

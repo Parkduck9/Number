@@ -41,4 +41,5 @@
 - Claude Sonnet (Anthropic, via Claude Code) — gameplay code implementation
 - Claude Opus (Anthropic, via Claude Code) — code review and planning
 - Codex CLI (OpenAI GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna) — concept art and background image generation (the STG-00/STG-01 background in the build is AI-generated), asset creation and asset setup
-- Antigravity CLI (Google) — QA, testing and bug reports
+- Antigravity CLI (Google) — QA, testing and bug reports (QA round 2 on 2026-11-09 was done by Claude Sonnet instead, Antigravity quota exhausted; verified by Claude Opus)
+- Google Gemini — high-resolution reference images for the dialogue portraits (made by the user from the team's character art); the in-game 48x48 portraits are converted from them by Codex
