@@ -33,6 +33,7 @@
 | Backgrounds STG-02 to STG-05 (bg_stg02_segA_rooftops, bg_stg02_segB_elevated_rail, bg_stg03_hideout_room, bg_stg04_segA_production_line, bg_stg04_segB_inspection_hall, bg_stg05_boss_room; 32-color pixel art) — in game | Codex (gpt-6.1-sol image generation) + Claude script pixelization (median filter, box downscale, 32-color quantize) | Assets/Art/Backgrounds/, STG02-STG05 scenes |
 | android overload v2 draft — reference samples/enemy_android_stand_big.png only | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Sprites/android_overload_v2_big.png, Assets/Art/Drafts/Sprites/android_overload_v2.png |
 | Dialogue portrait drafts (lineup set) — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Portraits/lineup/ |
+| AI bug enemy DRAFT sprites — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Resources/DraftSprites/bug_walk_2f.png, bug_attack_3f.png, bug_flyer_2f.png, bug_flyer_attack_3f.png; Assets/Art/Drafts/Sprites/bug_sprites_preview4x.png |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
