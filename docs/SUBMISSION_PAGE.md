@@ -78,11 +78,12 @@ Full list with versions and licenses: `CREDITS.md` in the project repository (su
 **Third-party assets**
 - Galmuri pixel font — quiple, SIL OFL 1.1 — https://github.com/quiple/galmuri
 - Mulmaru pixel font — mushsooni, SIL OFL 1.1 — https://github.com/mushsooni/mulmaru
-- pixelfx v0.3.0 (sword slash, parry, hit spark effects; recolored) — Patch / Hugo Duprez, MIT — https://github.com/patch-gg/pixelfx
-- `[TODO: add TMP default font (LiberationSans, SIL OFL 1.1) if it ships in the build]`
+- pixelfx v0.3.0 (sword slash, parry, hit spark effects, recolored; new effects built on it: number ember, run dust, speed lines, dash burst, kill burst, impact ring, parry clash) — Patch / Hugo Duprez, MIT — https://github.com/patch-gg/pixelfx
+- Liberation Sans (TextMesh Pro default font) — Red Hat / Ascender Corp., SIL OFL 1.1 — https://github.com/liberationfonts/liberation-fonts
+- EmojiOne (TextMesh Pro default emoji sprites) — EmojiOne, `[TODO: confirm license; or remove the TMP emoji sprite asset from the build]` — https://www.emojione.com/
 
 **Made by the team with generative AI tools** (see disclosure below)
-- Backgrounds, character sprites, HUD and UI icons, "number ember" last-strike flame effect
+- Backgrounds, dialogue portraits, character sprites, HUD (face health, broadcast numbers, hologram window), boss screen faces and UI icons, plus new combat and movement effects (number ember, run dust, speed lines, dash burst, kill burst, impact ring, parry clash)
 - All sound effects and music (synthesized, released CC0 by the team)
 
 Made with Unity 6 (6000.3). No paid generation services were used.
@@ -93,11 +94,12 @@ This game was made with heavy use of generative AI tools. The human team `[TODO:
 
 | Tool | Used for |
 |---|---|
-| **Claude** (Anthropic) via Claude Code — Fable, Opus and Sonnet models | Game code (player, enemies, number and broadcast rules, hacking, boss, levels, UI, editor tooling); architecture and system design (Fable); code review and planning (Opus); gameplay implementation (Sonnet); design documents and dialogue drafts; the "number ember" warning flame effect written as code on the pixelfx library (Opus); the audio generator script |
-| **Codex CLI** (OpenAI GPT models: GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna) | Image generation and pixel-art scripts for: concept art and style frames; the city backgrounds (incl. the stage 0/1 background); hero and enemy sprite frames (drafts pixelized and palette-quantized to the game palette); HUD (face health, broadcast number, hologram window) and UI icons (control hints, shockwave icon, Embector screen face); asset import settings |
+| **Claude** (Anthropic) via Claude Code — Fable, Opus and Sonnet models | Game code (player, enemies, number and broadcast rules, hacking, boss, levels, UI, editor tooling); architecture and system design (Fable); code review, planning and implementation (Opus); gameplay implementation (Sonnet); design documents and dialogue drafts; the "number ember", run dust, speed lines and dash burst effects written as code on the pixelfx library; the background pixelization scripts; the audio generator script |
+| **Codex CLI** (OpenAI GPT models: GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna) | Image generation and pixel-art scripts for: the city backgrounds (stage 0/1 layered parts, stages 2-5); hero and enemy sprite frames (pixelized and palette-quantized to the game palette); HUD (broadcast number, hologram window) and UI icons (control hints, shockwave icon); grid-snapping and cleanup of Gemini source images; the kill burst, impact ring and parry clash effects built on pixelfx; asset import settings |
+| **Google Gemini** | Source images (made by the user from the team's character art) for the dialogue portraits, the HUD face-health set, the Embector boss screen faces and the background layers; Codex then grid-snapped and cleaned them for the game |
 | **Antigravity CLI** (Google) | QA: play-test scenarios, bug hunting and bug reports, build and submission checklist. No game code |
 | **Claude-synthesized audio** | All 12 sound effects and 2 music tracks were synthesized from scratch (oscillators, noise, modal bells, plucked-string synthesis; no samples) by a generator script written by Claude Opus. The team released them CC0 |
 
-All tools were used under their terms of service. Combat effects are from the open-source pixelfx library (MIT), recolored or extended.
+All tools were used under their terms of service. Combat effects are from the open-source pixelfx library (MIT), recolored or extended. Development-time reference docs (Nice-Wolf-Studio Unity skills) are not part of the build.
 
 `[TODO: before submitting, remove any row or item above whose output did NOT end up in the final build, and add anything new. Keep this table identical to CREDITS.md.]`

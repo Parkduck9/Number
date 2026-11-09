@@ -1,9 +1,9 @@
-# 인수인계 — 다른 컴퓨터에서 이어 하기 (2026-11-09 새벽 갱신)
+# 인수인계 — 다른 컴퓨터에서 이어 하기 (2026-11-09 갱신)
 
 > 이 파일 하나만 읽으면 다른 PC에서 바로 이어 할 수 있게 정리했다.
 > Claude에게 시작할 때: **"docs/HANDOFF.md 읽고 이어서 하자"** 라고 말하면 된다.
 > 마감: 개발 **2026-11-13 00:00 KST** · ⛔ 기능 동결 **11/11 24:00** · 제출 **11/14 21:00** (18:00까지 목표)
-> 전체 일정: [review/ROADMAP-2026-11-09.md](review/ROADMAP-2026-11-09.md) · 결정 기록: [design/DECISIONS.md](design/DECISIONS.md) (11~14가 최신)
+> 전체 일정: [review/ROADMAP-2026-11-09.md](review/ROADMAP-2026-11-09.md) · 결정 기록: [design/DECISIONS.md](design/DECISIONS.md) (15~17이 최신)
 
 ---
 
@@ -33,49 +33,50 @@
 
 ---
 
-## 2. 지금 main에 있는 것 (커밋 `6f18f41` 이후)
+## 2. 지금 main에 있는 것 (커밋 `7f1d37b` 이후)
 
-**게임 흐름:** Title → STG-00(오프닝) → STG-01~04 → STG-05(보스 3웨이브) → 정지 버튼 엔딩 2개. 씬은 전부 **빌더가 생성** — 메뉴 **`NUMBER/Build EVERYTHING (Title + STG-00~05)`** 하나로 전부 다시 만든다. `.unity`를 손으로 고치지 않는다. **씬은 11/09 00:13에 새로 만들어 커밋돼 있다.**
+**게임 흐름:** Title → STG-00(오프닝) → STG-01~04 → STG-05(보스 3웨이브) → 정지 버튼 엔딩 2개. 씬은 전부 **빌더가 생성** — 메뉴 **`NUMBER/Build EVERYTHING (Title + STG-00~05)`** 하나로 전부 다시 만든다. `.unity`를 손으로 고치지 않는다.
 
 | 기능 | 결정 | 구현 기록 |
 |---|---|---|
-| 좌클릭: 마우스 조준(조준점, 적이 잡히면 하늘색+꺾쇠). 사거리 5u·±30° 안 적 → 적 뒤로 관통 돌진하며 처치(경로의 일반 적 전부), 없으면 제자리 공격 | DECISIONS 12 | impl/dash-attack.md |
-| 좌클릭 패링: 탄이 3u 안 / 적 공격이 **0.3초 안에 닿을 때만**. 우선순위 패링 > 돌진 > 제자리 | 12 | dash-attack.md |
-| Shift: 4u 안 적 → 무적 대시로 적 뒤 → **뒤돌며 반격**(일반 적 한 방). 없으면 정거리 후 뒤돌아봄. 쿨타임 3.5초. 마지막 일격·안드로이드 7번째 회피 인정 | 13 | movement-assist.md |
-| 적: 7u 안이면 바로 쫓아옴, 0.3초 예고 후 **돌진 공격**, 템포 빠르게. 지붕 끝에서 멈춤 | 12 | enemy-rules.md |
-| 원거리 시민(후드, 0이면 굳음) / 원거리 벌레(점 떼, STG-02부터, 0이어도 움직임) | 14 | enemy-rules.md, bug-swarm.md |
-| STG-01·02·04 가로 1.5배(구간 75.9u, 배경 왼쪽은 좌우 반전 복사), 중간 발판, 적 약 2배 | 12 | levels.md, LEVEL_*.md |
-| Space 충격파 설명: 러다이트 대사, 화면 힌트, HUD "SPACE 충격파", 퍼지는 막대 이펙트 | — | upgrade.md |
-| 오디오(효과음 12·BGM 2), HUD 그림(얼굴 체력·방송 숫자·홀로그램 창), 배경 STG-02~05, 조작 힌트, 보스 화면 | — | audio.md, draft-sprites.md, bg-art.md |
-| 캐릭터 스프라이트 전부 정면 기준 그림으로 다시 그림 (주인공·근접/원거리 시민·안드로이드) | — | draft-sprites.md |
-| 속도감 FX(발밑 먼지·속도선·대시 시작), 히트스톱 연속 방지(0.25초 간격, 패링은 예외), FX 재사용(풀) | — | juice.md |
-| **F3** = FPS·프레임 시간 표시 (에디터·개발 빌드만). `spikes`가 오르면 진짜 렉, 안 오르면 히트스톱 연출 | — | Core/FrameStats.cs |
-| 네온 조명(Card H) 코드·테스트 씬 — **스테이지엔 아직 안 붙임** | 9 | LIGHTING_DESIGN.md |
+| 좌클릭: 마우스 조준, 사거리 5u·±30° 안 적 → 관통 돌진 처치. 시선이 막히면 조준 안 됨. 아래로 돌진하면 얇은 발판을 통과 | 12 | impl/dash-attack.md |
+| 좌클릭 패링: 탄이 **0.25초 안에 도착**하거나 적 공격이 0.3초 안에 닿을 때. 우클릭 패링은 없음 | 12, 15 | dash-attack.md |
+| **우클릭 = 네온 갈고리 줄**: 마우스 방향 9u, 22 u/s로 끌려감, 모서리 걸림, 공중 1회 | 16 | (커밋 dcce69e) |
+| Shift: 4u 안 적 → 무적 대시 → 뒤돌며 반격. 쿨타임 3.5초 | 13 | movement-assist.md |
+| 적: 7u 안이면 쫓아옴, 0.3초 예고 후 돌진 공격. 원거리 시민(0이면 굳음) / 원거리 벌레(STG-02부터) | 12, 14 | enemy-rules.md, bug-swarm.md |
+| **저격수**: 레이저 1.0초 추적, 0.25초 고정, 패링 가능한 한 발. 안드로이드는 정면 막힘, 뒤·위·과부하 때만 한 방 | 15 | (커밋 335ecef) |
+| **스테이지 클리어 = 적 전멸 + 골.** 부술 수 있는 스포너(부술 때까지 리스폰), 남은 적 방향 화살표 | 15 | (커밋 dd91c81, 7b8d1bb) |
+| **세로 맵:** STG-01·02·04가 지붕 길·수직 통로로 이어짐 (스포너 + 저격수 2) | 15 | levels.md, LEVEL_*.md |
+| **STG-01·00 거리 배경 = 층 분리 + 움직임** (하늘·스카이라인·중경 시차, 구름·네온·홀로·드론, 중경 화면에 방송 숫자) | 17 | (커밋 fa4bcc2) |
+| **네온 조명이 실제 스테이지에 붙음** (정렬 레이어 Background/World/Characters/FX, STG-00 낮·나머지 밤) | 9 | LIGHTING_DESIGN.md |
+| 히트 FX 연결(타격 링·처치 터짐·패링 충돌), 흰색 피격 깜빡임(SpriteFlash), 안드로이드 과부하 글리치, 벌레 스프라이트, 주인공 달리기 6프레임, 발이 땅에 닿게 피벗 조정 | — | juice.md, draft-sprites.md |
+| 대화 초상화(주인공·시민·러다이트·방송), HUD 얼굴 체력·보스 화면 Gemini 원본으로 다시 | — | draft-sprites.md |
+| 벌레 점 떼 15Hz 갱신(렉 완화), 카메라 펀치 줌, 부활 0.55초 | — | bug-swarm.md, juice.md |
+| 오디오(효과음 12·BGM 2), 조작 힌트, 속도감 FX, Space 충격파 설명 | — | audio.md, upgrade.md |
+| **F3** = FPS·프레임 시간 표시 (에디터·개발 빌드만) | — | Core/FrameStats.cs |
 
 ---
 
 ## 3. 해야 할 것 (우선순위 순)
 
 ### 👤 사용자
-1. **플레이 (씬은 이미 새로 만들어져 있음)** — Title에서 Play. 렉이 느껴지면 F3. 메모는 [qa/PLAYTEST-2026-11-09.md](qa/PLAYTEST-2026-11-09.md)에 이어서, 체크 표는 [qa/PLAYTEST-GUIDE.md](qa/PLAYTEST-GUIDE.md).
-   - 볼 것: 맵 확대 후 속도감, 좌클릭 돌진·패링 손맛, Shift 반격, 0 해킹 때 시민(근접·원거리) 굳음, 적 수, 렉(F3).
-2. **WebGL 빌드를 브라우저에서 확인** — 에디터가 꺼져 있으면 Claude에게 "WebGL 빌드해서 브라우저로 열어줘". 에디터 렉과 실제 렉을 구분하는 가장 확실한 방법.
-3. **팀원 이름·역할·만 19세 이상 확인 (D9)** — CREDITS.md Team, SUBMISSION_PAGE.md. **없으면 제출 불가.** 기한 11/13 정오.
-4. **STG-01 SEG-B 배경(Card G) 승인** — `docs/design/concept/stg01/B_lit_composite_preview.png`
-5. **대사 확인** — [design/DIALOGUE_DRAFT.md](design/DIALOGUE_DRAFT.md) (안 고치면 초안 그대로)
+1. **플레이** — Title에서 Play. 렉이 느껴지면 F3. 메모는 [qa/PLAYTEST-2026-11-09.md](qa/PLAYTEST-2026-11-09.md)에, 체크 표는 [qa/PLAYTEST-GUIDE.md](qa/PLAYTEST-GUIDE.md).
+   - 볼 것: 세로 맵 동선, 갈고리 줄 손맛, 저격수·안드로이드 막기, 스포너·전멸 클리어, 층 분리 배경, 좌클릭 돌진·패링, 렉(F3).
+2. **팀원 이름·역할·만 19세 이상 확인 (D9)** — CREDITS.md Team, SUBMISSION_PAGE.md. **없으면 제출 불가.** 기한 11/13 정오.
+3. **대사 확인** — [design/DIALOGUE_DRAFT.md](design/DIALOGUE_DRAFT.md) (안 고치면 초안 그대로)
+4. **WebGL 브라우저 확인** — 지금 Claude가 하는 중. 결과를 받으면 보기.
+5. STG-01 SEG-B 배경: 17의 층 분리 방식이 SEG-A·STG-00만 다룬다. SEG-B는 아직 배경이 없으니 같은 방식으로 갈지 정하기.
 6. 이전 PC의 `Number/` 폴더, `Unity Game Jam.txt`는 쓰레기 — 새 PC엔 없다.
 
 ### 🤖 Claude (Opus 구현 → Fable 검수)
 | 할 일 | 메모 |
 |---|---|
 | 플레이 피드백 반영 | 가장 먼저 |
-| **안드로이드 과부하 그림 다시** (`android_stunned_1f`가 뭉개져서 안 읽힘) | Codex, 정면 기준 그림 `enemy_android_stand_big.png` 기준 |
-| 주인공 대기 1·2프레임 방향 차이, 걷기 3번째 프레임 소매 패치가 글자처럼 보임 | 거슬리면 Codex로 수정 |
-| STG-01 SEG-B 배경 연결 (승인 후) | 검수 결과: 그림에 없는 발판 CRATE-B 제거, 계단 충돌 추가 또는 골 위치 이동, 가짜 글자 같은 네온 2개(neon_B_03·11) 정리, 잎 사각 경계. 단계: Opus 리뷰 보고(이전 세션)대로 `Assets/Art/Backgrounds/bg_stg01_segB_street.png` + `Neon/stg01_segB/` |
-| 네온 조명 스테이지 연결 | 정렬 레이어 이름 결정(DECISIONS 9 Q6) 필요. 연결 단계: LightingSetup.BuildInScene을 각 빌더에서 호출, 배경을 Background/World 레이어로 |
-| WebGL 빌드 + 브라우저 확인 (Chrome·Firefox): 한글 폰트, 우클릭 막힘, 포커스, 첫 클릭 전 소리, 용량 | 에디터 꺼져 있을 때 `NUMBER/Build WebGL` 배치 실행 |
-| 벌레 점 떼가 매 프레임 텍스처를 다시 그림 | F3에서 렉이 보이면 갱신 주기 줄이기 |
-| 남은 "우클릭 패링" 문구 정리 | PrototypeDebug.cs, PROTOTYPE_ARCH.md, bug-swarm.md, SUBMISSION_CHECKLIST.md |
+| **QA 3차** | 진행 중 ([qa/SUMMARY-R2.md](qa/SUMMARY-R2.md) 다음) |
+| **CREDITS·AI 공개 점검** | 진행 중 |
+| **STG-02~05 배경 자르기·루프** | Gemini 원본 4묶음(먼 배경·건물·소품·실내)은 들어옴. Codex 지시서도 있음. Codex가 지금 안 돼서 대기 |
+| pixelfx 순간 이펙트 시안 9개 연결 | 만들어만 놨고 안 붙임 |
+| 주인공 대기 1·2프레임 방향 차이, 걷기 3번째 프레임 소매 패치 | 거슬리면 Codex로 수정 |
 | 대사 넣기, 이펙트 미세 조정 | 사용자 확인 후 |
 
 ### 기능 동결 이후 (11/12~)
@@ -84,10 +85,10 @@
 ---
 
 ## 4. 열린 질문 (다음에 사용자에게 물을 것)
-- 패링 판정 0.3초가 손에 맞는지 (플레이 후)
+- 패링 판정(0.3초·탄 0.25초)이 손에 맞는지 (플레이 후)
 - 적 돌진 중에는 좌클릭 패링이 안 된다 → 돌진 처치나 Shift로 대응. 괜찮은지
-- 맵이 1.5배로도 작게 느껴지면: 더 늘릴지, 카메라를 멀리 뺄지
-
+- 세로 맵 + 갈고리 줄로 이동이 충분히 시원한지, 카메라를 더 뺄지
+- STG-02~05 배경을 STG-01처럼 층 분리·움직임까지 갈지, 정지 배경으로 끝낼지 (시간 대비)
 ## 5. 작업 규칙 요약 (자세히는 AGENTS.md · CLAUDE.md)
 - 커밋 머리말 `[code]` `[review]` `[asset]` `[qa]` `[docs]`.
 - Unity 배치 모드는 에디터가 꺼져 있을 때만, 한 번에 하나만.
