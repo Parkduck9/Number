@@ -719,8 +719,11 @@ public class PlayerController : MonoBehaviour
         bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false });
         if (!damaged) return false;
         Sfx.Play(SfxId.Hit);
-        PlayHitSpark(col.ClosestPoint(from), Facing);
+        Vector2 contactPoint = col.ClosestPoint(from);
+        PlayHitSpark(contactPoint, Facing);
+        SpriteFx.Play("impact-ring", contactPoint, false, 101); // pivot = ring centre
         bool down = enemy.Current == TestEnemy.State.Stunned; // the hit that finishes the enemy
+        if (down) SpriteFx.Play("kill-burst", enemy.transform.position, Facing < 0, 102); // pivot = burst origin, flips with the blow
         if (down)
             for (int i = 0; i < Juice.KillSparks; i++) // cheap "shatter"
                 PlayHitSpark((Vector2)enemy.transform.position + new Vector2(Random.Range(-0.4f, 0.4f), Random.Range(-0.5f, 0.6f)), Random.value < 0.5f ? -1f : 1f);
@@ -766,6 +769,7 @@ public class PlayerController : MonoBehaviour
             ParryCount++;
             Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f);
             SpriteFx.Play("parry", contact - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
+            SpriteFx.Play("parry-clash", contact, Facing < 0, 102); // layered over the "parry" burst; debris flies toward the attacker
             ParryFeedback.Show(contact); // screen flash + "PARRY!" popup (playtest 11-09: parries were not readable)
             Sfx.Play(SfxId.Parry);
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
