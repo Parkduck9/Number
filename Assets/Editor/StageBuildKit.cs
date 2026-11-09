@@ -30,7 +30,9 @@ public static class StageBuildKit
 
     // ------------------------------------------------------------------ data structs (segment index + segment-local coords)
 
-    public enum Kind { Solid, OneWay }
+    // Building = Solid block from the segment floor (y1 = 0) up to y2 = its roof, drawn as a dark silhouette with a roof strip
+    // (vertical maps, DECISIONS 15): climbable, and nothing falls under it.
+    public enum Kind { Solid, OneWay, Building }
 
     public struct Box
     {
@@ -50,9 +52,10 @@ public static class StageBuildKit
     // cap > 0 = highest rolled number (placement rule: 5+ only from late STG-02).
     public struct Foe
     {
-        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged; this.cap = cap; this.bug = bug; }
+        // sniper = DECISIONS 15 sniper (TestEnemy.Kind.Sniper): ranged gold 1, stands still, 19u line-of-sight laser; place on high ledges facing a climb.
+        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug, sniper;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false, bool sniper = false)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; }
     }
 
     // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
@@ -72,11 +75,66 @@ public static class StageBuildKit
     }
 
     // Left/right walls of a segment (full height).
-    public static Box[] Walls(string name, int seg, float width = SegWidth) => new[]
+    public static Box[] Walls(string name, int seg, float width = SegWidth, float height = SegHeight) => new[]
     {
-        new Box("WALL-" + name + "-L", seg, Kind.Solid, -1f, 0f, 0f, SegHeight),
-        new Box("WALL-" + name + "-R", seg, Kind.Solid, width, width + 1f, 0f, SegHeight),
+        new Box("WALL-" + name + "-L", seg, Kind.Solid, -1f, 0f, 0f, height),
+        new Box("WALL-" + name + "-R", seg, Kind.Solid, width, width + 1f, 0f, height),
     };
+
+    // ------------------------------------------------------------------ vertical maps (DECISIONS 15)
+    // Jump reach (LEVEL_STG01 0): up to 1.5u per step is "safe", 2.0 "possible". Keep dy <= 1.5 and horizontal gaps <= 3u.
+
+    public const float TallHeight = SegHeight * 2f; // a segment two screens high (camera follows y inside it)
+    public const float StepUp = 1.5f;               // one safe jump
+    const float LedgeThick = 0.25f;
+
+    // Solid block from the floor to `roof` (Kind.Building).
+    public static Box Building(string id, int seg, float x1, float x2, float roof) => new Box(id, seg, Kind.Building, x1, x2, 0f, roof);
+
+    // One-way ledge whose top surface is y.
+    public static Box Ledge(string id, int seg, float x1, float x2, float y) => new Box(id, seg, Kind.OneWay, x1, x2, y - LedgeThick, y);
+
+    // Thin solid beam (top = y): walkable, cannot be jumped through or dropped through, only left at its ends.
+    public static Box Beam(string id, int seg, float x1, float x2, float y) => new Box(id, seg, Kind.Solid, x1, x2, y - LedgeThick, y);
+
+    // Climbing shaft: `count` one-way ledges alternating left / right inside [x1, x2], first at y0, each dy higher.
+    // Ledges are half the shaft wide, so a ledge never sits straight over the previous one (jump up-and-across).
+    public static Box[] Zigzag(string id, int seg, float x1, float x2, float y0, int count, float dy = StepUp, bool startLeft = true)
+    {
+        var r = new Box[count];
+        float mid = (x1 + x2) * 0.5f;
+        for (int i = 0; i < count; i++)
+        {
+            bool left = (i % 2 == 0) == startLeft;
+            r[i] = Ledge($"{id}-{i + 1}", seg, left ? x1 : mid, left ? mid : x2, y0 + i * dy);
+        }
+        return r;
+    }
+
+    // Plain sky above a background image that is shorter than the segment (no new art: the image's top-row sky colour).
+    // Order -101 = behind the image, so the image's own sky edge stays on top.
+    public static void BuildSkyFill(Transform root, float width, float fromY, float toY, Color sky)
+    {
+        if (toY <= fromY) return;
+        AddSquare(root, "Background (sky fill)", new Vector2(width * 0.5f, (fromY + toY) * 0.5f), new Vector2(width + 2f, toY - fromY), sky, -101);
+    }
+
+    // Breakable spawner (EnemySpawner, DECISIONS 15) at a segment-local point (y = feet). watched = the enemies it brings back;
+    // pass only enemies of its own segment (a door is one way: enemies left behind in another segment could never be cleared).
+    public static void BuildSpawner(Transform root, string id, Vector2 local, IList<GameObject> watched)
+    {
+        var go = new GameObject(id);
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(local.x, local.y + 0.8f, 0f); // device floats just above the floor
+        var sp = AddByName("EnemySpawner", go, "EnemySpawner (" + id + ")");
+        if (sp == null) return;
+        var so = new SerializedObject(sp);
+        var list = so.FindProperty("watched");
+        if (list == null) { Todo.Add(id + ": EnemySpawner.watched missing - spawner watches every enemy"); return; }
+        list.arraySize = watched.Count;
+        for (int i = 0; i < watched.Count; i++) list.GetArrayElementAtIndex(i).objectReferenceValue = watched[i].GetComponent<TestEnemy>();
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
 
     // ------------------------------------------------------------------ session state
 
@@ -207,10 +265,17 @@ public static class StageBuildKit
             eff.useSideFriction = false;
             eff.useSideBounce = false;
         }
-        if (visible)
+        if (visible && b.kind == Kind.Building)
+        {
+            AddSquare(go.transform, "Visual (PLACEHOLDER building)", Vector2.zero, col.size, BuildingColor, 0);
+            AddSquare(go.transform, "Visual (PLACEHOLDER roof)", new Vector2(0f, col.size.y * 0.5f - LedgeThick * 0.5f), new Vector2(col.size.x + 0.4f, LedgeThick), OneWayColor, 1);
+        }
+        else if (visible)
             AddSquare(go.transform, "Visual (PLACEHOLDER)", Vector2.zero, col.size, b.kind == Kind.OneWay ? OneWayColor : GroundColor, 0);
         return go;
     }
+
+    public static readonly Color BuildingColor = new Color32(0x22, 0x1E, 0x2C, 0xFF); // night silhouette, darker than the street art
 
     public static GameObject AddSquare(Transform parent, string name, Vector2 localPos, Vector2 size, Color color, int order)
     {
@@ -252,7 +317,7 @@ public static class StageBuildKit
         if (cp != null) SetObj(cp, "marker", marker.GetComponent<SpriteRenderer>());
     }
 
-    public static void BuildEnemy(Transform root, Foe f)
+    public static GameObject BuildEnemy(Transform root, Foe f)
     {
         var go = (GameObject)PrefabUtility.InstantiatePrefab(Enemy);
         go.name = f.android ? f.id + " (ANDROID)" : f.id;
@@ -280,6 +345,7 @@ public static class StageBuildKit
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
 
         if (f.ranged) TuneRanged(go, number, te, f.bug);
+        if (f.sniper) SetInt(te, "kind", 3); // TestEnemy.Kind.Sniper (after TuneRanged: same gold 1, groundMask set above = line of sight)
 
         if (f.android)
         {
@@ -290,6 +356,7 @@ public static class StageBuildKit
             SetInt(te, "maxHp", 5);
             if (f.fixedNumber <= 0) { SetInt(number, "minValue", 1); SetInt(number, "maxValue", 7); } // fixed-number androids keep the pin set above
         }
+        return go;
     }
 
     // ------------------------------------------------------------------ lighting (docs/design/LIGHTING_DESIGN.md, DECISIONS 9 Q6/Q7)
@@ -351,7 +418,7 @@ public static class StageBuildKit
         }
     }
 
-    public static Rect SegRect(float worldX, float width = SegWidth) => new Rect(worldX, 0f, width, SegHeight);
+    public static Rect SegRect(float worldX, float width = SegWidth, float height = SegHeight) => new Rect(worldX, 0f, width, height);
 
     public static GameObject BuildCamera(Transform player, Rect[] segments, Color background)
     {
