@@ -731,8 +731,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Dead) c = Color.gray;
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
-        if (now < parryFlashUntil) c = Juice.ParryPlayerTint; // white was invisible on the (white) draft sprite
-        visual.color = c;
+        SpriteFlash.Apply(visual, c, now < parryFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
     }
 
     // DraftSprites: one hero frame per state (walk strip is the fallback when another strip is missing). Art faces right; flipX handles left.

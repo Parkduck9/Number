@@ -571,8 +571,7 @@ public class TestEnemy : MonoBehaviour
             case State.Special: c = SpecialColor; break;
             case State.Overload: c = Mathf.FloorToInt(Time.time * 16f) % 2 == 0 ? OverloadColor : baseColor; break;
         }
-        if (Time.time < flashUntil) c = flashColor;
-        visual.color = c;
+        SpriteFlash.Apply(visual, c, Time.time < flashUntil, Color.white, flashColor); // flash shader: solid white; else the tint
     }
 
     void OnDrawGizmosSelected()
