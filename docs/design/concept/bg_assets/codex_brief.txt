@@ -1,0 +1,25 @@
+Task: turn four Gemini pixel-art drafts into clean game-ready background parts for STG-02..05 of a Unity 2D WebGL side-scroller (repo C:\Unity\Number). Follow EXACTLY the same method and conventions as the STG-01 job documented in docs/design/concept/bg_layers/stg01_layers_manifest.md (read it first): measure the real pixel-cell pitch of each source, recover the native grid by per-cell modal colour voting (no averaging, no smoothing), merge near colours, hard alpha 0/255, transparent RGB = 0, then enlarge exactly 2x for full-width plates and large buildings (like STG-01 far/mid at 810x268), keep small props at their recovered 1x or 2x so they sit at the same pixel density as STG-01 props (hero body is ~44 px tall). Unity PPU 32, Point filter.
+
+Sources (docs/design/concept/bg_assets/):
+1. b1_far_gemini.png - 2x2 grid of far backdrops separated by black gaps: TL rooftops+moon (STG-02), TR factory district with smokestacks (STG-04), BL hideout stone/timber wall interior (STG-03), BR palace gate on hill with searchlights (STG-05). Cut each panel to its own opaque plate. Make the sky part a separate plate from the silhouette layer where it is cleanly possible (sky = layer 0, skyline/silhouette with alpha = layer 1), like STG-01 far_sky / far_skyline. Each full plate ends 810 px wide (2x of recovered grid; if the recovered width is not ~405, crop/extend the sky side neatly rather than stretching).
+2. b2_buildings_gemini.png - 8 buildings on #00FF00. Chroma-key, cut each: shop_2f, house_ac, wall_tile (make it seamlessly tileable left-right), gate_scanner, rail_pillar (rail top tileable left-right as a separate rail_track piece if possible), factory_hall, watchtower, ruin_hanok.
+3. b3_props_gemini.png - 12 props on #00FF00: lantern_hanji (pivot top), talisman_holo, haetae, jangseung_pair, vending_dancheong, cable_bundle (pivot top), server_cabinet, conveyor (tileable left-right), robot_arm, scanner_gate, byeongpung_holo, crates_neon.
+   WARNING: byeongpung_holo screen panels are green-tinted; do NOT key them out - repaint those panel interiors to the cyan/teal hologram tones used elsewhere before keying. talisman_holo has pseudo-letter glyphs: replace them with simple abstract geometric strokes (no readable letters of any script).
+4. b4_interiors_gemini.png - three stacked interior back walls: hideout (STG-03), factory floor (STG-04), throne hall with Irworobongdo LED wall (STG-05). Cut each to an opaque 810-wide plate.
+All sources have a small Gemini sparkle watermark (4-point star, bottom right of the image) - remove it by repainting from neighbouring cells. Remove any remaining green spill.
+
+Ambient loops (repeating, seamless, no duplicate final frame, small frame counts, only the moving part as a separate overlay strip with alpha where possible, same convention as STG-01 *_Nf.png strips):
+- far factory: smoke_stack_6f (stepped smoke puffs rising from the stacks, overlay)
+- far palace: searchlight_sweep_8f (the beams slowly swing; overlay)
+- far rooftops: rooftop_window_twinkle_4f (few windows/neon toggle; overlay)
+- hideout: crt_static_4f (static noise inside the CRT screens only), bulb_flicker_4f
+- factory floor: vat_bubbles_6f (bubbles rising in the cyan vats), red_lamp_blink_2f
+- throne: ledwall_shimmer_4f (sparse pixel shimmer on the LED wall, sun/moon pulse)
+- props: lantern_hanji sway 4f, talisman_holo flicker 4f, haetae eyes blink 4f, jangseung screen faces blink 4f, server_cabinet lights 4f, conveyor scroll 4f, scanner_gate beam pulse 4f, watchtower lamp blink 2f.
+Keep motion subtle and readable at 1x; no smooth gradients, no glow haze.
+
+Output:
+- Assets/Art/Backgrounds/STG02_05_Parts/{far,buildings,props,interiors}/*.png (no .meta files; Unity makes them).
+- docs/design/concept/bg_assets/parts_manifest.md - same table format as the STG-01 manifest (file, PNG size, frame size, frames, fps, pivot, colour count), plus which stage each part is for and suggested layer order/parallax.
+- docs/design/concept/bg_assets/parts_preview.gif - per-stage composite previews at 2x showing far + buildings/interiors + a few props with loops running, and parts_sheet_4x.png contact sheet of all parts.
+Constraints: do not edit scripts, scenes, .meta files or CREDITS.md; do not use git (you cannot write .git); no paid services or external downloads; don't leave temp folders in the repo root (use a temp dir outside the repo). Verify every PNG: RGBA, alpha only 0/255, frame widths divide strip widths. End with a short summary.
