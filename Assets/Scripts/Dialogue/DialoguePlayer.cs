@@ -150,8 +150,16 @@ public class DialoguePlayer : MonoBehaviour
         box.nameText.text = s != null ? (DialogueLanguage.Korean ? s.nameKo : s.nameEn) : line.speaker;
         Color c = s != null ? s.color : Color.gray;
         box.nameText.color = c;
-        box.portrait.sprite = s != null ? s.portrait : null;
+        box.portrait.sprite = s != null ? (s.portrait != null ? s.portrait : LoadPortrait(s.id)) : null;
         box.portrait.color = box.portrait.sprite != null ? Color.white : c; // placeholder block
+    }
+
+    // Fallback when the speaker row has no portrait assigned: Assets/Resources/Portraits/<id>.png (48x48, shown 1x radio / 2x talk).
+    readonly Dictionary<string, Sprite> portraitCache = new Dictionary<string, Sprite>();
+    Sprite LoadPortrait(string id)
+    {
+        if (!portraitCache.TryGetValue(id, out var sp)) portraitCache[id] = sp = Resources.Load<Sprite>("Portraits/" + id);
+        return sp;
     }
 
     void BuildUi()
@@ -168,7 +176,7 @@ public class DialoguePlayer : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
 
         // radio: small, top-left corner
-        radioBox = BuildBox(canvasGo.transform, "Radio", new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(480f, 84f), 60f, true);
+        radioBox = BuildBox(canvasGo.transform, "Radio", new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(480f, 84f), 48f, true);
         // talk: wide, bottom of screen
         talkBox = BuildBox(canvasGo.transform, "Talk", new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(912f, 132f), 96f, false);
         radioBox.root.SetActive(false);

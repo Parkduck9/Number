@@ -28,3 +28,8 @@ MonoBehaviour:
     nameEn: Citizen
     portrait: {fileID: 0}
     color: {r: 1, g: 0.54901963, b: 0.25882354, a: 1}
+  - id: luddite
+    nameKo: "러다이트"
+    nameEn: Luddite
+    portrait: {fileID: 0}
+    color: {r: 0.7215686, g: 0.5254902, b: 0.1803922, a: 1}
