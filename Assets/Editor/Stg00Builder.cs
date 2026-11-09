@@ -4,12 +4,11 @@ using UnityEngine;
 using static StageBuildKit;
 
 // Menu NUMBER/Build STG-00 -> Assets/Scenes/STG00.unity. Idempotent. Opening: one segment, no combat, scripted by OpeningSequence.
-// Reuses STG-01 SEG-A's placeholder background (run NUMBER/Build STG-01 first if it is missing).
+// Reuses the layered STG-01 street backdrop (StreetBackdropKit).
 public static class Stg00Builder
 {
     const string Tag = "Stg00Builder";
     const string ScenePath = "Assets/Scenes/STG00.unity";
-    const string BgPath = "Assets/Art/Placeholder/PLACEHOLDER_stg01_segA_bg.png";
     const string DialogueDir = "Assets/Data/Dialogue/";
 
     // (T) day profile, LIGHTING_DESIGN Q7
@@ -30,9 +29,7 @@ public static class Stg00Builder
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var root = new GameObject("SEG-A").transform;
-        var bg = AssetDatabase.LoadAssetAtPath<Sprite>(BgPath);
-        if (bg != null) BuildSpriteBackground(root, bg, SegWidth);
-        else Todo.Add("Background sprite missing (" + BgPath + "): run NUMBER/Build STG-01 first");
+        StreetBackdropKit.Build(root, SegWidth, SegHeight, 2.25f, 15f, SegWidth - 15f); // one screen tall: the camera never moves up
         BuildCollider(root, Ground, false);
         foreach (var w in Walls("A", 0)) BuildCollider(root, w, false);
 

@@ -14,7 +14,6 @@ public static class Stg01Builder
 {
     const string Tag = "Stg01Builder";
     const string ScenePath = "Assets/Scenes/STG01.unity";
-    const string PlaceholderDir = "Assets/Art/Placeholder";
 
     // ------------------------------------------------------------------ DATA (segment-local coordinates, units; y of a Pt / Foe = feet)
 
@@ -23,10 +22,8 @@ public static class Stg01Builder
     static readonly float[] SegH = { TallHeight, SegHeight * 1.5f }; // A climbs to y ~26, B to y ~17
     const int A = 0, B = 1;
 
-    // SEG-A background: concept image (810x270 @ PPU 16 = 50.625 x 16.875u), right-aligned + mirrored fill; plain sky above it.
-    // SEG-B: no background yet (the 13_style_frame_v2 concept had a fake HUD drawn in), the camera colour shows.
-    const string SegASrc = "docs/design/concept/14_bg_stg01_pixel_native.png", SegADst = "PLACEHOLDER_stg01_segA_bg.png";
-    static readonly Color SkyA = new Color32(0x2A, 0x2A, 0x55, 0xFF); // the image's top-row sky
+    // SEG-A background: layered, animated street backdrop (StreetBackdropKit, DECISIONS 16-2). SEG-B: no background yet, the camera colour shows.
+    const float GroundA = 2.25f; // GROUND-A top: where the backdrop's street surface sits
 
     static readonly Box[] Boxes = new[]
     {
@@ -127,7 +124,6 @@ public static class Stg01Builder
     public static void Build()
     {
         if (!Begin(Tag, ScenePath)) return;
-        var bgA = ImportBackground();
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var roots = new Transform[SegX.Length];
@@ -136,11 +132,7 @@ public static class Stg01Builder
             roots[i] = new GameObject(i == A ? "SEG-A" : "SEG-B").transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
         }
-        if (bgA != null)
-        {
-            BuildWideBackground(roots[A], bgA, W); // native scale, right-aligned + mirrored fill
-            BuildSkyFill(roots[A], W, bgA.bounds.size.y, SegH[A], SkyA);
-        }
+        StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f); // camera x range of SEG-A = [15, W - 15]
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
@@ -163,37 +155,8 @@ public static class Stg01Builder
         BuildBoard(roots[B], "BOARD-B", BoardPos, 3, new Vector2(SegX[B], SegX[B] + W));
         BuildDialoguePlayer(); // radio hint needs DialoguePlayer.Instance
         BuildHint(roots[HintA.seg]);
-        BuildLighting(false); // night (no lamps: the SEG-A background is a concept placeholder)
+        BuildLighting(false); // night (no lamps yet)
         SaveScene(scene, Tag, ScenePath);
-    }
-
-    // Copies the concept image into Assets/Art/Placeholder (if not there yet) and applies the import settings.
-    static Sprite ImportBackground()
-    {
-        Directory.CreateDirectory(PlaceholderDir);
-        string dst = PlaceholderDir + "/" + SegADst;
-        if (!File.Exists(dst))
-        {
-            string src = Path.GetFullPath(Path.Combine(Application.dataPath, "..", SegASrc));
-            if (!File.Exists(src)) { Todo.Add("Background missing for SEG-A: " + SegASrc); return null; }
-            File.Copy(src, dst);
-            AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceSynchronousImport);
-        }
-        var ti = (TextureImporter)AssetImporter.GetAtPath(dst);
-        var st = new TextureImporterSettings();
-        ti.ReadTextureSettings(st);
-        st.spriteAlignment = (int)SpriteAlignment.BottomLeft;
-        ti.SetTextureSettings(st);
-        ti.textureType = TextureImporterType.Sprite;
-        ti.spriteImportMode = SpriteImportMode.Single;
-        ti.spritePixelsPerUnit = 16f; // 810 px -> 50.625u
-        ti.filterMode = FilterMode.Point;
-        ti.textureCompression = TextureImporterCompression.Uncompressed;
-        ti.mipmapEnabled = false;
-        ti.alphaIsTransparency = false;
-        ti.maxTextureSize = 2048;
-        ti.SaveAndReimport();
-        return AssetDatabase.LoadAssetAtPath<Sprite>(dst);
     }
 
     static void BuildHint(Transform root)
