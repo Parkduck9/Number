@@ -16,6 +16,9 @@ public static class DashRules
 
     // ---- LMB parry merge (PlayerController.FaceParryThreat): parry wins over the lunge when a threat is about to land ----
     public const float ParryShotRange = 3f;     // a parryable shot this close (u) and flying at the player (playtest 11-09: 2 was too late for humans)
+    // ...or (fast shots) one arriving within this many seconds, whatever the distance. QA R2-04: the 14 u/s sniper shot inside 3 u gave a
+    // 0.16 s window; 0.25 s = ~4.2 u for it. The guard lasts until arrival + ParryCoverMargin.
+    public const float ParryShotWindow = 0.25f;
     public const float ParryShotLateral = 1.3f; // ...whose line passes within this of the player's centre (half height 1 + shot 0.25)
     // melee: an enemy in Windup/Strike whose attack box overlaps the player box and whose strike lands within this (TestEnemy.MeleeThreatens)
     public const float ParryMeleeWindow = 0.3f; // s; was parryActiveTime 0.2 (playtest 11-09: too strict)

@@ -266,6 +266,7 @@ public class PlayerController : MonoBehaviour
             {
                 EnterState(State.Parry);
                 // No upper cap: a strike seen at eta 0.3 lands up to 2 frames later (Windup->Strike->DoStrike); the Parry state stretches to match.
+                // Shots are bounded by their eligibility (ParryShotRange / ParryShotWindow), so the guard always lasts until they land.
                 parryActiveFor = Mathf.Max(eta + DashRules.ParryCoverMargin, parryActiveTime);
             }
             else EnterState(State.Attack);
@@ -610,12 +611,15 @@ public class PlayerController : MonoBehaviour
             Vector2 to = pos - (Vector2)p.transform.position;
             float dist = to.magnitude;
             Vector2 v = p.Velocity;
-            if (dist > DashRules.ParryShotRange || dist >= bestDist || v.sqrMagnitude < 0.0001f || Vector2.Dot(v, to) <= 0f) continue;
+            if (dist >= bestDist || v.sqrMagnitude < 0.0001f || Vector2.Dot(v, to) <= 0f) continue;
+            float shotEta = Mathf.Max(0f, dist - 0.7f) / v.magnitude; // contact ~0.7u before the centre (player half 0.45 + shot half 0.25)
+            if (dist > DashRules.ParryShotRange && shotEta > DashRules.ParryShotWindow) continue; // QA R2-04: near OR arriving soon
             Vector2 vn = v.normalized;
             if (Mathf.Abs(vn.x * to.y - vn.y * to.x) > DashRules.ParryShotLateral) continue; // passes beside the body
+            if (Physics2D.Raycast(p.transform.position, vn, Mathf.Max(0f, dist - 0.7f), groundMask).collider != null) continue; // dies on a wall first
             bestDist = dist;
             face = Mathf.Abs(v.x) > 0.01f ? (v.x > 0f ? -1 : 1) : (to.x < 0f ? 1 : -1); // ReceiveEnemyHit judges shots by travel direction
-            eta = Mathf.Max(0f, dist - 0.7f) / v.magnitude; // contact ~0.7u before the centre (player half 0.45 + shot half 0.25)
+            eta = shotEta;
         }
         int n = Physics2D.OverlapCircle(pos, 4f, enemyFilter, enemyHits);
         for (int i = 0; i < n; i++)
