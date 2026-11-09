@@ -61,6 +61,7 @@ public static class StageClear
             en += sep + "Break the spawner"; ko += sep + "스폰 장치를 부숴라";
         }
         ShowHint(en, ko);
+        EnemyPointer.Flash(); // arrows to what is left, for a few seconds
         return false;
     }
 

@@ -17,6 +17,7 @@ public class LevelTransition : MonoBehaviour
 
     static Image fadeImage;
     static bool fadeInPending; // set before a stage change; the next scene starts black and fades in
+    public bool IsGoal => mode == Mode.Goal;
     bool busy;
     float nextCheckAt;
 
