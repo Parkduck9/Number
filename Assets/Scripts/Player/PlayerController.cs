@@ -128,13 +128,14 @@ public class PlayerController : MonoBehaviour
         visual = GetComponentInChildren<SpriteRenderer>();
         draftSprite = DraftSprites.Setup(visual, DraftSprites.Hero);
         rb.gravityScale = gravityScale;
+        bodyCols = GetComponents<Collider2D>();
         enemyFilter.SetLayerMask(enemyMask);
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
         MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like Shockwave)
     }
 
-    void OnDisable() { EndHitStop(); }
+    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); }
 
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
     bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
@@ -185,12 +186,13 @@ public class PlayerController : MonoBehaviour
         // ground check (ignore while rising so a jump doesn't refresh coyote time)
         // A ground collider that already contains a point just above the feet means the feet are embedded in it
         // (jump apex inside a one-way platform), so it is not something we stand on.
+        if (!lunging && passedPlatforms.Count > 0) RestorePassedPlatforms(false);
         Vector2 feet = (Vector2)transform.position + feetOffset;
         groundFilter.SetLayerMask(groundMask);
         int hitCount = Physics2D.OverlapBox(feet, feetSize, 0f, groundFilter, groundHits);
         grounded = false;
-        for (int i = 0; i < hitCount && !grounded; i++)
-            grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f);
+        for (int i = 0; i < hitCount && !grounded; i++) // a platform a down-lunge is still passing through is not ground
+            grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f) && !passedPlatforms.Contains(groundHits[i]);
         if (grounded && rb.linearVelocity.y <= 0.1f) lastGroundedAt = now;
 
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
@@ -421,26 +423,59 @@ public class PlayerController : MonoBehaviour
         return best;
     }
 
-    // Line of sight between centres: no solid ground in between. One-way platforms block only a downward line (as in WallDistance).
+    // Line of sight between centres: no solid ground in between. One-way platforms never block it (a downward lunge passes them, see TryStartLunge).
     bool ClearLine(Vector2 from, Vector2 to)
     {
-        bool down = to.y - from.y < -0.01f;
         foreach (RaycastHit2D h in Physics2D.LinecastAll(from, to, groundMask))
-            if (!h.collider.usedByEffector || down) return false;
+            if (!h.collider.usedByEffector) return false;
         return true;
+    }
+
+    // One-way platforms a downward lunge passes through (collision with the body off until the body is clear of them again).
+    readonly System.Collections.Generic.List<Collider2D> passedPlatforms = new System.Collections.Generic.List<Collider2D>();
+    readonly System.Collections.Generic.List<RaycastHit2D> lungePass = new System.Collections.Generic.List<RaycastHit2D>();
+    Collider2D[] bodyCols;
+
+    void SetPlatformPass(Collider2D platform, bool pass)
+    {
+        foreach (Collider2D b in bodyCols)
+            if (b != null && !b.isTrigger) Physics2D.IgnoreCollision(b, platform, pass);
+    }
+
+    bool BodyOverlaps(Collider2D platform)
+    {
+        foreach (Collider2D b in bodyCols)
+            if (b != null && !b.isTrigger && b.Distance(platform).isOverlapped) return true;
+        return false;
+    }
+
+    // After the lunge: give each passed platform its collision back once the body no longer overlaps it (else the effector would pop the body up).
+    void RestorePassedPlatforms(bool all)
+    {
+        for (int i = passedPlatforms.Count - 1; i >= 0; i--)
+        {
+            Collider2D p = passedPlatforms[i];
+            if (p != null && !all && BodyOverlaps(p)) continue;
+            if (p != null) SetPlatformPass(p, false);
+            passedPlatforms.RemoveAt(i);
+        }
     }
 
     // Lunge toward the locked target: through it (end LungeBehind past its centre) or, if it blocks hits (Android), LungeStopInFront before it.
     // Walls clamp the line; on the ground the end must not hang over a pit. false = no target / no room -> in-place swing.
     bool TryStartLunge(Vector2 aim)
     {
-        TestEnemy target = FindLungeTarget(aim, out _);
+        TestEnemy target = FindLungeTarget(aim, out Collider2D targetCol);
         if (target == null) return false;
         Vector2 pos = rb.position;
         Vector2 d = (Vector2)target.transform.position - pos;
         float tDist = d.magnitude;
         Vector2 dir = tDist > 0.001f ? d / tDist : new Vector2(Facing, 0f);
-        float wall = WallDistance(pos, dir, tDist + DashRules.LungeBehind);
+        // Downward: one-way platforms above the target's feet (the catwalk under the player, any in between) are passed through;
+        // the platform the target stands on and solid ground still stop the lunge.
+        float passAbove = dir.y < -0.01f ? targetCol.bounds.min.y + 0.05f : float.PositiveInfinity;
+        lungePass.Clear();
+        float wall = WallDistance(pos, dir, tDist + DashRules.LungeBehind, passAbove, lungePass);
         float len = Mathf.Min(target.BlocksHits ? tDist - DashRules.LungeStopInFront : tDist + DashRules.LungeBehind, wall);
         if (grounded && !GroundBelow(pos + dir * len))
         {
@@ -455,6 +490,8 @@ public class PlayerController : MonoBehaviour
         lungeStart = pos;
         lungeDir = dir;
         lungeEnd = pos + dir * len;
+        foreach (RaycastHit2D h in lungePass)
+            if (h.distance < len && !passedPlatforms.Contains(h.collider)) { SetPlatformPass(h.collider, true); passedPlatforms.Add(h.collider); }
         attackHitDone = true; // the sweep replaces the in-place hit box
         nextAfterimageAt = 0f;
         rb.gravityScale = 0f;
@@ -465,15 +502,18 @@ public class PlayerController : MonoBehaviour
     }
 
     // Free distance along dir for a slightly slimmer player box (0.8 x 1.8 of 0.9 x 2). One-way platforms are ignored unless the
-    // lunge heads downward: the effector blocks a body coming from above, so such a lunge would hang on the platform until LungeMaxTime.
+    // lunge heads downward; then those whose top is above passAbove go into pass (TryStartLunge turns their collision off) and the rest
+    // (the target's own platform) count like ground.
     // A floor under a shallow down-slanted lunge (or a ceiling over a shallow up-slanted one) is not a wall: the body slides along it,
     // so it must not cut the lunge short (playtest 11-09 "the attack stops at walls when an enemy is there").
-    float WallDistance(Vector2 pos, Vector2 dir, float maxLen)
+    float WallDistance(Vector2 pos, Vector2 dir, float maxLen, float passAbove = float.PositiveInfinity,
+        System.Collections.Generic.List<RaycastHit2D> pass = null)
     {
         float best = maxLen;
         foreach (RaycastHit2D h in Physics2D.BoxCastAll(pos, new Vector2(0.8f, 1.8f), 0f, dir, maxLen, groundMask))
         {
             if (h.collider.usedByEffector && dir.y >= -0.01f) continue;
+            if (h.collider.usedByEffector && h.collider.bounds.max.y > passAbove) { pass?.Add(h); continue; }
             if ((h.normal.y > 0.7f && dir.y > -0.5f) || (h.normal.y < -0.7f && dir.y < 0.5f)) continue; // slide along floor / ceiling
             if (h.distance < best) best = h.distance;
         }
@@ -669,7 +709,9 @@ public class PlayerController : MonoBehaviour
     {
         if (enemy == null || !enemy.gameObject.activeInHierarchy || enemy.Current == TestEnemy.State.Stunned) return true; // already down / vanishing
         if (!swingHits.Add(enemy)) return true;
-        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = transform.position, IsSpecial = false });
+        // A lunge hit comes from where the lunge began (the sweep spans from there): the Android "from above / behind" test must not
+        // depend on which frame the fast-moving body happened to be sampled at (Fable review 11-09).
+        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false });
         if (!damaged) return false;
         Sfx.Play(SfxId.Hit);
         PlayHitSpark(col.ClosestPoint(from), Facing);
