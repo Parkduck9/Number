@@ -178,7 +178,7 @@ public class DialoguePlayer : MonoBehaviour
         // radio: small, top-left corner
         radioBox = BuildBox(canvasGo.transform, "Radio", new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(480f, 84f), 48f, true);
         // talk: wide, bottom of screen
-        talkBox = BuildBox(canvasGo.transform, "Talk", new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(912f, 132f), 96f, false);
+        talkBox = BuildBox(canvasGo.transform, "Talk", new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(912f, 132f), 100f, false); // portrait 100 = the 100x100 portrait art, exact 2x on 1080p (ref 960x540)
         radioBox.root.SetActive(false);
         talkBox.root.SetActive(false);
     }

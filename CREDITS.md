@@ -35,6 +35,7 @@
 | android overload v2 draft — reference samples/enemy_android_stand_big.png only | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Sprites/android_overload_v2_big.png, Assets/Art/Drafts/Sprites/android_overload_v2.png |
 | Dialogue portrait drafts (lineup set) — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Portraits/lineup/ |
 | AI bug enemy DRAFT sprites — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Resources/DraftSprites/bug_walk_2f.png, bug_attack_3f.png, bug_flyer_2f.png, bug_flyer_attack_3f.png; Assets/Art/Drafts/Sprites/bug_sprites_preview4x.png |
+| Dialogue portrait yudo (in game) — source image made by the user with Google Gemini from the team's hero art; grid-snapped and cleaned to native pixel size by Codex | AI 생성 (Google Gemini, Codex gpt-6.1-sol) | Assets/Resources/Portraits/yudo.png; source docs/design/concept/portraits/yudo_gemini.png |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
