@@ -7,9 +7,11 @@ public static class SpriteFlash
 {
     static readonly int FlashAmount = Shader.PropertyToID("_FlashAmount");
     static readonly int FlashColor = Shader.PropertyToID("_FlashColor");
+    static readonly int GlitchAmount = Shader.PropertyToID("_GlitchAmount");
     static MaterialPropertyBlock block;
 
-    public static void Apply(SpriteRenderer sr, Color color, bool flashing, Color flashColor, Color fallbackTint)
+    // glitch 0..1: shader row-shift glitch (Android overload); ignored without the shader. Called every frame, so values reset by themselves.
+    public static void Apply(SpriteRenderer sr, Color color, bool flashing, Color flashColor, Color fallbackTint, float glitch = 0f)
     {
         Material m = sr.sharedMaterial;
         if (m == null || !m.HasProperty(FlashAmount))
@@ -22,6 +24,7 @@ public static class SpriteFlash
         sr.GetPropertyBlock(block);
         block.SetFloat(FlashAmount, flashing ? 1f : 0f);
         block.SetColor(FlashColor, flashColor);
+        block.SetFloat(GlitchAmount, glitch);
         sr.SetPropertyBlock(block);
     }
 }

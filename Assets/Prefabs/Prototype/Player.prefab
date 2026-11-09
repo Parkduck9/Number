@@ -58,7 +58,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 7fe9e917548b2d748bab30f4eda19648, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -261,14 +261,18 @@ MonoBehaviour:
   attackDamage: 1
   parryActiveTime: 0.2
   parryDuration: 0.35
+  parryGuardTime: 0.2
   dashSpeed: 24
   dashDuration: 0.15
-  dashCooldown: 2
+  ledgeProbeDepth: 1.5
+  dashBehindClearance: 0.3
+  dashMinDuration: 0.08
   knockback: {x: 5, y: 4}
   hurtDuration: 0.25
   hitStopTime: 0.06
   parryFlashTime: 0.1
-  sparkCount: 6
-  sparkLife: 0.2
-  sparkSpeed: 6
-  sparkSize: 0.15
+  afterimageInterval: 0.04
+  afterimageLife: 0.2
+  runFxSpeedFrac: 0.9
+  runDustInterval: 0.25
+  speedLinesInterval: 0.15

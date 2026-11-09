@@ -149,6 +149,7 @@ public static class PrototypeSceneBuilder
         var visual = BuildSquare("Visual", new Color32(0x4C, 0xE0, 0xFF, 0xFF), new Vector2(1f, 2f), 10);
         visual.transform.SetParent(root.transform, false);
         visual.layer = PlayerLayer;
+        SpriteFlashSetup.Assign(visual.transform); // hit-flash shader material
 
         PrefabUtility.SaveAsPrefabAssetAndConnect(root, PrefabDir + "/Player.prefab", InteractionMode.AutomatedAction);
     }
@@ -173,6 +174,7 @@ public static class PrototypeSceneBuilder
         var visual = BuildSquare("Visual", new Color32(0xFF, 0x8C, 0x42, 0xFF), new Vector2(1f, 2f), 10);
         visual.transform.SetParent(root.transform, false);
         visual.layer = EnemyLayer;
+        SpriteFlashSetup.Assign(visual.transform); // hit-flash shader material
 
         var numGo = new GameObject("Number") { layer = EnemyLayer };
         numGo.transform.SetParent(root.transform, false);

@@ -59,3 +59,4 @@ Citizen/Bug만 해당 (Android 제외). `Juice.NormalTimeMul` **0.55**(이전 0.
 - 패링 히트스톱 `DashRules.ParryHitStop` 0.1 → 0.15 s (처치 0.12보다 길다).
 - 패링된 탄은 사라지지 않고 1.3배 속도로 되돌아가며 흰색으로 0.35 s 날다 사라진다(아무것도 맞히지 않음).
 - 개발 빌드 F3: `parry 성공/시도 (hit while parrying N)` 카운터.
+- 흰색 번쩍임 셰이더(11-09): Player/TestEnemy 프리팹의 Visual에 `Assets/Materials/SpriteFlash.mat`(Codex `NUMBER/SpriteFlash`)을 넣었다 (`NUMBER/Apply Sprite Flash Material`, PrototypeSceneBuilder도 넣음). `SpriteFlash.Apply`가 번쩍이는 동안 `_FlashAmount` 1로 진짜 흰색을 칠하고, 안드로이드 과부하 중엔 `_GlitchAmount` `Juice.OverloadGlitch` 0.35를 10Hz로 3틱 중 2틱 켠다. 머티리얼이 없으면 색 칠하기로 돌아간다.

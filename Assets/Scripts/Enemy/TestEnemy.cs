@@ -591,7 +591,9 @@ public class TestEnemy : MonoBehaviour
             case State.Special: c = SpecialColor; break;
             case State.Overload: c = Mathf.FloorToInt(Time.time * 16f) % 2 == 0 ? OverloadColor : baseColor; break;
         }
-        SpriteFlash.Apply(visual, c, Time.time < flashUntil, Color.white, flashColor); // flash shader: solid white; else the tint
+        // Overload: small flickery glitch (shader only), on for 2 of every 3 ticks of OverloadGlitchHz.
+        float glitch = state == State.Overload && Mathf.FloorToInt(Time.time * Juice.OverloadGlitchHz) % 3 != 0 ? Juice.OverloadGlitch : 0f;
+        SpriteFlash.Apply(visual, c, Time.time < flashUntil, Color.white, flashColor, glitch); // flash shader: solid white; else the tint
     }
 
     void OnDrawGizmosSelected()

@@ -35,6 +35,8 @@ public static class Juice
     // Android overload (gimmick A): after a parried last strike / dodged 7th strike, the next hit kills it.
     public const float OverloadSeconds = 1.5f;        // (T) how long the window stays open
     public const float OverloadSparkInterval = 0.2f;  // (T) spark burst spacing
+    public const float OverloadGlitch = 0.35f;        // (T) SpriteFlash shader _GlitchAmount while overloaded (0..1)
+    public const float OverloadGlitchHz = 10f;        // (T) flicker ticks per second (glitch off every 3rd tick)
 
     // Citizen/Bug tempo (Android unchanged): timings x NormalTimeMul, approach speed x NormalSpeedMul. 1 = old values.
     public const float NormalTimeMul = 0.55f;  // DECISIONS 12: 0.65 -> 0.55 (faster tells / chains)

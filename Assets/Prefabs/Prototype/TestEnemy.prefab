@@ -315,13 +315,12 @@ MonoBehaviour:
   - 15
   - 40
   - 40
+  minValue: 2
+  maxValue: 5
+  fixedNumber: 0
+  numberColor: {r: 1, g: 0.1647, b: 0.1647, a: 1}
   pulseSpeed: 2.5
   pulseScale: 1.3
-  flameCount: 4
-  flameSize: 0.12
-  flameHeight: 0.6
-  flameSpread: 0.3
-  flameFlicker: 12
 --- !u!114 &4091592498481781644
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -353,6 +352,21 @@ MonoBehaviour:
   flashTime: 0.1
   chargeSpeed: 14
   chargeMaxTime: 0.6
+  kind: 0
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  activationRange: 8
+  edgeProbeForward: 0.7
+  edgeProbeDepth: 1.5
+  lastStrikeDelay: 0
+  unparryableNumber: 0
+  ranged: 0
+  keepDistance: 5
+  backoffMaxTime: 1
+  projectileSpeed: 9
+  muzzleOffset: {x: 0.8, y: 0.3}
+  projectileColor: {r: 1, g: 0.788, b: 0.235, a: 1}
 --- !u!1 &6711471289357908216
 GameObject:
   m_ObjectHideFlags: 0
@@ -411,7 +425,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 7fe9e917548b2d748bab30f4eda19648, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
