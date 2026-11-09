@@ -2,13 +2,14 @@ using UnityEditor;
 using UnityEngine;
 
 // DRAFT art import rules. See docs/design/impl/draft-sprites.md.
-//  Assets/Resources/DraftSprites/<name>_<N>f.png : N frames of 64x64, pivot bottom-center (feet), PPU 32.
+//  Assets/Resources/DraftSprites/<name>_<N>f.png : N frames of 64x64, pivot on the feet line (2 px above the frame bottom), PPU 32.
 //  Assets/Resources/DraftHud/*_digits_*.png      : 10 digit glyphs (broadcast 12x18 + 1px gap, holo 7x11 + 1px gap), pivot center.
 //  Assets/Resources/DraftHud/*_arcs_*.png        : 2 broadcast waves (left, right) 11x16 + 1px gap, pivot center.
 //  Assets/Resources/DraftHud|DraftUi/*.png       : single sprite, pivot center.
 public class DraftSpriteImporter : AssetPostprocessor
 {
-    public override uint GetVersion() => 2;
+    const float StripFeetGap = 2f; // px: every 64x64 strip has its feet on row 61, two empty rows below
+    public override uint GetVersion() => 3; // 3: strip pivot lifted to the feet (2 empty rows under them)
 
     void OnPreprocessTexture()
     {
@@ -55,8 +56,8 @@ public class DraftSpriteImporter : AssetPostprocessor
             {
                 name = name + "_" + i,
                 rect = new Rect(i * step, 0f, w, h),
-                alignment = (int)(strip ? SpriteAlignment.BottomCenter : SpriteAlignment.Center),
-                pivot = strip ? new Vector2(0.5f, 0f) : new Vector2(0.5f, 0.5f)
+                alignment = (int)(strip ? SpriteAlignment.Custom : SpriteAlignment.Center),
+                pivot = strip ? new Vector2(0.5f, StripFeetGap / 64f) : new Vector2(0.5f, 0.5f) // strips: pivot on the feet line, not the frame bottom
             };
         ti.spriteImportMode = SpriteImportMode.Multiple;
 #pragma warning disable CS0618 // simple slicing API; fine for a draft
