@@ -11,6 +11,7 @@ public class ControlHints : MonoBehaviour
 {
     const float ShowSeconds = 10f;       // (T) playable seconds before the hint fades away
     const float Scale = 2f;              // 16 px icon art at 2x = 32 reference px
+    static readonly Color PlateColor = new Color32(0x0B, 0x0F, 0x1E, 0xC0); // (T) UiTheme background navy, ~75% opaque
     static readonly HashSet<string> Shown = new HashSet<string>();
 
     // icon file, letter on the key ("" for mouse icons), hint EN / KO
@@ -78,8 +79,11 @@ public class ControlHints : MonoBehaviour
         row.childForceExpandWidth = row.childForceExpandHeight = false;
         var fit = strip.gameObject.AddComponent<ContentSizeFitter>();
         fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        // Readability on any ground: dark translucent plate behind the strip (sized by the fitter + padding), light text.
+        row.padding = new RectOffset(12, 12, 6, 6);
+        UiKit.FilledImage(strip, PlateColor);
 
-        var dim = UiTheme.Current.dim;
+        var textColor = UiTheme.Current.text;
         foreach (var e in entries)
         {
             Sprite icon = DraftHud.Ui(e[0]);
@@ -89,7 +93,7 @@ public class ControlHints : MonoBehaviour
             le.preferredWidth = icon.rect.width * Scale;
             le.preferredHeight = icon.rect.height * Scale;
             if (e[1] != "") UiKit.Label("Key", img.transform, new Vector2(0.5f, 0.5f), Vector2.zero, icon.rect.size * Scale, e[1], e[1], 12, Color.white);
-            if (e[2] != "") UiKit.Label("Text " + e[2], strip, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, e[2], e[3], 18, dim);
+            if (e[2] != "") UiKit.Label("Text " + e[2], strip, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, e[2], e[3], 18, textColor);
         }
     }
 

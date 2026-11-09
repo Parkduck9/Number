@@ -11,7 +11,9 @@ public class TitleScreen : MonoBehaviour
     [SerializeField] string firstScene = "STG00"; // falls back to STG01 if STG00 is not in Build Settings
 
     // Layout at the 960x540 reference. Font sizes are multiples of 12 (Mulmaru native).
-    const string Number = "0";
+    // Mulmaru's digit 0 has a diagonal notch that reads as a broken 8 at this size; its capital O is the same
+    // plain oval (same width, same 2 px stroke), so the hologram "zero" uses that glyph.
+    const string Number = "O";
     const int NumberSize = 192, LogoSize = 48;
     const float NumberY = 150f, LogoY = 0f, MenuTopY = -40f;
     static readonly Vector2 WindowSize = new Vector2(160f, 192f); // translucent hologram window behind the digit
