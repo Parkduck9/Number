@@ -56,9 +56,9 @@ public enum HitResult { Hit, Parried, Dodged }
 ### 1.1 입력 에셋 수정 (`InputSystem_Actions.inputactions`, JSON 직접 편집)
 - `Jump`에 바인딩 `<Keyboard>/w` 추가하고 **Space 바인딩은 지운다** (Q-G: Space는 나중 스킬·기믹용으로 비워 둠).
 - `Sprint` → 이름을 `Dash`로 바꾼다 (바인딩 LShift 유지).
-- 액션 `Parry` (type Button) 추가, 바인딩 `<Mouse>/rightButton`, groups는 Attack의 좌클릭 바인딩과 동일하게. id는 새 GUID 아무거나.
+- 액션 `Parry` (type Button) 추가, 바인딩 `<Mouse>/rightButton` (2026-11-08 밤부터 패링은 좌클릭에 합쳐졌고 이 우클릭은 보조키로만 남음, DECISIONS 12-B), groups는 Attack의 좌클릭 바인딩과 동일하게. id는 새 GUID 아무거나.
 - Attack(좌클릭)·Interact(E)·Move는 그대로. Look/Crouch/Previous/Next는 건드리지 않는다.
-- 키: 좌클릭 공격 / 우클릭 패링 / LShift 대시 / W 점프 — 확정 (Q-A, Q-G).
+- 키: 좌클릭 공격·패링 / LShift 회피+반격 / W 점프 — 확정 (Q-A, Q-G; 패링을 좌클릭에 합침: DECISIONS 12·13. 우클릭은 보조키).
 
 `PlayerInputReader`: `[SerializeField] InputActionAsset asset;` → `Awake`에서 `asset.FindActionMap("Player", true)`의 Move/Jump/Attack/Parry/Dash를 캐시, `OnEnable/OnDisable`에서 맵 Enable/Disable. 노출: `float MoveX` (Move.x), `bool JumpPressed`(WasPressedThisFrame), `bool JumpHeld`, `bool AttackPressed`, `bool ParryPressed`, `bool DashPressed`. **Update에서만 읽는다** (FixedUpdate에서 WasPressedThisFrame은 누락/중복).
 
@@ -175,7 +175,7 @@ Play 모드 확인용 색 규칙: 플레이어 시안 / 대시 중 흰색 / 피�
 **Task C — 통합·튜닝** (파일: `PrototypeSceneBuilder.cs` 적 섹션, 필요 시 `TestEnemy.cs`/`PlayerController.cs` 수치)
 1. 빌더에 TestEnemy 프리팹·배치 추가, 재실행 → 확인: 적이 플레이어에게 걸어와 사거리에서 멈추고 숫자가 펄스함.
 2. 피격 → 확인: 가만히 있으면 HP가 숫자만큼 깎이고(3이면 3번), 숫자가 3→2→1→0으로 줄고, 마지막 일격 Windup은 노란색 큰 펄스, 0에서 1초 멈췄다가 새 숫자로 다시 옴. `progress`를 0과 1로 바꿔 가며 20번쯤 재추첨하면 각각 2~3 / 4~5가 많이 나옴.
-3. 패링 → 확인: 적을 바라보고 Windup 끝 직전 우클릭하면 HP 안 깎이고 숫자만 줄어듦(적 경직 없음). 등을 보인 채 패링하면 맞음. 너무 일찍 누르면(0.35초 전) 맞음.
+3. 패링 → 확인: 적을 바라보고 Windup 끝 직전 좌클릭(탄·근접 타격이 닿기 직전이면 패링으로 나감)하면 HP 안 깎이고 숫자만 줄어듦(적 경직 없음). 등을 보인 채 패링하면 맞음. 너무 일찍 누르면(0.35초 전) 맞음.
 4. 대시 회피·등 뒤 → 확인: Strike 순간 대시로 적을 통과하면 HP 그대로, 적이 0.35초 돌아서는 동안 등을 때리면 빨강 플래시(피해). 돌아선 뒤 다음 공격 때 Shift가 쿨다운이라 패링만 됨. 숫자>0인 적을 정면에서 때리면 흰 플래시(피해 0).
 5. 특수 공격 회피 → 확인: 마지막 일격(노란색)을 대시로 피하면 적이 1초 굳고, 바로 새 숫자로 다시 옴.
 6. 반격 → 확인: 숫자 0에서 3번 때리면 적이 회색으로 눕고 숫자가 꺼짐(영구).
@@ -187,7 +187,7 @@ Task C 뒤 Opus 검수 → `[code]` 커밋. 커밋에 `Assets/TextMesh Pro/` 포
 
 | ID | 질문 | 결정 |
 |---|---|---|
-| Q-A | 공격·패링 키 | **확정**: 좌클릭 공격 / 우클릭 패링 |
+| Q-A | 공격·패링 키 | **확정(변경됨)**: 좌클릭 공격·패링 (2026-11-08 밤 DECISIONS 12·13; 처음엔 우클릭 패링) |
 | Q-B | 숫자>0일 때 공격·대시 | 정면 일반 공격은 피해 없이 튕김. 적 공격을 Shift로 피해 등 뒤로 가면 적이 0.35초 돌아선 뒤 체인을 이어감. 그때는 대시 쿨다운 중이라 패링만 가능 |
 | Q-C | 0 이후 반격 창·다음 숫자 | 1초 → 2~5 재추첨. 초반은 2~3, 후반으로 갈수록 4~5에 가중치 |
 | Q-D | 시민 적 체력 | 3타, 영구 기절 |

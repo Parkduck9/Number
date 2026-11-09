@@ -44,7 +44,7 @@
 | Debug.Log 남발 없음 | 완료 | 매 프레임 로그 없음, 경고 몇 줄뿐 |
 | 브라우저 입력: 키보드 포커스 | 확인 대기 | itch 페이지에서 게임 화면을 한 번 클릭해야 키 입력이 들어감 → 설명에 "Click the game first" 적기 |
 | 브라우저 입력: 전체 화면 Esc | 부분 완료 | 일시정지는 P도 됨. 해킹 다이얼·엔딩 선택 취소는 Esc만 (BUG-BUILD-C06) |
-| 브라우저 입력: 우클릭(패리) 시 컨텍스트 메뉴 안 뜸 | 확인 대기 | WebGL 빌드에서 우클릭 연타로 확인 |
+| 브라우저 입력: 우클릭(패링 보조키) 시 컨텍스트 메뉴 안 뜸 | 확인 대기 | WebGL 빌드에서 우클릭 연타로 확인 |
 | 커서 잠금 | 해당 없음 | Cursor.lockState 사용 안 함 |
 | Quit 버튼 WebGL에서 숨김 | 완료 | `TitleScreen.cs` `Application.platform != WebGLPlayer` |
 | ZIP 업로드 (index.html이 ZIP 루트) | 사용자 확인 필요 | `Build/WebGL` 폴더 **내용**을 압축 |
@@ -58,7 +58,7 @@
 | 항목 | 상태 | 근거 / 할 일 |
 |---|---|---|
 | 제목, 설명 | 사용자 확인 필요 | productName `NUMBER` (ProjectSettings.asset:16) |
-| 조작법 (Controls) | **누락** | README·CREDITS 어디에도 없음. 초안: A/D·←/→ 이동, W 점프, 좌클릭 공격, 우클릭 패리, Shift 대시, Space 충격파(해금 후), E 상호작용/대사 넘김, 0~9·↑/↓·휠 다이얼, Esc/P 일시정지, (L 언어 — C05 결정에 따라) |
+| 조작법 (Controls) | **누락** | README·CREDITS 어디에도 없음. 초안: A/D·←/→ 이동, W 점프, 좌클릭(마우스 조준) 공격·패링, Shift 회피+반격, Space 충격파(해금 후), E 상호작용/대사 넘김, 0~9·↑/↓·휠 다이얼, Esc/P 일시정지, (L 언어 — C05 결정에 따라) |
 | 크레딧 (모든 외부 에셋) | **누락** | BUG-BUILD-C01, C08 반영 필요 |
 | 팀원 이름 | **누락** | CREDITS.md "## Team"이 `(팀원 이름 / 역할)` 자리표시자 그대로 |
 | 생성형 AI 공개 (도구 + 사용 방식) | **누락** | CREDITS.md에 초안은 있음 (Claude Fable/Sonnet/Opus, Codex, Antigravity, pixelfx 기반 number-ember). 빠진 것: Codex 컨셉 이미지 생성(STG00 배경에 사용, C01). 제목에서 "(draft)" 제거, 실제로 안 쓴 도구·모델명(예: Antigravity가 실제로 QA를 했는지, Codex 모델 3종 모두 썼는지)은 사실대로 정리 |

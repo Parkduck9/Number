@@ -121,7 +121,7 @@ TestEnemy FindTargetAhead(float maxDx, float maxDy, out Collider2D col)
 5. **STG-01 첫 적 조작 힌트 없음 (P1-6)** — `Stg01Builder.Build`에 `StageBuildKit.BuildDialoguePlayer()` 추가(지금 STG-01엔 DialoguePlayer가 없다), E-A1이 깨어나는 지점(SEG-A x 8~9, y 2.25~5) 앞에 `BuildTrigger` + `DialogueTrigger`(`lines` = 새 파일). 파일 `Assets/Data/Dialogue/stg01_hint_combat.txt`:
    ```
    @mode radio
-   yudo | 좌클릭 공격 · 우클릭 패링 | LMB attack / RMB parry | 4
+   yudo | 좌클릭 공격 · 패링 | LMB attack · parry | 4
    ```
    (화자는 `yudo`; 표지판 그림 없이 라디오 줄만 — 새 에셋 0. 문구는 사용자가 바꿀 수 있음.)
 
@@ -159,7 +159,7 @@ B 뒤잡기
 20. 패링 가드 0.2초 안에 공격을 시작하고 두 번째 타를 가드로 막아도 공격 애니메이션이 끊기지 않는다.
 21. 대화(InputLocked) 중 Shockwave HUD 쿨다운이 멈춘다.
 22. 라디오 줄 표시 중 L(개발 빌드) → 같은 줄이 다른 언어로 바뀐다.
-23. STG-01 시작 후 오른쪽으로 가면 첫 원거리 적이 깨기 전 "LMB attack / RMB parry" 라디오가 한 번 뜬다.
+23. STG-01 시작 후 오른쪽으로 가면 첫 원거리 적이 깨기 전 "LMB attack · parry" 라디오가 한 번 뜬다.
 
 ## 7. 위험
 - 미끄러짐 속도 37u/s는 Continuous 모드라 벽을 뚫지 않지만, **one-way 발판의 옆면**은 PlatformEffector2D가 통과시켜 발판 위로 올라탈 수 있다 — 목적지 발밑 검사만 있으므로 가끔 발판 모서리에 걸릴 수 있다. 플레이에서 보이면 `approachMaxSpeed`를 낮추거나 목적지를 `BoxCast`로 한 번 더 자른다.

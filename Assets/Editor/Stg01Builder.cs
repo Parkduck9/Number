@@ -95,7 +95,7 @@ public static class Stg01Builder
     // Placement rule (DECISIONS "Review Top 5" #2): the only 1:1 flat fight is the tutorial melee E-A2; everything else is a group, a ledge or a ranged shot.
     static readonly Foe[] Foes =
     {
-        new Foe("E-A1", A, 18f, 2.85f, 1, 0f, 10f, true), // FIRST enemy: gold ranged 1 on LEDGE-A1 (wakes at player x 8). Parry the shot (RMB) or dash past. Its 9u range ends near x 31.
+        new Foe("E-A1", A, 18f, 2.85f, 1, 0f, 10f, true), // FIRST enemy: gold ranged 1 on LEDGE-A1 (wakes at player x 8). Parry the shot (LMB) or dash past. Its 9u range ends near x 31.
         new Foe("E-A2", A, 37f, 2.25f, 2, 0f, 6f),        // tutorial melee 1:1, fixed 2; wakes at player x 31, outside E-A1's range
         new Foe("E-A3", A, 40f, 2.25f, 3, 0f, 9f),        // fixed 3 melee; detect 9 = wakes with E-A2 at player x 31 -> 2+3 pair (auto-approach makes a 1:1 a single click; review 06 #4)
         new Foe("E-A4", A, 42f, 2.25f, 1, 0f, 8f, true),
