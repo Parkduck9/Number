@@ -201,7 +201,7 @@ public static class PartsBackdropKit
 
     static void Missing(string file) => Todo.Add("STG02_05_Parts part missing: " + file);
 
-    // Spill light at a lit part (segment-local x, y), same light-only NeonSign as StageBuildKit.AddLamps (LIGHTING_DESIGN 3.1), lighting the backdrop too.
+    // Spill light at a lit part (segment-local x, y), a light-only NeonSign via LightingSetup.BuildNeon (LIGHTING_DESIGN 3.1), lighting the backdrop too.
     static void Glow(float x, float y, Color c, float radius, float flicker = 0f)
     {
         var parent = R.Find("Lamps (light only)");

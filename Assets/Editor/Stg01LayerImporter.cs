@@ -7,9 +7,15 @@ using UnityEngine;
 public class Stg01LayerImporter : AssetPostprocessor
 {
     public const string Dir = "Assets/Art/Backgrounds/STG01_Layers/";
-    // STG-02..05 parts (docs/design/concept/bg_assets/parts_manifest.md): same rules; hanging lanterns / cables pivot at the top, strips up to 6480 px.
+    // STG-02..05 parts (docs/design/concept/bg_assets/parts_manifest.md): same rules; hanging lanterns / cables pivot at the top; strips over 4096 px are repacked as grids (GridCols).
     public const string PartsDir = "Assets/Art/Backgrounds/STG02_05_Parts/";
-    public override uint GetVersion() => 1;
+    public override uint GetVersion() => 2;
+
+    // Frame columns for strips repacked into a grid to stay within 4096 px (WebGL MAX_TEXTURE_SIZE).
+    static readonly System.Collections.Generic.Dictionary<string, int> GridCols = new System.Collections.Generic.Dictionary<string, int>
+    {
+        { "smoke_stack_6f", 3 }, { "vat_bubbles_6f", 3 }, { "searchlight_sweep_8f", 4 }
+    };
 
     public static bool Handles(string path) => path.StartsWith(Dir) || path.StartsWith(PartsDir);
 
@@ -33,7 +39,7 @@ public class Stg01LayerImporter : AssetPostprocessor
         ti.mipmapEnabled = false;
         ti.alphaIsTransparency = true;
         ti.npotScale = TextureImporterNPOTScale.None;
-        ti.maxTextureSize = assetPath.StartsWith(PartsDir) ? 8192 : 4096; // the 3240 px overlay strips (6480 px searchlight strip)
+        ti.maxTextureSize = 4096;
 
         string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
         Vector2 pivot = PivotFor(name);
@@ -49,13 +55,17 @@ public class Stg01LayerImporter : AssetPostprocessor
         if (!m.Success) { ti.spriteImportMode = SpriteImportMode.Single; return; }
         int count = int.Parse(m.Groups[1].Value);
         ti.GetSourceTextureWidthAndHeight(out int w, out int h);
-        float fw = w / (float)count;
+        // Strips wider than 4096 px are packed as a grid (row-major, top row first); default is a single row.
+        int cols = GridCols.TryGetValue(name, out int gc) ? gc : count;
+        int rows = (count + cols - 1) / cols;
+        float fw = w / (float)cols;
+        float fh = h / (float)rows;
         var frames = new SpriteMetaData[count];
         for (int i = 0; i < count; i++)
             frames[i] = new SpriteMetaData
             {
                 name = name + "_" + i,
-                rect = new Rect(i * fw, 0f, fw, h),
+                rect = new Rect((i % cols) * fw, h - (i / cols + 1) * fh, fw, fh),
                 alignment = (int)SpriteAlignment.Custom,
                 pivot = pivot
             };

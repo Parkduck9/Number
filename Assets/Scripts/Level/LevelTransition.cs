@@ -19,7 +19,8 @@ public class LevelTransition : MonoBehaviour
     static bool fadeInPending; // set before a stage change; the next scene starts black and fades in
     public bool IsGoal => mode == Mode.Goal;
     bool busy;
-    float nextCheckAt;
+    float nextCheckAt, nextOpenCheckAt;
+    GameObject openFx; // Goal only: looping pad effect, shown once the exit is open (all enemies dead + spawners broken)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Hook()
@@ -53,6 +54,14 @@ public class LevelTransition : MonoBehaviour
     void Awake() => GetComponent<Collider2D>().isTrigger = true;
 
     void OnTriggerEnter2D(Collider2D other) => Touch(other, true);
+
+    void Update()
+    {
+        if (mode != Mode.Goal || openFx != null || Time.time < nextOpenCheckAt) return;
+        nextOpenCheckAt = Time.time + 0.5f;
+        Bounds b = GetComponent<Collider2D>().bounds;
+        if (StageClear.TryClear(transform.position, false)) openFx = MomentFx.GoalOpen(new Vector2(b.center.x, b.min.y));
+    }
 
     // Goal only: standing in the exit after a refusal re-checks every 0.2 s (no hint spam).
     void OnTriggerStay2D(Collider2D other)

@@ -17,6 +17,6 @@ public class DraftIdleAnim : MonoBehaviour
 
     void Update()
     {
-        if (frames != null) sr.sprite = frames[Mathf.FloorToInt(Time.time * DraftSprites.IdleFps) % frames.Length];
+        if (frames != null) sr.sprite = frames[Mathf.FloorToInt(Time.time * DraftSprites.LudditeIdleFps) % frames.Length];
     }
 }

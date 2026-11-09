@@ -14,11 +14,10 @@ public static class Stg02Builder
     const int A = 0, B = 1;
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C)
 
-    // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
+    // Segments at world x 0 and 110.
     static readonly float[] SegX = { 0f, 110f };
     static readonly float[] SegH = { TallHeight, SegHeight * 1.5f }; // A climbs to y ~22, B to y ~11.5
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
-
 
     // Every step is <= StepUp (1.5u) with <= 1u horizontal gap. Nothing solid hangs over a shaft (a beam above a ledge = bonk-lock).
     static readonly Box[] Boxes = new[]

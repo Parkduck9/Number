@@ -11,7 +11,6 @@ public static class Stg03Builder
     const string TalkPath = "Assets/Data/Dialogue/stg03_luddite_placeholder.txt";
     const float RoomWidth = 30f;
 
-
     static readonly Color NpcColor = new Color32(0x8F, 0xBF, 0x6A, 0xFF);
     static readonly Color DoorColor = new Color32(0x5A, 0x4A, 0x3A, 0xFF);
 
@@ -37,7 +36,6 @@ public static class Stg03Builder
         var root = new GameObject("ROOM").transform;
         PartsBackdropKit.Hideout(root, RoomWidth, 1f); // layered parts (DECISIONS 17); one fixed screen
         foreach (var b in Boxes) BuildCollider(root, b, true);
-
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);

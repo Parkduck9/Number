@@ -6,35 +6,36 @@ using UnityEngine;
 public static class DraftSprites
 {
     public const bool Use = true;
-    public const float WalkFps = 8f;
-    public const float IdleFps = 2f;
+    public const float WalkFps = 16f; // walk / flap strips are 2x frames (old 8 fps)
+    public const float IdleFps = 4f;       // hero idle 4f (old 2 fps)
+    public const float LudditeIdleFps = 2f; // luddite idle strip is still 2f
     public const float RunFps = 12f; // hero run cycle (6 frames = 0.5 s per cycle)
 
     static Sprite[] hero, heroRun, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
         heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
         bug, bugWalk, bugFlyer, bugFlyerAttack, heroGrapple;
-    public static Sprite[] Hero => hero ??= Load("hero_walk_3f", 3);
+    public static Sprite[] Hero => hero ??= Load("hero_walk_6f", 6);
     public static Sprite[] HeroRun => heroRun ??= Load("hero_run_6f", 6);                   // test strip (Codex); null = walk
-    public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_2f", 2);
-    public static Sprite[] HeroAttack => heroAttack ??= Load("hero_attack_3f", 3);
-    public static Sprite[] HeroDash => heroDash ??= Load("hero_dash_2f", 2);
+    public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_4f", 4);
+    public static Sprite[] HeroAttack => heroAttack ??= Load("hero_attack_5f", 5);
+    public static Sprite[] HeroDash => heroDash ??= Load("hero_dash_3f", 3);
     public static Sprite[] HeroHurt => heroHurt ??= Load("hero_hurt_1f", 1);
-    public static Sprite[] Citizen => citizen ??= Load("citizen_attack_3f", 3);
-    public static Sprite[] CitizenRanged => citizenRanged ??= Load("citizen_b_ranged_3f", 3);
-    public static Sprite[] Android => android ??= Load("android_attack_3f", 3);
+    public static Sprite[] Citizen => citizen ??= Load("citizen_attack_5f", 5);
+    public static Sprite[] CitizenRanged => citizenRanged ??= Load("citizen_b_ranged_5f", 5);
+    public static Sprite[] Android => android ??= Load("android_attack_5f", 5);
     public static Sprite[] Luddite => luddite ??= Load("luddite_npc_idle_2f", 2);
-    public static Sprite[] HeroJump => heroJump ??= Load("hero_jump_2f", 2);                 // 0 rising, 1 falling
+    public static Sprite[] HeroJump => heroJump ??= Load("hero_jump_4f", 4);                 // 0 rise, 1 rise->apex, 2 apex->fall, 3 fall
     public static Sprite[] HeroGrapple => heroGrapple ??= Load("hero_grapple_1f", 1);        // pulled by the rope (Codex); null = jump
     public static Sprite[] HeroParry => heroParry ??= Load("hero_parry_2f", 2);
-    public static Sprite[] CitizenWalk => citizenWalk ??= Load("citizen_walk_2f", 2);
+    public static Sprite[] CitizenWalk => citizenWalk ??= Load("citizen_walk_4f", 4);
     public static Sprite[] CitizenStunned => citizenStunned ??= Load("citizen_stunned_1f", 1);
-    public static Sprite[] CitizenRangedWalk => citizenRangedWalk ??= Load("citizen_b_walk_2f", 2);
-    public static Sprite[] AndroidWalk => androidWalk ??= Load("android_walk_2f", 2);
+    public static Sprite[] CitizenRangedWalk => citizenRangedWalk ??= Load("citizen_b_walk_4f", 4);
+    public static Sprite[] AndroidWalk => androidWalk ??= Load("android_walk_4f", 4);
     public static Sprite[] AndroidStunned => androidStunned ??= Load("android_stunned_1f", 1);
-    public static Sprite[] Bug => bug ??= Load("bug_attack_3f", 3);                          // melee bug (spider): 0 windup, 1 strike, 2 recover
-    public static Sprite[] BugWalk => bugWalk ??= Load("bug_walk_2f", 2);
-    public static Sprite[] BugFlyer => bugFlyer ??= Load("bug_flyer_2f", 2);                 // ranged bug: flap loop (hovers, body ~1.1u above the pivot)
-    public static Sprite[] BugFlyerAttack => bugFlyerAttack ??= Load("bug_flyer_attack_3f", 3); // 0 charge, 1 fire, 2 recover
+    public static Sprite[] Bug => bug ??= Load("bug_attack_5f", 5);                          // melee bug (spider): 0 windup, 2 strike, 4 recover (1, 3 = in-betweens)
+    public static Sprite[] BugWalk => bugWalk ??= Load("bug_walk_4f", 4);
+    public static Sprite[] BugFlyer => bugFlyer ??= Load("bug_flyer_4f", 4);                 // ranged bug: flap loop (hovers, body ~1.1u above the pivot)
+    public static Sprite[] BugFlyerAttack => bugFlyerAttack ??= Load("bug_flyer_attack_5f", 5); // 0 charge, 2 fire, 4 recover
 
     static Sprite[] Load(string name, int count)
     {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,7 +23,7 @@ public static class StageBuildKit
     const int GroundLayer = 6, PlayerLayer = 7, EnemyLayer = 8;
 
     public const float SegWidth = 50.625f, SegHeight = 16.875f;
-    // DECISIONS 12-C: STG-01/02/04 segments are 1.5x wide (2430 px). The 1620 px background is tiled pixel-exact (BuildWideBackground).
+    // DECISIONS 12-C: STG-01/02/04 segments are 1.5x wide (2430 px).
     public const float WideWidth = SegWidth * 1.5f; // 75.9375
     public static readonly Color GroundColor = new Color32(0x4A, 0x40, 0x38, 0xFF);
     public static readonly Color OneWayColor = new Color32(0x7A, 0x6A, 0x55, 0xFF);
@@ -109,14 +109,6 @@ public static class StageBuildKit
             r[i] = Ledge($"{id}-{i + 1}", seg, left ? x1 : mid, left ? mid : x2, y0 + i * dy);
         }
         return r;
-    }
-
-    // Plain sky above a background image that is shorter than the segment (no new art: the image's top-row sky colour).
-    // Order -101 = behind the image, so the image's own sky edge stays on top.
-    public static void BuildSkyFill(Transform root, float width, float fromY, float toY, Color sky)
-    {
-        if (toY <= fromY) return;
-        AddSquare(root, "Background (sky fill)", new Vector2(width * 0.5f, (fromY + toY) * 0.5f), new Vector2(width + 2f, toY - fromY), sky, -101);
     }
 
     // Breakable spawner (EnemySpawner, DECISIONS 15) at a segment-local point (y = feet). watched = the enemies it brings back;
@@ -385,38 +377,9 @@ public static class StageBuildKit
         t.GetComponentInParent<PlayerController>(true) != null || t.GetComponentInParent<TestEnemy>(true) != null ||
         t.GetComponentInParent<OpeningCitizen>(true) != null || t.GetComponentInParent<DraftIdleAnim>(true) != null;
 
-    // Lamp / sign spill light painted over a background image (LIGHTING_DESIGN 3.1): px = pixel from the image's top-left.
-    // No neon sprite yet (Codex neon PNGs + neon_list.csv not made): light only, driven by LightingController like a NeonSign.
-    public struct Lamp
-    {
-        public float px, py, radius, flicker; public Color color;
-        public Lamp(float px, float py, Color color, float radius, float flicker = 0f) { this.px = px; this.py = py; this.color = color; this.radius = radius; this.flicker = flicker; }
-    }
     public static readonly Color LampWarm = new Color32(0xD9, 0xA6, 0x4A, 0xFF);  // lantern / gold sign (desaturated, LIGHTING Q1)
     public static readonly Color LampRed = new Color32(0xE0, 0x60, 0x4A, 0xFF);   // dancheong vermilion sign
     public static readonly Color LampTeal = new Color32(0x3A, 0xA8, 0x95, 0xFF);  // dancheong teal sign / screens
-
-    // Places each lamp on every background image under root (a wide segment draws the image twice, once mirrored) whose
-    // world x falls inside [root.x, root.x + width]. Background sprites have a bottom-left pivot (BackgroundImporter).
-    public static void AddLamps(Transform root, float width, params Lamp[] lamps)
-    {
-        var parent = new GameObject("Lamps (light only)").transform;
-        parent.SetParent(root, false);
-        float xMin = root.position.x, xMax = xMin + width;
-        foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>(true))
-        {
-            if (!sr.name.StartsWith("Background") || sr.sprite == null || sr.sprite == Square) continue; // solid fallback: no art to match
-            float ppu = sr.sprite.pixelsPerUnit, h = sr.sprite.rect.height;
-            foreach (var l in lamps)
-            {
-                Vector3 p = sr.transform.TransformPoint(new Vector3(l.px / ppu, (h - l.py) / ppu, 0f));
-                if (p.x < xMin || p.x > xMax) continue;
-                var n = LightingSetup.BuildNeon("Lamp", parent, p, null, l.color, l.radius, l.flicker, 0, "World");
-                // Unlike LIGHTING_DESIGN 3.1 (World + Characters): here the lit street / room IS the background image, so light it too.
-                n.GetComponentInChildren<Light2D>().targetSortingLayers = new[] { SortingLayer.NameToID("Background"), SortingLayer.NameToID("World"), SortingLayer.NameToID("Characters") };
-            }
-        }
-    }
 
     public static Rect SegRect(float worldX, float width = SegWidth, float height = SegHeight) => new Rect(worldX, 0f, width, height);
 
@@ -526,58 +489,6 @@ public static class StageBuildKit
         if (HasProp(board, "zoneX")) SetVector2(board, "zoneX", zoneX);
         else Todo.Add($"{id}: set BroadcastBoard.zoneX = ({zoneX.x}, {zoneX.y}) (field missing; arrives with the enemy-rules branch)");
         return board;
-    }
-
-    // Square scaled to cover the segment (bottom-left at the root).
-    public static void BuildSolidBackground(Transform root, float width, float height, Color color)
-    {
-        AddSquare(root, "Background (PLACEHOLDER solid)", new Vector2(width * 0.5f, height * 0.5f), new Vector2(width, height), color, -100);
-    }
-
-    // Final background art (Assets/Art/Backgrounds, 1 px = 1/32 u, so it is not scaled); falls back to the solid colour when the image is missing.
-    public static void BuildImageBackground(Transform root, string assetPath, float width, float height, Color fallback)
-    {
-        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
-        if (sprite == null)
-        {
-            Todo.Add("Background image missing (" + assetPath + "): solid colour used");
-            BuildSolidBackground(root, width, height, fallback);
-            return;
-        }
-        if (width > sprite.bounds.size.x + 0.01f) BuildWideBackground(root, sprite, width);
-        else BuildSpriteBackground(root, sprite, width);
-    }
-
-    // Segment wider than the image (DECISIONS 12-C), native scale only (never a non-integer stretch):
-    // the image is right-aligned so its right edge (gate / door art) ends the segment, and the strip to its left is a mirrored copy
-    // (scale.x -1 around the shared edge = pixel-continuous seam). The mirrored copy also reaches left of the segment origin
-    // (off-camera), so segments must be at least 2 * imageWidth (101.25u) apart or the copies overlap (Stg01/02/04 put SEG-B at x 110).
-    public static void BuildWideBackground(Transform root, Sprite sprite, float width)
-    {
-        float w = sprite.bounds.size.x, off = width - w;
-        if (off > w) Todo.Add($"Background {sprite.name}: segment {width}u is wider than 2 images ({2f * w}u), right part left empty");
-        for (int i = 0; i < 2; i++)
-        {
-            var go = new GameObject(i == 0 ? "Background (image)" : "Background (mirrored fill)");
-            go.transform.SetParent(root, false);
-            go.transform.localPosition = new Vector3(off, 0f, 0f); // bottom-left pivot: normal copy spans [off, width], mirrored [off - w, off]
-            go.transform.localScale = new Vector3(i == 0 ? 1f : -1f, 1f, 1f);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
-            sr.sortingOrder = -100;
-        }
-    }
-
-    // Image background placed bottom-left (the sprite's pivot is BottomLeft), scaled to the segment width.
-    public static void BuildSpriteBackground(Transform root, Sprite sprite, float width)
-    {
-        var go = new GameObject("Background (PLACEHOLDER concept image)");
-        go.transform.SetParent(root, false);
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.sortingOrder = -100;
-        float k = width / sprite.bounds.size.x;
-        go.transform.localScale = new Vector3(k, k, 1f);
     }
 
     static TMP_FontAsset LoadFont()

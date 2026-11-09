@@ -967,7 +967,8 @@ public class PlayerController : MonoBehaviour
     // DraftSprites: one hero frame per state (walk strip is the fallback when another strip is missing). Art faces right; flipX handles left.
     Sprite DraftFrame(float now)
     {
-        int t = Mathf.FloorToInt((now - stateEnteredAt) / (state == State.Dash ? dashEndsAfter / 2f : attackDuration / 3f));
+        // Strips have 2x frames (attack 5f / dash 3f, keys at 0/2/4 and 0/2): index = old third (half) * 2, so the strike key shows at the same moment as before.
+        int t = Mathf.FloorToInt((now - stateEnteredAt) / (state == State.Dash ? dashEndsAfter / 2f : attackDuration / 3f) * 2f);
         switch (state)
         {
             case State.Attack: return DraftSprites.Pick(DraftSprites.HeroAttack, t, DraftSprites.Hero);
@@ -977,13 +978,17 @@ public class PlayerController : MonoBehaviour
             case State.Hurt:
             case State.Dead: return DraftSprites.Pick(DraftSprites.HeroHurt, 0, DraftSprites.Hero);
         }
-        if (!grounded) return DraftSprites.Pick(DraftSprites.HeroJump, rb.linearVelocity.y > 0.1f ? 0 : 1, DraftSprites.Hero);
+        if (!grounded)
+        {
+            float vy = rb.linearVelocity.y; // jump strip: 0 rise, 1 rise->apex, 2 apex->fall, 3 fall
+            return DraftSprites.Pick(DraftSprites.HeroJump, vy > 2f ? 0 : vy > 0.1f ? 1 : vy > -2f ? 2 : 3, DraftSprites.Hero);
+        }
         if (Mathf.Abs(rb.linearVelocity.x) > 0.1f)
         {
             Sprite[] run = DraftSprites.HeroRun ?? DraftSprites.Hero; // DECISIONS 15: normal movement shows the run cycle (walk = fallback)
             return run[Mathf.FloorToInt(now * (run == DraftSprites.Hero ? DraftSprites.WalkFps : DraftSprites.RunFps)) % run.Length];
         }
-        return DraftSprites.Pick(DraftSprites.HeroIdle, Mathf.FloorToInt(now * DraftSprites.IdleFps) % 2, DraftSprites.Hero);
+        return DraftSprites.Pick(DraftSprites.HeroIdle, Mathf.FloorToInt(now * DraftSprites.IdleFps) % (DraftSprites.HeroIdle?.Length ?? 1), DraftSprites.Hero);
     }
 
     void OnDrawGizmosSelected()

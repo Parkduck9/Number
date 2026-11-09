@@ -47,6 +47,67 @@ Flat colors, hard pixel-art-friendly edges, no text, no logo.
 
 ---
 
+## A. 타이틀 키아트 (= itch 표지·로딩 화면 배경) — 우선
+- **저장:** `docs/design/concept/keyart/title_keyart_gemini.png` (16:9, 가능한 한 크게)
+- **첨부할 참고:** `portraits/yudo_gemini.png`, `portraits/broadcast_gemini.png`, STG-01 배경 원본(`bg_layers/stg01_bg_far_gemini.png`)
+- **게임 쪽:** Codex가 ① 타이틀 배경(960×540 픽셀), ② itch 표지 630×500, ③ WebGL 로딩 화면 배경으로 자름. **로고 글자 "NUMBER"는 Gemini에 넣지 않고** Codex가 픽셀 폰트로 따로 만든다 (AI 글자는 깨지기 쉬움).
+
+```
+Wide 16:9 key art for a pixel-art action game, no text at all.
+Night view of a Joseon-dynasty cyberpunk city: layered giwa rooftops, paper lanterns, cyan and magenta neon,
+and one gigantic broadcast screen in the sky showing a single huge glowing magenta digit "0" made of thick pixel blocks.
+In the foreground, the protagonist (see reference) stands on a rooftop ridge seen from behind and slightly to the side,
+coat and hair moving in the wind, holding his blade low, looking up at the screen.
+Leave the upper-left third fairly calm and dark (space for a logo). Strong silhouette, limited palette
+(deep indigo, navy, cyan, magenta, a few amber lanterns), flat colors, hard pixel-art-friendly edges, no soft gradients, no text, no watermark.
+```
+
+---
+
+## B. 정지 버튼 (엔딩 직전 소품)
+- **저장:** `docs/design/concept/props/stop_button_gemini.png`
+- **게임 쪽:** Codex가 월드 소품(약 64×64)과 근접 화면용 큰 버전으로 변환. 지금은 글자 "[E] STOP BUTTON"뿐.
+
+```
+Pixel-art friendly prop design, front view and three-quarter view: the AI company's emergency STOP button
+in a Joseon cyberpunk palace server room. A big red mushroom push button under a raised hinged glass cover,
+set into a carved dark-wood and brass pedestal with dancheong patterns, cables running into the floor,
+a small cyan status light. Flat colors, hard edges, limited palette (red, brass, dark wood, cyan accent).
+Plain solid dark navy background (#0B1026), no text, no logo.
+```
+
+---
+
+## C. 체크포인트 = 러다이트 표식
+- **저장:** `docs/design/concept/props/checkpoint_mark_gemini.png`
+- **게임 쪽:** Codex가 꺼짐(회색)·켜짐(금색) 2상태 소품(약 32×64)으로 변환. 지금은 색만 바뀌는 네모.
+
+```
+Pixel-art friendly prop design, front view: a small hidden shrine-post used as a secret sign by the Luddite resistance
+in a Joseon cyberpunk city. A short wooden jangseung-like post wrapped in rope and paper talismans, with a hand-carved
+gear symbol (no electronics, no screens) and a small oil lamp on top. Show two versions side by side: unlit (grey, cold)
+and lit (warm gold lamp glow). Flat colors, hard edges, limited palette. Plain solid dark navy background (#0B1026), no text.
+```
+
+---
+
+## 0. 러다이트 게임 스프라이트 다시 (우선)
+- **저장:** `docs/design/concept/npc/luddite_full_gemini.png`
+- **첨부할 참고:** `docs/design/concept/portraits/luddite_gemini.png` (얼굴·옷·색을 이것과 똑같이), 주인공 스프라이트 만들 때 쓴 정면 레퍼런스 사진
+- **게임 쪽:** Codex가 64×64 대기 4프레임(`luddite_npc_idle_4f`)으로 변환, 주인공·적과 같은 크기·외곽선·팔레트
+
+```
+Full-body character design sheet of the same old man as the attached portrait: front-facing standing pose, plus a three-quarter view.
+Elderly leader of the Luddite resistance in a Joseon-dynasty cyberpunk city: grey hair in a sangtu topknot with a small metal topknot cap,
+grey goatee, calm stern face, white hanbok jeogori under a worn brown leather vest, dark baji trousers, straw-and-metal shoes.
+His right arm is a crude hand-made mechanical prosthetic (riveted steel plates, exposed gears, no screens, no glowing AI parts),
+with only a thin cyan rim light on one side like the portrait. Slightly stooped but strong, hands relaxed at his sides.
+Pixel-art friendly design: clear silhouette, flat colors, limited palette matching the portrait (greys, skin, brown, off-white, small cyan accent),
+hard edges, no soft gradients. Plain solid dark navy background (#0B1026), no text, no logo, no extra characters.
+```
+
+---
+
 ## 3. STG-01 SEG-B 배경 (층 분리)
 - **저장:** `docs/design/concept/bg_layers/stg01B_far_gemini.png`, `stg01B_mid_gemini.png` (가로 3:1)
 - **첨부할 참고:** `docs/design/concept/bg_layers/` 안의 SEG-A 원본(`stg01_bg_far_gemini.png`, `stg01_bg_mid_gemini.png`) — 같은 화풍·같은 밤이어야 한다

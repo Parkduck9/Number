@@ -15,10 +15,9 @@ public static class Stg04Builder
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C)
     const float H = SegHeight * 1.5f; // 25.3125: 1.5 screens, the camera follows y inside the segment
 
-    // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
+    // Segments at world x 0 and 110.
     static readonly float[] SegX = { 0f, 110f };
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
-
 
     // Colliders (all drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
     static readonly Box[] Boxes = new[]

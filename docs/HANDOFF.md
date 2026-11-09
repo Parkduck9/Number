@@ -1,4 +1,4 @@
-# 인수인계 — 다른 컴퓨터에서 이어 하기 (2026-11-09 갱신)
+# 인수인계 — 다른 컴퓨터에서 이어 하기 (2026-11-10 갱신)
 
 > 이 파일 하나만 읽으면 다른 PC에서 바로 이어 할 수 있게 정리했다.
 > Claude에게 시작할 때: **"docs/HANDOFF.md 읽고 이어서 하자"** 라고 말하면 된다.
@@ -23,7 +23,9 @@
 
 ### Claude 작업 규칙 (이전 PC 로컬 기억 → 여기 옮김)
 - **Fable = 검수 전용** (11/08 밤부터). 구현은 **Opus**가 파일이 겹치지 않게 나눠 맡고(병렬 가능), 단순 작업·문서는 Sonnet. CLAUDE.md 맨 위 줄에도 있음.
+- **11/09 오후 변경:** Fable 사용량이 얼마 안 남았다. **중요한 코드·시각 검수만** Fable. 중요하지 않은 코드(스프라이트·머티리얼 연결, 작은 수정, 문서)는 **Sonnet 구현 → Opus 검수**.
 - 흐름: Opus 구현(여러 명) → **Fable 검수** → 커밋·푸시.
+- **Codex는 크레딧이 가끔 바닥난다.** 실패하면 사용자가 충전한 뒤 재시도.
 - **사용자에게는 한국어**, AI끼리(서브에이전트 프롬프트·세션 메시지)는 **영어**.
 - 보이는 에셋은 **시안 먼저 → 사용자 확인 → 본작업**. AI 생성은 CREDITS.md에 기록.
 - 사용자가 열어 둔 에디터는 건드리지 않는다. **에디터가 꺼져 있으면** Claude가 배치 모드로 씬을 직접 만든다:
@@ -33,7 +35,7 @@
 
 ---
 
-## 2. 지금 main에 있는 것 (커밋 `7f1d37b` 이후)
+## 2. 지금 main에 있는 것 (커밋 `bbc94bc` 기준)
 
 **게임 흐름:** Title → STG-00(오프닝) → STG-01~04 → STG-05(보스 3웨이브) → 정지 버튼 엔딩 2개. 씬은 전부 **빌더가 생성** — 메뉴 **`NUMBER/Build EVERYTHING (Title + STG-00~05)`** 하나로 전부 다시 만든다. `.unity`를 손으로 고치지 않는다.
 
@@ -54,6 +56,10 @@
 | 벌레 점 떼 15Hz 갱신(렉 완화), 카메라 펀치 줌, 부활 0.55초 | — | bug-swarm.md, juice.md |
 | 오디오(효과음 12·BGM 2), 조작 힌트, 속도감 FX, Space 충격파 설명 | — | audio.md, upgrade.md |
 | **F3** = FPS·프레임 시간 표시 (에디터·개발 빌드만) | — | Core/FrameStats.cs |
+| **GUI 움직임 (0fecfe2):** 메뉴 버튼 반짝임·눌림·순차 등장(UiKit ButtonHighlight), 일시정지 팝인, **Shift 쿨타임 원형 HUD**(왼쪽 아래, UI/ShiftCooldownHud.cs), 방송 숫자 글리치·스크램블, 얼굴 HUD 흔들림·번쩍, 조작 힌트 토스트 | — | — |
+| **pixelfx 순간 이펙트 9개 연결 (Combat/MomentFx.cs):** 착지 먼지·갈고리 적중·스포너 파괴·적 워프인·저격 총구·체크포인트·플레이어 글리치 사망(사망 시 몸 숨김)·해킹 펄스·골 열림 루프 | — | — |
+| **STG-02~05 배경 재작성 (bbc94bc):** Codex 부품(`Assets/Art/Backgrounds/STG02_05_Parts`) + `Editor/PartsBackdropKit.cs`, 가로등 글로우 재추가. FX 시트 8개 Codex 복구(원본은 `D:\Git\pixelfx`). 주인공 대기·걷기 수정 + 새 `hero_grapple_1f`. 씬 재생성 | — | — |
+| QA 3차 수정(e5c301b, c0b9afa): 인게임 힌트에 갈고리, 우클릭 버퍼, 조준선 비할당 체크, 무릎 벽 매달림 수정(마찰 0 재질), WebGL 빌드 13.8MB 확인, CREDITS·AI 공개 점검 | — | docs/qa/ |
 
 ---
 
@@ -64,20 +70,23 @@
    - 볼 것: 세로 맵 동선, 갈고리 줄 손맛, 저격수·안드로이드 막기, 스포너·전멸 클리어, 층 분리 배경, 좌클릭 돌진·패링, 렉(F3).
 2. **팀원 이름·역할·만 19세 이상 확인 (D9)** — CREDITS.md Team, SUBMISSION_PAGE.md. **없으면 제출 불가.** 기한 11/13 정오.
 3. **대사 확인** — [design/DIALOGUE_DRAFT.md](design/DIALOGUE_DRAFT.md) (안 고치면 초안 그대로)
-4. **WebGL 브라우저 확인** — 지금 Claude가 하는 중. 결과를 받으면 보기.
-5. STG-01 SEG-B 배경: 17의 층 분리 방식이 SEG-A·STG-00만 다룬다. SEG-B는 아직 배경이 없으니 같은 방식으로 갈지 정하기.
-6. 이전 PC의 `Number/` 폴더, `Unity Game Jam.txt`는 쓰레기 — 새 PC엔 없다.
+4. **Gemini 원본 요청** — [design/concept/GEMINI_REQUESTS.md](design/concept/GEMINI_REQUESTS.md): **#0 러다이트 게임 스프라이트(다시, 최우선)**, #1 저격수 스프라이트, #2 엔딩 일러스트 2장, #3 STG-01 SEG-B 층 분리 배경.
+5. **부드러운 애니메이션 시안 확인** — `docs/design/concept/anim_v2`(주인공 idle4/walk6/attack5/jump4/dash3, 적 walk4/attack5, 15장). Fable 검수 → Codex 수정 후 사용자 승인 대기.
+6. **WebGL 브라우저 확인** — 애니메이션 연결 뒤 다시 빌드해서 Claude가 확인.
+7. 미추적 쓰레기(`Number/`, `Unity Game Jam.txt`, 옛 콘셉트 샘플)는 그대로 둔다.
 
 ### 🤖 Claude (Opus 구현 → Fable 검수)
 | 할 일 | 메모 |
 |---|---|
 | 플레이 피드백 반영 | 가장 먼저 |
-| **QA 3차** | 진행 중 ([qa/SUMMARY-R2.md](qa/SUMMARY-R2.md) 다음) |
-| **CREDITS·AI 공개 점검** | 진행 중 |
-| **STG-02~05 배경 자르기·루프** | Gemini 원본 4묶음(먼 배경·건물·소품·실내)은 들어옴. Codex 지시서도 있음. Codex가 지금 안 돼서 대기 |
-| pixelfx 순간 이펙트 시안 9개 연결 | 만들어만 놨고 안 붙임 |
-| 주인공 대기 1·2프레임 방향 차이, 걷기 3번째 프레임 소매 패치 | 거슬리면 Codex로 수정 |
+| **애니메이션 v2 연결** | 시안 15장 Fable 검수 → 어색한 것 Codex 재작업 → 사용자 승인 → 연결. 코드: `DraftSprites` 이름·프레임 수, WalkFps 8→16, IdleFps 2→4, 타격 타이밍 유지 |
+| **배경 띠 3장 재포장** | 4096px 넘는 배경 스트립 3개를 WebGL용으로 다시 자르기 (진행 중) |
+| **WebGL 재빌드 + 브라우저 확인** | 위 둘 뒤에 |
+| STG-02·04 구간 끝 ~30u 거리 소품 없음 | 채우기 |
+| 엔딩 대사 | 아직 자리표시. Gemini 일러스트(#2) 후 연결 |
 | 대사 넣기, 이펙트 미세 조정 | 사용자 확인 후 |
+
+*끝난 것(11/09~10): QA 3차, CREDITS·AI 공개 점검, STG-02~05 배경 자르기, pixelfx 순간 이펙트 9개 연결, 주인공 대기·걷기 패치.*
 
 ### 기능 동결 이후 (11/12~)
 최종 WebGL 빌드 → itch.io 업로드(사용자) → CREDITS·AI 공개 최종 → 제출 체크리스트([qa/SUBMISSION_CHECKLIST.md](qa/SUBMISSION_CHECKLIST.md)).
@@ -88,7 +97,7 @@
 - 패링 판정(0.3초·탄 0.25초)이 손에 맞는지 (플레이 후)
 - 적 돌진 중에는 좌클릭 패링이 안 된다 → 돌진 처치나 Shift로 대응. 괜찮은지
 - 세로 맵 + 갈고리 줄로 이동이 충분히 시원한지, 카메라를 더 뺄지
-- STG-02~05 배경을 STG-01처럼 층 분리·움직임까지 갈지, 정지 배경으로 끝낼지 (시간 대비)
+- (STG-02~05 배경은 부품 방식으로 정리됨. STG-01 SEG-B만 Gemini #3 대기)
 ## 5. 작업 규칙 요약 (자세히는 AGENTS.md · CLAUDE.md)
 - 커밋 머리말 `[code]` `[review]` `[asset]` `[qa]` `[docs]`.
 - Unity 배치 모드는 에디터가 꺼져 있을 때만, 한 번에 하나만.

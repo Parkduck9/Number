@@ -665,7 +665,13 @@ public class TestEnemy : MonoBehaviour
             return draftWalk[FlapFrame()]; // flyer: flap loop except while shooting (charge / fire / recover)
         if (state == State.Approach && draftWalk != null)
             return draftWalk[Mathf.Abs(rb.linearVelocity.x) > 0.1f ? Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length : 0];
-        return draftFrames[state == State.Windup || state == State.Special || state == State.RushWindup ? 0 : state == State.Strike ? 1 : 2];
+        // 5-frame attack strips: keys 0 windup / 2 strike / 4 recover, 1 = last 0.1 s of the windup, 3 = first half of the recover.
+        if (draftFrames.Length < 5) return draftFrames[state == State.Windup || state == State.Special || state == State.RushWindup ? 0 : state == State.Strike ? 1 : 2];
+        float el = Time.time - stateEnteredAt;
+        if (state == State.Windup) return draftFrames[WindupWait() - el <= 0.1f ? 1 : 0];
+        if (state == State.Special || state == State.RushWindup) return draftFrames[0];
+        if (state == State.Strike) return draftFrames[2];
+        return draftFrames[state == State.Recover && el < recoverTime * TimeMul * 0.5f ? 3 : 4];
     }
 
     int FlapFrame() => Mathf.FloorToInt(Time.time * DraftSprites.WalkFps) % draftWalk.Length;
