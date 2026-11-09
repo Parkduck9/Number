@@ -8,7 +8,7 @@ public class PlayerInputReader : MonoBehaviour
     [SerializeField] InputActionAsset asset;
 
     InputActionMap map;
-    InputAction move, jump, attack, dash, shockwave; // right mouse button: intentionally unbound (DECISIONS 15)
+    InputAction move, jump, attack, dash, shockwave, grapple; // right mouse button = grapple rope (DECISIONS 16)
 
     public float MoveX { get; private set; }
     public bool JumpPressed { get; private set; }
@@ -16,6 +16,7 @@ public class PlayerInputReader : MonoBehaviour
     public bool AttackPressed { get; private set; }
     public bool DashPressed { get; private set; }
     public bool ShockwavePressed { get; private set; }
+    public bool GrapplePressed { get; private set; }
 
     void Awake()
     {
@@ -26,17 +27,18 @@ public class PlayerInputReader : MonoBehaviour
         dash = map.FindAction("Dash", true);
         shockwave = new InputAction("Shockwave", InputActionType.Button, "<Keyboard>/space");
         shockwave.AddBinding("<Gamepad>/buttonEast");
+        grapple = new InputAction("Grapple", InputActionType.Button, "<Mouse>/rightButton");
     }
 
-    void OnEnable() { map.Enable(); shockwave.Enable(); }
-    void OnDisable() { map.Disable(); shockwave.Disable(); }
+    void OnEnable() { map.Enable(); shockwave.Enable(); grapple.Enable(); }
+    void OnDisable() { map.Disable(); shockwave.Disable(); grapple.Disable(); }
 
     void Update()
     {
         if (GameFlow.InputLocked) // blocking dialogue: no input
         {
             MoveX = 0f;
-            JumpPressed = JumpHeld = AttackPressed = DashPressed = ShockwavePressed = false;
+            JumpPressed = JumpHeld = AttackPressed = DashPressed = ShockwavePressed = GrapplePressed = false;
             return;
         }
         MoveX = move.ReadValue<Vector2>().x;
@@ -45,5 +47,6 @@ public class PlayerInputReader : MonoBehaviour
         AttackPressed = attack.WasPressedThisFrame();
         DashPressed = dash.WasPressedThisFrame();
         ShockwavePressed = shockwave.WasPressedThisFrame();
+        GrapplePressed = grapple.WasPressedThisFrame();
     }
 }

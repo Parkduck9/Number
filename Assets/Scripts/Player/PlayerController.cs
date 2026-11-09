@@ -5,7 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(PlayerInputReader), typeof(PlayerHealth))]
 public class PlayerController : MonoBehaviour
 {
-    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead }
+    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Grapple } // Grapple: RMB rope pull (DECISIONS 16)
 
     [Header("Masks")]
     [SerializeField] LayerMask groundMask;
@@ -102,6 +102,16 @@ public class PlayerController : MonoBehaviour
     Collider2D dashTargetCol;
     Vector2 dashVelocity;               // Shift dash velocity (horizontal, plus a small vertical step onto the target's ground level)
     bool pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
+    // DECISIONS 16 RMB grapple rope (DashRules.Grapple*)
+    GrappleRope rope;
+    Vector2 grappleAnchor;
+    bool grappleCeiling;      // anchor on a ceiling (hit normal down): no upward pop into it
+    bool grappleAttached;     // the rope reached the anchor (after GrappleExtendTime): pulling
+    bool grappleUsed;         // spent this airtime; refilled on landing
+    float grappleReadyAt;     // miss cooldown
+    float grappleCarryUntil;  // after release: horizontal momentum eases into air control
+    bool pendingGrapple;      // pressed during a hit-stop
+    readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
@@ -120,6 +130,7 @@ public class PlayerController : MonoBehaviour
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
     bool DashPressed => input.DashPressed || pendingDash;
+    public Vector2 HandPosition => (Vector2)transform.position + new Vector2(Facing * 0.35f, 0.25f); // GrappleRope start
 
     void Awake()
     {
@@ -134,9 +145,10 @@ public class PlayerController : MonoBehaviour
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
         MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like Shockwave)
+        rope = GrappleRope.Create(this); // DECISIONS 16
     }
 
-    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); }
+    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); if (rope != null) rope.Hide(); }
 
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
     bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
@@ -166,7 +178,7 @@ public class PlayerController : MonoBehaviour
         }
         if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
         {
-            pendingDash = false;
+            pendingDash = pendingGrapple = false;
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
@@ -175,9 +187,12 @@ public class PlayerController : MonoBehaviour
             jumpBufferedUntil += dt;
             attackBufferedUntil += dt;
             lastGroundedAt += dt;
+            grappleReadyAt += dt;
+            grappleCarryUntil += dt;
             health.ShiftInvulnerability(dt);
             if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
             EndLunge(); // same for a lunge (gravity back, velocity zeroed)
+            if (state == State.Grapple) { EnterState(State.Locomotion); rb.linearVelocity = Vector2.zero; } // and for the rope (no hanging in dialogue / blackout)
             UpdateVisual(Time.time);
             return;
         }
@@ -195,6 +210,7 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < hitCount && !grounded; i++) // a platform a down-lunge is still passing through is not ground
             grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f) && !passedPlatforms.Contains(groundHits[i]);
         if (grounded && rb.linearVelocity.y <= 0.1f) lastGroundedAt = now;
+        if (grounded && rb.linearVelocity.y <= 0.1f && state != State.Grapple) grappleUsed = false; // one rope per airtime (a rope fired from the ground is still this airtime's)
 
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
         if (input.AttackPressed && state != State.Locomotion && state != State.Hurt && state != State.Dead)
@@ -226,9 +242,10 @@ public class PlayerController : MonoBehaviour
             case State.Hurt:
                 if (elapsed >= hurtDuration) EnterState(health.IsDead ? State.Dead : State.Locomotion);
                 break;
+            case State.Grapple: UpdateGrapple(now, elapsed); break;
         }
 
-        pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
+        pendingDash = pendingGrapple = false; // replayed (or ignored by the current state, like a live press) this frame
         if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
         UpdateSpeedFx(now);
         UpdateVisual(now);
@@ -240,6 +257,7 @@ public class PlayerController : MonoBehaviour
         if (input.JumpPressed) jumpBufferedUntil = Time.time + jumpBuffer;
         if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
         pendingDash |= input.DashPressed;
+        pendingGrapple |= input.GrapplePressed;
     }
 
     // When the current Attack/Parry/Dash ends by itself (now for any other state).
@@ -259,6 +277,7 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
         if (TryDash(now)) return;
+        if (TryGrapple(now)) return;
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
             // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
@@ -306,6 +325,7 @@ public class PlayerController : MonoBehaviour
     void EnterState(State next)
     {
         EndLunge();                     // any state change ends a lunge (dash cancel, hurt, death)
+        if (state == State.Grapple && rope != null) rope.Hide(); // ...and an attached rope (release, hurt, dialogue)
         state = next;
         stateEnteredAt = Time.time;
         rb.gravityScale = gravityScale; // always restore (Dash / lunge zero it)
@@ -331,6 +351,7 @@ public class PlayerController : MonoBehaviour
                 break;
             case State.Dash:
                 rb.gravityScale = 0f;
+                grappleCarryUntil = 0f; // a dash out of the rope ends like any dash
                 DashStart = rb.position;
                 dashBehindActive = TryPlanDashBehind(out Vector2 behindOffset);
                 if (dashBehindActive)
@@ -351,6 +372,11 @@ public class PlayerController : MonoBehaviour
             case State.Dead:
                 rb.linearVelocity = Vector2.zero; // FixedUpdate does not write velocity in Dead, so the corpse stays put
                 break;
+            case State.Grapple:
+                rb.gravityScale = 0f;
+                rb.linearVelocity = Vector2.zero; // hangs still while the rope flies out, then the pull (FixedUpdate)
+                grappleAttached = false;
+                break;
         }
     }
 
@@ -359,7 +385,15 @@ public class PlayerController : MonoBehaviour
         switch (state)
         {
             case State.Locomotion:
-                rb.linearVelocity = new Vector2(input.MoveX * moveSpeed, rb.linearVelocity.y);
+                float vx = input.MoveX * moveSpeed;
+                if (Time.time < grappleCarryUntil && !grounded) // rope release: keep the swing, blend into air control
+                    vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, DashRules.GrappleAirAccel * Time.fixedDeltaTime);
+                rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
+                break;
+            case State.Grapple:
+                if (!grappleAttached) { rb.linearVelocity = Vector2.zero; break; }
+                Vector2 toAnchor = grappleAnchor - rb.position;
+                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * DashRules.GrapplePullSpeed : Vector2.zero; // full speed to the end (release keeps it)
                 break;
             case State.Dash:
                 rb.linearVelocity = dashVelocity;
@@ -554,6 +588,93 @@ public class PlayerController : MonoBehaviour
         lunging = false;
         rb.gravityScale = gravityScale;
         rb.linearVelocity = Vector2.zero;
+    }
+
+    // DECISIONS 16: RMB fires the rope at the mouse. Hit (ground / wall / ceiling / one-way platform within GrappleRange) -> Grapple state;
+    // miss -> the rope shoots out and snaps back, short cooldown. One attached rope per airtime.
+    bool TryGrapple(float now)
+    {
+        if (!(input.GrapplePressed || pendingGrapple) || now < grappleReadyAt || grappleUsed) return false;
+        Vector2 hand = HandPosition;
+        Vector2 aim = MouseCrosshair.MouseWorld(out Vector2 mouse) ? mouse - hand : new Vector2(Facing, 0f);
+        aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);
+        int face = Mathf.Abs(aim.x) > 0.01f ? (aim.x > 0f ? 1 : -1) : Facing; // applied on a hit only (Facing is the parry front)
+        hand = (Vector2)transform.position + new Vector2(face * 0.35f, 0.25f);
+        RaycastHit2D best = default;
+        int n = Physics2D.Raycast(hand, aim, groundFilter, grappleHits, DashRules.GrappleRange); // groundFilter: groundMask, set every Update
+        for (int i = 0; i < n; i++) // skip a collider the hand starts inside (rising through a one-way platform)
+            if (grappleHits[i].distance > 0.01f && (best.collider == null || grappleHits[i].distance < best.distance)) best = grappleHits[i];
+        if (best.collider == null)
+        {
+            rope.Shoot(hand + aim * DashRules.GrappleRange, false);
+            grappleReadyAt = now + DashRules.GrappleMissCooldown;
+            Sfx.Play(SfxId.Swing, 0.5f);
+            return false; // a miss does not interrupt movement
+        }
+        Facing = face;
+        grappleAnchor = best.point;
+        grappleCeiling = best.normal.y < -0.7f;
+        // A wall just below a ledge top: anchor on the corner instead, so the pull ends level with the top and the pop lands on it.
+        if (Mathf.Abs(best.normal.x) > 0.7f)
+        {
+            Vector2 probe = best.point - best.normal * 0.1f + Vector2.up * DashRules.GrappleLedgeSnap;
+            RaycastHit2D top = Physics2D.Raycast(probe, Vector2.down, DashRules.GrappleLedgeSnap, groundMask);
+            if (top.collider != null && top.distance > 0.01f && top.normal.y > 0.7f) grappleAnchor = new Vector2(best.point.x, top.point.y + 0.1f);
+        }
+        grappleUsed = true;
+        EnterState(State.Grapple);
+        rope.Shoot(grappleAnchor, true);
+        Sfx.Play(SfxId.Dash);
+        return true;
+    }
+
+    void UpdateGrapple(float now, float elapsed)
+    {
+        // Jump = early release + a normal jump. LMB / Shift = release into that action (UpdateLocomotion runs it this frame).
+        if (input.JumpPressed && grappleAttached) // a live press while pulling (not during the extend: no free air jump)
+        {
+            ReleaseGrapple(false);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, jumpSpeed));
+            jumpBufferedUntil = -999f;
+            jumpCut = false;
+            return;
+        }
+        if (input.AttackPressed || now <= attackBufferedUntil || (DashPressed && now >= dashCooldownUntil))
+        {
+            ReleaseGrapple(false);
+            UpdateLocomotion(now);
+            return;
+        }
+        if (!grappleAttached)
+        {
+            if (elapsed < DashRules.GrappleExtendTime) return;
+            grappleAttached = true; // rope reached the anchor: spark there, start pulling
+            PlayHitSpark(grappleAnchor, Mathf.Sign(grappleAnchor.x - rb.position.x));
+            Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
+            return;
+        }
+        SpawnAfterimage(now);
+        Vector2 toAnchor = grappleAnchor - rb.position;
+        float dist = toAnchor.magnitude;
+        float pulled = elapsed - DashRules.GrappleExtendTime;
+        float wanted = DashRules.GrapplePullSpeed;
+        bool blocked = pulled > 2f * Time.fixedDeltaTime && dist > 0.001f &&
+            Vector2.Dot(rb.linearVelocity, toAnchor / dist) < 0.25f * wanted; // stuck on a corner / ceiling: let go
+        if (dist <= DashRules.GrappleReleaseDist + DashRules.GrapplePullSpeed * Time.fixedDeltaTime || blocked || pulled >= DashRules.GrappleMaxPull)
+            ReleaseGrapple(!(blocked && grappleCeiling)); // stuck under a ceiling: no pop into it
+    }
+
+    // Back to Locomotion keeping the pull velocity. pop: anchor above -> at least GrapplePopFrac of a jump upward (slingshot onto the ledge).
+    void ReleaseGrapple(bool pop)
+    {
+        Vector2 v = grappleAttached ? rb.linearVelocity : Vector2.zero;
+        bool above = grappleAnchor.y > rb.position.y + 0.1f;
+        EnterState(State.Locomotion);
+        if (pop && above) v.y = Mathf.Max(v.y, DashRules.GrapplePopFrac * jumpSpeed);
+        rb.linearVelocity = v;
+        jumpCut = true; // the pop is not a held jump: releasing W must not halve it
+        grappleCarryUntil = Time.time + DashRules.GrappleCarryTime;
+        grappleReadyAt = Time.time + DashRules.GrappleCooldown; // ground ropes refill at once: no spammed wall zip
     }
 
     void SpawnAfterimage(float now)
@@ -812,6 +933,7 @@ public class PlayerController : MonoBehaviour
             case State.Attack: return DraftSprites.Pick(DraftSprites.HeroAttack, t, DraftSprites.Hero);
             case State.Parry: return DraftSprites.Pick(DraftSprites.HeroParry, ParryActive ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero);
             case State.Dash: return DraftSprites.Pick(DraftSprites.HeroDash, t, DraftSprites.Hero);
+            case State.Grapple: return DraftSprites.Pick(DraftSprites.HeroJump, 0, DraftSprites.Hero);
             case State.Hurt:
             case State.Dead: return DraftSprites.Pick(DraftSprites.HeroHurt, 0, DraftSprites.Hero);
         }

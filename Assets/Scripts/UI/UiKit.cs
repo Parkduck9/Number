@@ -101,8 +101,8 @@ public static class UiKit
     {
         var fill = Frame("Controls", parent, anchor, pos, new Vector2(600f, 104f), out _);
         Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
-            "A/D  Move      W  Jump\nShift  Dodge + counter      E  Interact / hack\nLeft click (aim mouse)  Attack / Parry\nSpace  Shockwave (after unlock)      Esc / P  Pause",
-            "A/D  이동      W  점프\nShift  회피 + 반격      E  상호작용 / 해킹\n좌클릭(마우스 조준)  공격 / 패링\nSpace  충격파(해금 후)      Esc / P  일시정지",
+            "A/D  Move      W  Jump\nShift  Dodge + counter      E  Interact / hack\nLeft click  Attack / Parry      Right click  Grapple\nSpace  Shockwave (after unlock)      Esc / P  Pause",
+            "A/D  이동      W  점프\nShift  회피 + 반격      E  상호작용 / 해킹\n좌클릭  공격 / 패링      우클릭  갈고리\nSpace  충격파(해금 후)      Esc / P  일시정지",
             18, UiTheme.Current.dim);
         return fill.parent.gameObject;
     }
