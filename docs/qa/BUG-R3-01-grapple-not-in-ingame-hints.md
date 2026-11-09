@@ -24,4 +24,4 @@
 ## 참고 (수정 방향, 코드는 Sonnet 담당)
 - `Hints["STG01"]`에 `new[] { "ctrl_mouse_right", "", "Grapple", "갈고리" }` 한 줄 추가. 아이콘·문구는 이미 있음.
 
-수정: ControlHints STG01 띠에 ctrl_mouse_right + Grapple / 갈고리 줄 추가.
+수정: ControlHints STG01 띠에 ctrl_mouse_right + Grapple / 갈고리 추가 (일시정지 조작법 표기와 통일).
