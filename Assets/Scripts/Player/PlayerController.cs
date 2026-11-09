@@ -116,6 +116,7 @@ public class PlayerController : MonoBehaviour
     float parryActiveFor; // parryActiveTime, or longer for an LMB parry so it covers the threat it was chosen for (DashRules.ParryCoverMargin)
     float ParryLength => Mathf.Max(parryDuration, parryActiveFor); // the Parry state never ends while its active window is still open
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
+    public bool LungingDown => lunging && lungeDir.y < -0.2f; // TestEnemy Android guard: a downward lunge counts as "from above"
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
     bool DashPressed => input.DashPressed || pendingDash;

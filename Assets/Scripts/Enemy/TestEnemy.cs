@@ -573,7 +573,7 @@ public class TestEnemy : MonoBehaviour
     {
         bool behind = (from.x - transform.position.x) * facing < 0f || Time.time - facingChangedAt < AndroidTurnGrace;
         bool above = from.y - transform.position.y >= AndroidAboveDy && player != null &&
-                     (player.Grounded || (playerRb != null && playerRb.linearVelocity.y < -AndroidDescendVy));
+                     (player.Grounded || player.LungingDown || (playerRb != null && playerRb.linearVelocity.y < -AndroidDescendVy));
         return behind || above;
     }
 
