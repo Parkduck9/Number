@@ -1,0 +1,533 @@
+{
+  "draftOnly": true,
+  "backdrop": "#0B1026",
+  "scale": 3,
+  "overview": {
+    "frames": 96,
+    "dimensions": [
+      1296,
+      1152
+    ],
+    "seconds": 2.4,
+    "colors": 6015,
+    "rgbRms": 0.6560406394213554
+  },
+  "entries": [
+    {
+      "name": "land-dust",
+      "id": "impacts/number-land-dust",
+      "options": {
+        "palette": [
+          "#25283B",
+          "#41465B",
+          "#626B81",
+          "#8793A4"
+        ],
+        "seed": 21,
+        "spread": 30,
+        "light": 0
+      },
+      "size": [
+        96,
+        64
+      ],
+      "origin": [
+        48,
+        54
+      ],
+      "duration": 0.45,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 19,
+        "dimensions": [
+          288,
+          192
+        ],
+        "seconds": 0.48,
+        "colors": 5,
+        "rgbRms": 0
+      },
+      "check": "ok    impacts/number-land-dust\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "impacts/number-land-dust",
+        "--opts",
+        "{\"palette\":[\"#25283B\",\"#41465B\",\"#626B81\",\"#8793A4\"],\"seed\":21,\"spread\":30,\"light\":0}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "grapple-hit",
+      "id": "impacts/number-grapple-hit",
+      "options": {
+        "palette": [
+          "#16425B",
+          "#20758B",
+          "#4FF0FF",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "seed": 23,
+        "radius": 9,
+        "sparks": 5,
+        "light": 0.25
+      },
+      "size": [
+        64,
+        64
+      ],
+      "origin": [
+        24,
+        32
+      ],
+      "duration": 0.25,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 11,
+        "dimensions": [
+          192,
+          192
+        ],
+        "seconds": 0.28,
+        "colors": 29,
+        "rgbRms": 0
+      },
+      "check": "ok    impacts/number-grapple-hit\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "impacts/number-grapple-hit",
+        "--opts",
+        "{\"palette\":[\"#16425B\",\"#20758B\",\"#4FF0FF\",\"#C7FCFF\",\"#FFFFFF\"],\"seed\":23,\"radius\":9,\"sparks\":5,\"light\":0.25}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "spawner-break",
+      "id": "explosions/number-spawner-break",
+      "options": {
+        "palette": [
+          "#123449",
+          "#20758B",
+          "#25A7BF",
+          "#4FF0FF",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "accent": [
+          "#521A54",
+          "#AF298F",
+          "#FF3FD0",
+          "#FFA6EB"
+        ],
+        "metal": [
+          "#25283B",
+          "#41465B",
+          "#8793A4",
+          "#C0CDD8"
+        ],
+        "seed": 31,
+        "radius": 30,
+        "light": 0.3
+      },
+      "size": [
+        128,
+        96
+      ],
+      "origin": [
+        64,
+        56
+      ],
+      "duration": 0.8,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 33,
+        "dimensions": [
+          384,
+          288
+        ],
+        "seconds": 0.83,
+        "colors": 113,
+        "rgbRms": 0
+      },
+      "check": "ok    explosions/number-spawner-break\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "explosions/number-spawner-break",
+        "--opts",
+        "{\"palette\":[\"#123449\",\"#20758B\",\"#25A7BF\",\"#4FF0FF\",\"#C7FCFF\",\"#FFFFFF\"],\"accent\":[\"#521A54\",\"#AF298F\",\"#FF3FD0\",\"#FFA6EB\"],\"metal\":[\"#25283B\",\"#41465B\",\"#8793A4\",\"#C0CDD8\"],\"seed\":31,\"radius\":30,\"light\":0.3}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "enemy-warp-in",
+      "id": "scifi/number-enemy-warp-in",
+      "options": {
+        "palette": [
+          "#351420",
+          "#741E31",
+          "#BE2635",
+          "#FF2A2A",
+          "#FF9999",
+          "#FFF4F4"
+        ],
+        "seed": 37,
+        "height": 44,
+        "width": 15,
+        "light": 0.2
+      },
+      "size": [
+        80,
+        80
+      ],
+      "origin": [
+        40,
+        64
+      ],
+      "duration": 0.75,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 31,
+        "dimensions": [
+          240,
+          240
+        ],
+        "seconds": 0.78,
+        "colors": 25,
+        "rgbRms": 0
+      },
+      "check": "ok    scifi/number-enemy-warp-in\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "scifi/number-enemy-warp-in",
+        "--opts",
+        "{\"palette\":[\"#351420\",\"#741E31\",\"#BE2635\",\"#FF2A2A\",\"#FF9999\",\"#FFF4F4\"],\"seed\":37,\"height\":44,\"width\":15,\"light\":0.2}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "sniper-muzzle",
+      "id": "projectiles/number-sniper-muzzle",
+      "options": {
+        "palette": [
+          "#741E31",
+          "#BE2635",
+          "#FF2A2A",
+          "#FFA6A6",
+          "#FFFFFF"
+        ],
+        "seed": 41,
+        "size": 0.8,
+        "light": 0.25
+      },
+      "size": [
+        64,
+        64
+      ],
+      "origin": [
+        16,
+        32
+      ],
+      "duration": 0.15,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 7,
+        "dimensions": [
+          192,
+          192
+        ],
+        "seconds": 0.18,
+        "colors": 34,
+        "rgbRms": 0
+      },
+      "check": "ok    projectiles/number-sniper-muzzle\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "projectiles/number-sniper-muzzle",
+        "--opts",
+        "{\"palette\":[\"#741E31\",\"#BE2635\",\"#FF2A2A\",\"#FFA6A6\",\"#FFFFFF\"],\"seed\":41,\"size\":0.8,\"light\":0.25}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "checkpoint",
+      "id": "scifi/number-checkpoint",
+      "options": {
+        "palette": [
+          "#16425B",
+          "#20758B",
+          "#25A7BF",
+          "#4FF0FF",
+          "#97F8FF",
+          "#DFFFFF"
+        ],
+        "seed": 43,
+        "radius": 21,
+        "height": 39,
+        "light": 0.2
+      },
+      "size": [
+        96,
+        80
+      ],
+      "origin": [
+        48,
+        67
+      ],
+      "duration": 0.75,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 31,
+        "dimensions": [
+          288,
+          240
+        ],
+        "seconds": 0.78,
+        "colors": 81,
+        "rgbRms": 0
+      },
+      "check": "ok    scifi/number-checkpoint\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "scifi/number-checkpoint",
+        "--opts",
+        "{\"palette\":[\"#16425B\",\"#20758B\",\"#25A7BF\",\"#4FF0FF\",\"#97F8FF\",\"#DFFFFF\"],\"seed\":43,\"radius\":21,\"height\":39,\"light\":0.2}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "player-glitch-death",
+      "id": "scifi/number-player-glitch-death",
+      "options": {
+        "palette": [
+          "#173447",
+          "#20758B",
+          "#4FF0FF",
+          "#FF3FD0",
+          "#C7FCFF",
+          "#FFFFFF"
+        ],
+        "seed": 47,
+        "height": 44,
+        "spread": 26,
+        "light": 0
+      },
+      "size": [
+        112,
+        80
+      ],
+      "origin": [
+        56,
+        64
+      ],
+      "duration": 0.5,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 21,
+        "dimensions": [
+          336,
+          240
+        ],
+        "seconds": 0.53,
+        "colors": 14,
+        "rgbRms": 0
+      },
+      "check": "ok    scifi/number-player-glitch-death\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "scifi/number-player-glitch-death",
+        "--opts",
+        "{\"palette\":[\"#173447\",\"#20758B\",\"#4FF0FF\",\"#FF3FD0\",\"#C7FCFF\",\"#FFFFFF\"],\"seed\":47,\"height\":44,\"spread\":26,\"light\":0}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "hack-pulse",
+      "id": "scifi/number-hack-pulse",
+      "options": {
+        "palette": [
+          "#351833",
+          "#70225F",
+          "#AF298F",
+          "#FF3FD0",
+          "#FFA6EB",
+          "#FFF0FC"
+        ],
+        "seed": 53,
+        "radius": 36,
+        "light": 0.2
+      },
+      "size": [
+        112,
+        96
+      ],
+      "origin": [
+        56,
+        48
+      ],
+      "duration": 0.4,
+      "fps": 40,
+      "loop": false,
+      "gif": {
+        "frames": 17,
+        "dimensions": [
+          336,
+          288
+        ],
+        "seconds": 0.43,
+        "colors": 31,
+        "rgbRms": 0
+      },
+      "check": "ok    scifi/number-hack-pulse\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "scifi/number-hack-pulse",
+        "--opts",
+        "{\"palette\":[\"#351833\",\"#70225F\",\"#AF298F\",\"#FF3FD0\",\"#FFA6EB\",\"#FFF0FC\"],\"seed\":53,\"radius\":36,\"light\":0.2}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    },
+    {
+      "name": "goal-open",
+      "id": "scifi/teleporter-pad",
+      "options": {
+        "palette": [
+          "#123449",
+          "#16425B",
+          "#20758B",
+          "#25A7BF",
+          "#4FF0FF",
+          "#78D6E0",
+          "#A7E9EF",
+          "#DFFFFF"
+        ],
+        "metal": [
+          "#0B1026",
+          "#141C30",
+          "#252E43",
+          "#37465C",
+          "#506980",
+          "#7895A4"
+        ],
+        "seed": 59,
+        "light": 0.18
+      },
+      "size": [
+        96,
+        104
+      ],
+      "origin": [
+        48,
+        92
+      ],
+      "duration": 2.4,
+      "fps": 30,
+      "loop": true,
+      "gif": {
+        "frames": 72,
+        "dimensions": [
+          288,
+          312
+        ],
+        "seconds": 2.4,
+        "colors": 5825,
+        "rgbRms": 3.5627467800765564
+      },
+      "check": "ok    scifi/teleporter-pad\n\n1 effects: 1 pass, 0 fail, 0 with warnings",
+      "renderCommand": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "tools/render.mjs",
+        "scifi/teleporter-pad",
+        "--opts",
+        "{\"palette\":[\"#123449\",\"#16425B\",\"#20758B\",\"#25A7BF\",\"#4FF0FF\",\"#78D6E0\",\"#A7E9EF\",\"#DFFFFF\"],\"metal\":[\"#0B1026\",\"#141C30\",\"#252E43\",\"#37465C\",\"#506980\",\"#7895A4\"],\"seed\":59,\"light\":0.18}",
+        "--gif",
+        "--scale",
+        "3",
+        "--zoom",
+        "1",
+        "--max",
+        "12",
+        "--out",
+        "D:\\Git\\pixelfx\\records\\number-moments\\native"
+      ]
+    }
+  ]
+}

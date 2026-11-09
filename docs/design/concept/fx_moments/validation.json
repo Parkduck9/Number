@@ -1,0 +1,204 @@
+{
+  "official": "9 pass, 0 fail, 0 warnings",
+  "configured": [
+    {
+      "name": "land-dust",
+      "seeds": [
+        21,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "grapple-hit",
+      "seeds": [
+        23,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "spawner-break",
+      "seeds": [
+        31,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "enemy-warp-in",
+      "seeds": [
+        37,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": 44,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "sniper-muzzle",
+      "seeds": [
+        41,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "checkpoint",
+      "seeds": [
+        43,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "player-glitch-death",
+      "seeds": [
+        47,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": 44,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "hack-pulse",
+      "seeds": [
+        53,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    },
+    {
+      "name": "goal-open",
+      "seeds": [
+        59,
+        2,
+        3,
+        7
+      ],
+      "actorHeight": null,
+      "spillPixels": 0,
+      "endColorPixels": 0,
+      "endLightPixels": 0
+    }
+  ],
+  "gifDecoding": [
+    {
+      "Name": "checkpoint.gif",
+      "Width": 288,
+      "Height": 240,
+      "Frames": 31,
+      "Seconds": 0.78,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "enemy-warp-in.gif",
+      "Width": 240,
+      "Height": 240,
+      "Frames": 31,
+      "Seconds": 0.78,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "goal-open.gif",
+      "Width": 288,
+      "Height": 312,
+      "Frames": 72,
+      "Seconds": 2.4,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "grapple-hit.gif",
+      "Width": 192,
+      "Height": 192,
+      "Frames": 11,
+      "Seconds": 0.28,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "hack-pulse.gif",
+      "Width": 336,
+      "Height": 288,
+      "Frames": 17,
+      "Seconds": 0.43,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "land-dust.gif",
+      "Width": 288,
+      "Height": 192,
+      "Frames": 19,
+      "Seconds": 0.48,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "overview.gif",
+      "Width": 1296,
+      "Height": 1152,
+      "Frames": 96,
+      "Seconds": 2.4,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "player-glitch-death.gif",
+      "Width": 336,
+      "Height": 240,
+      "Frames": 21,
+      "Seconds": 0.53,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "sniper-muzzle.gif",
+      "Width": 192,
+      "Height": 192,
+      "Frames": 7,
+      "Seconds": 0.18,
+      "Decoded": "All frames"
+    },
+    {
+      "Name": "spawner-break.gif",
+      "Width": 384,
+      "Height": 288,
+      "Frames": 33,
+      "Seconds": 0.83,
+      "Decoded": "All frames"
+    }
+  ]
+}
