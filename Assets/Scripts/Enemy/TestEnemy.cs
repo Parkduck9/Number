@@ -38,7 +38,8 @@ public class TestEnemy : MonoBehaviour
 
     // ---- Android guard (DECISIONS 15): frontal hits are blocked; from behind or above it dies in one hit ----
     const float AndroidTurnGrace = 0.35f; // (T) s: a hit this soon after it turned around during a player dash still counts as from behind (Shift dash-behind)
-    const float AndroidAboveDy = 2.0f;    // (T) attacker centre at least this far above the android's centre = attacker's feet at its head top (boxes 0.9 x 2)
+    const float AndroidAboveDy = 1.0f;    // (T) attacker centre at least this far above the android's centre (2.0 was out of reach of every attack; levels/Fable 11-09)
+    const float AndroidDescendVy = 0.5f;  // (T) airborne attacker counts as "from above" only while moving down faster than this (u/s)
 
     [Header("Variants (defaults = melee citizen)")]
     [SerializeField] Kind kind = Kind.Citizen;       // NUM-0 freezes citizens only; Android uses the gold fan special
@@ -72,6 +73,7 @@ public class TestEnemy : MonoBehaviour
     Rigidbody2D rb;
     EnemyNumber number;
     PlayerController player;
+    Rigidbody2D playerRb;     // Android guard: is the attacker coming down
     State state;
     float stateEnteredAt;
     int hp;
@@ -131,6 +133,7 @@ public class TestEnemy : MonoBehaviour
     void Start()
     {
         player = FindFirstObjectByType<PlayerController>();
+        if (player != null) playerRb = player.GetComponent<Rigidbody2D>();
         EnterState(State.Approach);
         zoneBoard = BroadcastBoard.At(transform.position); // zone is fixed: find it once, then react to its changes
         if (zoneBoard != null)
@@ -564,11 +567,13 @@ public class TestEnemy : MonoBehaviour
 
     // Android guard: an attacker at `from` hits its back or comes from above (DECISIONS 15).
     // Behind = on the side it does not face, or it turned around within AndroidTurnGrace (it turns to face a player who just
-    // dashed past, before the Shift counter lands). Above = attacker centre >= AndroidAboveDy over its centre.
+    // dashed past, before the Shift counter lands). Above = attacker centre >= AndroidAboveDy over its centre AND the player either
+    // stands on higher ground or is coming down (falling / downward lunge); a rising or level jump-dash into its face stays blocked.
     bool AndroidExposedTo(Vector2 from)
     {
         bool behind = (from.x - transform.position.x) * facing < 0f || Time.time - facingChangedAt < AndroidTurnGrace;
-        bool above = from.y - transform.position.y >= AndroidAboveDy;
+        bool above = from.y - transform.position.y >= AndroidAboveDy && player != null &&
+                     (player.Grounded || (playerRb != null && playerRb.linearVelocity.y < -AndroidDescendVy));
         return behind || above;
     }
 
