@@ -43,6 +43,17 @@ public static class Juice
     public const float NormalSpeedMul = 1.5f;  // DECISIONS 12: 1.25 -> 1.5
     public const float MinFirstWindup = 0.2f; // first-strike windup never shorter than this (readable tell)
 
+    // Punch zoom (CameraFollow2D): brief zoom-in on a shake of kill / parry size, eases back in real time. Fractions of the view size.
+    public const float PunchKill = 0.07f, PunchParry = 0.10f; // parry stronger than a kill. PPU is an int (32): 0.07 -> 34, 0.10 -> 35, i.e. a 1-3 px pop that eases back
+    public const float PunchTime = 0.15f;                     // s
+    // Look-ahead (CameraFollow2D): the camera leads the player's movement; a dash (speed above the threshold) leads further.
+    public const float LookAhead = 1.75f, LookAheadDash = 3f; // world units
+    public const float LookAheadSmooth = 0.3f;                // s
+    public const float DashSpeedThreshold = 14f;              // units/s (walk ~8, dash 24)
+    public const float LookAheadFlipSpeed = 1.5f;             // units/s: slower than this never flips the lead (no jitter on stops / turns)
+    // Death -> retry: the Dead pose stays this long (real time) before the scene reloads. Hurt 0.25 s + this + load = control back.
+    public const float DeathRespawnDelay = 0.55f;
+
     public static void Shake(float amp, float time) => CameraFollow2D.Shake(amp, time);
     public static void Shake(float amp, float time, UnityEngine.Vector2 blowDir) => CameraFollow2D.Shake(amp, time, blowDir);
 }

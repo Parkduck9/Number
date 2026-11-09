@@ -6,8 +6,6 @@ using UnityEngine.SceneManagement;
 // First checkpoint = the player's start position (recorded when no record exists for this scene).
 public class RespawnManager : MonoBehaviour
 {
-    [SerializeField] float respawnDelay = 1.5f; // (T) seconds the Dead state is shown before reload
-
     static bool hasRecord;
     static Vector2 recordPos;
     static string recordScene;
@@ -71,7 +69,7 @@ public class RespawnManager : MonoBehaviour
     {
         if (player == null || !health.IsDead || player.CurrentState != PlayerController.State.Dead) return;
         if (deadSince < 0f) deadSince = Time.unscaledTime;
-        else if (Time.unscaledTime - deadSince >= respawnDelay)
+        else if (Time.unscaledTime - deadSince >= Juice.DeathRespawnDelay)
         {
             respawnPending = true;
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
