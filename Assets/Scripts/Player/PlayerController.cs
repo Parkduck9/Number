@@ -84,6 +84,7 @@ public class PlayerController : MonoBehaviour
     float lastGroundedAt = -999f;
     float jumpBufferedUntil = -999f;
     float attackBufferedUntil = -999f;
+    float grappleBufferedUntil = -999f; // RMB pressed during another action: fires when it ends (like the LMB buffer)
     float dashCooldownUntil;
     float nextAfterimageAt;
     float nextRunDustAt, nextSpeedLinesAt;
@@ -179,6 +180,7 @@ public class PlayerController : MonoBehaviour
         if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
         {
             pendingDash = pendingGrapple = false;
+            grappleBufferedUntil = -999f;
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
@@ -215,6 +217,8 @@ public class PlayerController : MonoBehaviour
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
         if (input.AttackPressed && state != State.Locomotion && state != State.Hurt && state != State.Dead)
             attackBufferedUntil = Mathf.Max(now, StateEndsAt()) + attackBuffer; // must outlive the current swing/parry/dash
+        if (input.GrapplePressed && state != State.Locomotion && state != State.Grapple && state != State.Hurt && state != State.Dead)
+            grappleBufferedUntil = Mathf.Max(now, StateEndsAt()) + attackBuffer;
 
         switch (state)
         {
@@ -258,6 +262,8 @@ public class PlayerController : MonoBehaviour
         if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
         pendingDash |= input.DashPressed;
         pendingGrapple |= input.GrapplePressed;
+        if (input.GrapplePressed && state != State.Locomotion && state != State.Grapple && state != State.Hurt && state != State.Dead)
+            grappleBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
     }
 
     // When the current Attack/Parry/Dash ends by itself (now for any other state).
@@ -460,10 +466,15 @@ public class PlayerController : MonoBehaviour
     }
 
     // Line of sight between centres: no solid ground in between. One-way platforms never block it (a downward lunge passes them, see TryStartLunge).
+    ContactFilter2D losFilter; // own filter: FindLungeTarget also runs from the crosshair's LateUpdate, outside Update's groundFilter setup
+    readonly RaycastHit2D[] losHits = new RaycastHit2D[16];
     bool ClearLine(Vector2 from, Vector2 to)
     {
-        foreach (RaycastHit2D h in Physics2D.LinecastAll(from, to, groundMask))
-            if (!h.collider.usedByEffector) return false;
+        losFilter.SetLayerMask(groundMask);
+        losFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old LinecastAll
+        int n = Physics2D.Linecast(from, to, losFilter, losHits);
+        for (int i = 0; i < n; i++)
+            if (!losHits[i].collider.usedByEffector) return false;
         return true;
     }
 
@@ -594,7 +605,8 @@ public class PlayerController : MonoBehaviour
     // miss -> the rope shoots out and snaps back, short cooldown. One attached rope per airtime.
     bool TryGrapple(float now)
     {
-        if (!(input.GrapplePressed || pendingGrapple) || now < grappleReadyAt || grappleUsed) return false;
+        if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt || grappleUsed) return false;
+        grappleBufferedUntil = -999f;
         Vector2 hand = HandPosition;
         Vector2 aim = MouseCrosshair.MouseWorld(out Vector2 mouse) ? mouse - hand : new Vector2(Facing, 0f);
         aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);

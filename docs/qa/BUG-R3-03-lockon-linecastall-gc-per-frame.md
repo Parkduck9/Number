@@ -23,3 +23,5 @@
 
 ## 참고 (수정 방향)
 - `Physics2D.Linecast(from, to, groundFilter, 고정배열)` 비할당 오버로드로 바꾸고, `usedByEffector`가 아닌 것이 하나라도 있으면 false. 같은 패턴: `WallDistance`의 `BoxCastAll`(`:549`, 돌진 시작 때만이라 영향 작음), `FindTargetAhead`의 `OverlapBoxAll`(`:417`, Shift 때만).
+
+수정: ClearLine을 Physics2D.Linecast(ContactFilter2D, 고정 RaycastHit2D[16]) 비할당 오버로드로 교체 (groundMask, useTriggers=queriesHitTriggers, usedByEffector 판정 동일).

@@ -154,7 +154,7 @@ public class DialoguePlayer : MonoBehaviour
         box.portrait.color = box.portrait.sprite != null ? Color.white : c; // placeholder block
     }
 
-    // Fallback when the speaker row has no portrait assigned: Assets/Resources/Portraits/<id>.png (48x48, shown 1x radio / 2x talk).
+    // Fallback when the speaker row has no portrait assigned: Assets/Resources/Portraits/<id>.png (100x100, shown at 50 ref px radio = 1x / 100 ref px talk = 2x on 1080p).
     readonly Dictionary<string, Sprite> portraitCache = new Dictionary<string, Sprite>();
     Sprite LoadPortrait(string id)
     {
@@ -176,7 +176,7 @@ public class DialoguePlayer : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
 
         // radio: small, top-left corner
-        radioBox = BuildBox(canvasGo.transform, "Radio", new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(480f, 84f), 48f, true);
+        radioBox = BuildBox(canvasGo.transform, "Radio", new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(480f, 84f), 50f, true); // portrait 50 = the 100x100 art at exactly 1x on 1080p
         // talk: wide, bottom of screen
         talkBox = BuildBox(canvasGo.transform, "Talk", new Vector2(0.5f, 0f), new Vector2(0f, 24f), new Vector2(912f, 132f), 100f, false); // portrait 100 = the 100x100 portrait art, exact 2x on 1080p (ref 960x540)
         radioBox.root.SetActive(false);

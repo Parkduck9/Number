@@ -25,3 +25,5 @@
 
 ## 참고
 - DECISIONS 16은 "끌려가는 중 좌클릭·Shift = 놓고 그 동작"만 정했고, 반대 방향(다른 동작 중 우클릭)은 정하지 않았다. 버퍼를 넣을지는 기획 확인 필요.
+
+수정: PlayerController grappleBufferedUntil 추가: 공격·돌진·패링·대시 중 우클릭을 현재 동작이 끝난 뒤 attackBuffer(0.15초) 동안 보관, Locomotion에서 TryGrapple이 소비. InputLocked(일시정지·대화)에서는 지움, 피격·사망 중에는 받지 않음.
