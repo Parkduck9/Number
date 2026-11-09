@@ -5,7 +5,8 @@ using UnityEngine.SceneManagement;
 // AI bug look (GDD ART-09): a Kind.Bug TestEnemy hides its placeholder square and is drawn as ~55-70 single-pixel dots
 // that gather into a bug silhouette, twitch, stretch toward the player on Windup, burst on Strike and dissolve on death.
 // Appearance only: it reads TestEnemy.Current / the hidden SpriteRenderer (flipX = facing, color = flash) and changes nothing.
-// One small runtime Texture2D per enemy (Point filter), redrawn from a reused Color32 buffer: no per-frame allocation.
+// One small runtime Texture2D per enemy (Point filter), written in place (raw texture data, only the dot pixels change)
+// and uploaded at RedrawHz, not every frame; off-screen / frozen (hit-stop, pause) swarms are not redrawn. No per-frame allocation.
 // Attached at runtime by BugSwarmBootstrap below. Removal: delete this file. Doc: docs/design/impl/bug-swarm.md.
 [DefaultExecutionOrder(500)] // LateUpdate after TestEnemy.ApplyVisual wrote this frame's flipX / colour
 public class BugSwarmVisual : MonoBehaviour
@@ -29,6 +30,8 @@ public class BugSwarmVisual : MonoBehaviour
     const float RangedHover = 2f;         // px hover bob of the ranged bug
     const float DeathFade = 0.5f;         // s: mirrors Juice.KillVanishDelay (the body is deactivated after it)
     const float DeathSpeed = 40f, DeathGravity = 90f; // px/s, px/s^2 for the dispersing dots
+    const float RedrawHz = 15f;           // (T) simulate + upload this often (state / flash changes redraw at once)
+    const float MaxStep = 0.25f;          // s: longest simulation step (after an off-screen stretch)
 
     // Palette: dark gray-purple body, red accent (melee) or gold accent (ranged). 5 colours per variant.
     static readonly Color32 Dark = new Color32(0x2E, 0x26, 0x38, 255);
@@ -53,7 +56,10 @@ public class BugSwarmVisual : MonoBehaviour
     SpriteRenderer sr;
     Transform swarmTf;
     Texture2D tex;
-    Color32[] buf;
+    readonly int[] drawn = new int[MaxDots]; // pixel indices written by the last Draw (cleared next time)
+    int drawnCount;
+    float pendingDt;  // game time since the last simulation step
+    int lastFlash = -1; // 0 none, 1 parry white, 2 kill red; -1 forces the first draw right after Start
     readonly Dot[] dots = new Dot[MaxDots];
     int count;
     bool ranged;
@@ -71,8 +77,8 @@ public class BugSwarmVisual : MonoBehaviour
         visual = GetComponentInChildren<SpriteRenderer>();
 
         tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { name = "BugSwarm", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-        buf = new Color32[Size * Size];
-        tex.SetPixels32(buf);
+        var raw = tex.GetRawTextureData<Color32>(); // a new texture's contents are undefined: clear once
+        for (int i = 0; i < raw.Length; i++) raw[i] = default;
         tex.Apply(false, false);
 
         var go = new GameObject("Swarm") { layer = gameObject.layer };
@@ -172,12 +178,19 @@ public class BugSwarmVisual : MonoBehaviour
     void LateUpdate()
     {
         TestEnemy.State s = enemy.Current;
-        if (s != lastState) { Enter(s); lastState = s; stateAt = Time.time; }
+        bool now = false; // redraw this frame regardless of the rate (a burst / flash must not wait up to 1/RedrawHz)
+        if (s != lastState) { Enter(s); lastState = s; stateAt = Time.time; now = true; }
         if (visual != null) swarmTf.localPosition = visual.transform.localPosition; // inherit ParryFx's strike nudge
+        int flash = visual == null ? 0 : visual.color == Color.white ? 1 : visual.color == Color.red ? 2 : 0;
+        if (flash != lastFlash) { lastFlash = flash; now = true; }
+        pendingDt += Time.deltaTime; // 0 during hit-stop / pause: nothing to redraw
         if (!sr.isVisible && Time.frameCount > firstFrame + 1) return; // off-screen: keep state tracking, skip simulation + upload
+        if (!now && pendingDt < 1f / RedrawHz) return;
+        float dt = Mathf.Min(pendingDt, MaxStep);
+        pendingDt = 0f;
         float t = Time.time - stateAt;
-        Simulate(s, t, Time.deltaTime);
-        Draw(s, t);
+        Simulate(s, t, dt);
+        Draw(s, t, flash);
     }
 
     void Enter(TestEnemy.State s)
@@ -234,7 +247,7 @@ public class BugSwarmVisual : MonoBehaviour
         }
         // Hover: melee 1 px; the ranged dart floats in a slower, deeper 2 px bob so it reads as a hovering shooter. Legs stay put.
         float bob = ranged ? Mathf.Round(Mathf.Sin(Time.time * 3f) * RangedHover) : Mathf.Round(Mathf.Sin(Time.time * 5f));
-        float follow = Mathf.Min(1f, Follow * dt);
+        float follow = 1f - Mathf.Exp(-Follow * dt); // frame-rate independent (same pull per second at 15 Hz as at 60 Hz)
         float decay = Mathf.Exp(-StrikeDecay * dt);
         float now = Time.time;
         for (int i = 0; i < count; i++)
@@ -256,14 +269,16 @@ public class BugSwarmVisual : MonoBehaviour
         }
     }
 
-    void Draw(TestEnemy.State s, float t)
+    void Draw(TestEnemy.State s, float t, int flash)
     {
-        System.Array.Clear(buf, 0, buf.Length);
+        var buf = tex.GetRawTextureData<Color32>(); // view of the texture memory, no copy
+        for (int i = 0; i < drawnCount; i++) buf[drawn[i]] = default; // erase only last draw's dots
+        drawnCount = 0;
         bool dead = s == TestEnemy.State.Stunned;
         bool charge = s == TestEnemy.State.Windup || s == TestEnemy.State.RushWindup || s == TestEnemy.State.Charge;
         bool accentOff = (s == TestEnemy.State.Staggered || s == TestEnemy.State.Open) && Mathf.PingPong(Time.time * 8f, 1f) > 0.5f; // eyes blink while open
-        bool flashWhite = visual != null && visual.color == Color.white; // parry flash
-        bool flashRed = visual != null && visual.color == Color.red;     // kill flash
+        bool flashWhite = flash == 1; // parry flash
+        bool flashRed = flash == 2;   // kill flash
         int alive = dead ? Mathf.CeilToInt(count * (1f - Mathf.Clamp01(t / DeathFade))) : count;
         const int Half = Size / 2;
         for (int i = 0; i < count; i++)
@@ -273,9 +288,10 @@ public class BugSwarmVisual : MonoBehaviour
             Vector2 p = d.pos + d.twitch + d.scatter;
             int px = Half + Mathf.RoundToInt(p.x), py = Half + Mathf.RoundToInt(p.y);
             if ((uint)px >= Size || (uint)py >= Size) continue;
-            buf[py * Size + px] = flashWhite ? White : flashRed ? accent : ColorOf(d.part, charge, accentOff);
+            int idx = py * Size + px;
+            buf[idx] = flashWhite ? White : flashRed ? accent : ColorOf(d.part, charge, accentOff);
+            drawn[drawnCount++] = idx;
         }
-        tex.SetPixels32(buf);
         tex.Apply(false, false);
     }
 
