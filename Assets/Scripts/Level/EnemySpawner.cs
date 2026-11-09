@@ -136,6 +136,7 @@ public class EnemySpawner : MonoBehaviour
         Broken = true;
         for (int i = 0; i < Juice.KillSparks; i++)
             Spark((Vector2)transform.position + new Vector2(UnityEngine.Random.Range(-size.x, size.x) * 0.5f, UnityEngine.Random.Range(-size.y, size.y) * 0.5f));
+        MomentFx.SpawnerBreak(transform.position);
         Sfx.Play(SfxId.Stunned);
         Juice.Shake(Juice.ShakeKillAmp, Juice.ShakeKillTime);
         BrokenEvent?.Invoke(this);
@@ -158,7 +159,9 @@ public class EnemySpawner : MonoBehaviour
             e.spawned = e.current.GetComponent<TestEnemy>();
             if (e.spawned != null) { e.spawned.enabled = false; e.graceUntil = Time.time + SpawnGrace; } // frozen AI: cannot attack for a moment
             e.diedAt = -1f;
-            SpriteFx.Play("dash-burst", (Vector2)e.pos - new Vector2(0f, 1f)); // spawn puff (reuses the dash burst sheet)
+            Collider2D body = e.current.GetComponent<Collider2D>();
+            if (MomentFx.EnemyWarpIn(new Vector2(e.pos.x, body != null ? body.bounds.min.y : e.pos.y - 1f)) == null) // warp-in column stands on the enemy's feet
+                SpriteFx.Play("dash-burst", (Vector2)e.pos - new Vector2(0f, 1f)); // sheet not in yet: old spawn puff
         }
     }
 

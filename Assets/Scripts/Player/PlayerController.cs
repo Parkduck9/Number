@@ -341,6 +341,7 @@ public class PlayerController : MonoBehaviour
         EndLunge();                     // any state change ends a lunge (dash cancel, hurt, death)
         if (state == State.Grapple && rope != null) rope.Hide(); // ...and an attached rope (release, hurt, dialogue)
         state = next;
+        if (next == State.Dead) MomentFx.PlayerDeath(rb.position + feetOffset);
         stateEnteredAt = Time.time;
         rb.gravityScale = gravityScale; // always restore (Dash / lunge zero it)
 
@@ -732,6 +733,7 @@ public class PlayerController : MonoBehaviour
         bool landed = grounded && !fxWasGrounded && state != State.Dead;
         bool turned = running && Facing != fxLastFacing;
         fxWasGrounded = grounded;
+        MomentFx.TrackLand(grounded && state != State.Dead, rb.position + feetOffset);
         fxLastFacing = Facing;
         if (landed || turned || (running && now >= nextRunDustAt))
         {

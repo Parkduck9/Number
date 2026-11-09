@@ -62,8 +62,12 @@ public class ControlHints : MonoBehaviour
         go.AddComponent<ControlHints>().Build(entries);
     }
 
-    float visibleFor;
+    const float SlideIn = 0.3f, FadeOut = 0.2f, SlideDistance = 120f; // (T) toast timings, reference px
+    const float RestY = 56f;
+    float visibleFor, age, hideAt = -1f;
     GameObject root;
+    RectTransform stripRt;
+    CanvasGroup group;
 
     void Build(string[][] entries)
     {
@@ -72,7 +76,9 @@ public class ControlHints : MonoBehaviour
 
         var canvas = UiKit.CreateCanvas("HintCanvas", transform, 35); // below the shockwave HUD (40)
         root = canvas.gameObject;
-        var strip = UiKit.Rect("Strip", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, 56f), Vector2.zero);
+        group = root.AddComponent<CanvasGroup>();
+        var strip = UiKit.Rect("Strip", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, RestY - SlideDistance), Vector2.zero);
+        stripRt = strip;
         var row = strip.gameObject.AddComponent<HorizontalLayoutGroup>();
         row.spacing = 12f;
         row.childAlignment = TextAnchor.MiddleCenter;
@@ -103,8 +109,20 @@ public class ControlHints : MonoBehaviour
     void Update()
     {
         if (player == null) player = FindFirstObjectByType<PlayerController>(); // cached: was a full scene search every frame
-        if (root == null || GameFlow.InputLocked || player == null) return;
+        if (root == null) return;
+        // Toast: slide up from below the screen edge with back-out, then slide down + fade out.
+        age += Time.unscaledDeltaTime;
+        if (hideAt >= 0f)
+        {
+            float k = (Time.unscaledTime - hideAt) / FadeOut;
+            if (k >= 1f) { Destroy(gameObject); return; }
+            group.alpha = 1f - k;
+            stripRt.anchoredPosition = new Vector2(0f, RestY - SlideDistance * k);
+            return;
+        }
+        stripRt.anchoredPosition = new Vector2(0f, RestY - SlideDistance * (1f - UiMotion.BackOut(age / SlideIn)));
+        if (GameFlow.InputLocked || player == null) return;
         visibleFor += Time.unscaledDeltaTime;
-        if (visibleFor >= ShowSeconds) Destroy(gameObject);
+        if (visibleFor >= ShowSeconds) hideAt = Time.unscaledTime;
     }
 }

@@ -57,7 +57,9 @@ public class GrappleRope : MonoBehaviour
     {
         if (!active) return;
         if (player == null) { Destroy(gameObject); return; }
+        float prevT = t;
         t += Time.deltaTime;
+        if (hit && prevT < DashRules.GrappleExtendTime && t >= DashRules.GrappleExtendTime) MomentFx.GrappleHit(target); // hook just attached
         if (!hit && t >= DashRules.GrappleExtendTime + DashRules.GrappleRetractTime) { Hide(); return; }
         Draw();
     }

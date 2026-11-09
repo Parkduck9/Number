@@ -440,7 +440,11 @@ public class TestEnemy : MonoBehaviour
         if (ranged)
         {
             if (kind == Kind.Sniper)
-                EnemyProjectile.Spawn(Muzzle, (sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f)) * SniperShotSpeed, playerMask, groundMask, hit, projectileColor);
+            {
+                Vector2 shot = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
+                EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor);
+                MomentFx.SniperMuzzle(Muzzle, shot);
+            }
             else
                 EnemyProjectile.Spawn(Muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor);
         }

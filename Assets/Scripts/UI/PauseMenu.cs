@@ -19,6 +19,10 @@ public class PauseMenu : MonoBehaviour
     GameObject createdEventSystem;
     bool open;
     bool lockedAtFrameStart;
+    const float DimFade = 0.15f, PopTime = 0.25f;
+    UnityEngine.UI.Image dimImage;
+    Transform popPanel, popControls;
+    float dimAlpha, popT = PopTime;
     PlayerController player;
     PlayerHealth health;
 
@@ -65,6 +69,7 @@ public class PauseMenu : MonoBehaviour
 
     void Update()
     {
+        if (open && popT < PopTime) AnimatePop();
         var kb = Keyboard.current;
         if (kb == null || !(kb.escapeKey.wasPressedThisFrame || kb.pKey.wasPressedThisFrame)) return;
         if (open) Close(unlock: true);
@@ -84,9 +89,22 @@ public class PauseMenu : MonoBehaviour
         lockedAtFrameStart = GameFlow.InputLocked; // a lock that ended this frame (e.g. Esc cancelled a choice) can't open the menu
     }
 
+    // Modal pop-in on unscaled time: backdrop fades in, panel (and controls guide) scales 0.85 -> 1 with back-out.
+    void AnimatePop()
+    {
+        popT += Time.unscaledDeltaTime;
+        float a = Mathf.Clamp01(popT / DimFade);
+        var c = dimImage.color; c.a = dimAlpha * a; dimImage.color = c;
+        float u = Mathf.Clamp01(popT / PopTime) - 1f;
+        float s = Mathf.LerpUnclamped(0.85f, 1f, 1f + 2.70158f * u * u * u + 1.70158f * u * u);
+        popPanel.localScale = popControls.localScale = new Vector3(s, s, 1f);
+    }
+
     void Open()
     {
         open = true;
+        popT = 0f;
+        AnimatePop();
         GameFlow.InputLocked = true;
         Time.timeScale = 0f;
         UiKit.EnsureEventSystem(out createdEventSystem);
@@ -111,11 +129,13 @@ public class PauseMenu : MonoBehaviour
         var canvas = UiKit.CreateCanvas("PauseCanvas", transform, 200);
 
         var dim = UiKit.Stretch("Dim", canvas.transform);
-        UiKit.FilledImage(dim, t.dimmer, true); // also blocks clicks to anything below
+        dimImage = UiKit.FilledImage(dim, t.dimmer, true); // also blocks clicks to anything below
+        dimAlpha = t.dimmer.a;
 
         var panelSize = new Vector2(t.buttonSize2.x + 96f, 4 * t.buttonStep + 96f);
         var fill = UiKit.Frame("Panel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), panelSize, out _);
-        UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f - panelSize.y / 2f - 60f));
+        var controls = UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f - panelSize.y / 2f - 60f));
+        popPanel = fill.parent; popControls = controls.transform;
         UiKit.Label("Title", fill, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(panelSize.x, 36f), "PAUSED", "일시정지", t.buttonSize, t.text);
 
         var column = UiKit.Rect("Menu", fill, new Vector2(0.5f, 1f), new Vector2(0f, -72f), new Vector2(t.buttonSize2.x, 0f));

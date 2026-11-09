@@ -21,6 +21,8 @@ public class BroadcastHackUi : MonoBehaviour
     static readonly Color BorderColor = new Color32(0x3A, 0x3F, 0x4B, 0xFF);
     static readonly Color BroadcastGold = new Color32(0xFF, 0xD2, 0x4A, 0xFF); // AI's number
     static readonly Color HackedCyan = new Color32(0x4C, 0xE0, 0xFF, 0xFF);    // number set by the player's hack
+    static readonly Color GlitchRed = new Color32(0xFF, 0x2D, 0x55, 0xCC), GlitchCyan = new Color32(0x00, 0xD5, 0xFF, 0xCC);
+    const float GlitchSeconds = 0.3f, GlitchStep = 0.04f;
     const int HudSize = 48, TextSize = 24; // multiples of 12 at 960x540
 
     PlayerController player;
@@ -35,7 +37,9 @@ public class BroadcastHackUi : MonoBehaviour
     GameObject barRoot, promptRoot;
     RectTransform barFill;
     RectTransform digitRow; // DraftHud art; null = the TMP text above is used
-    Image arcL, digitImg, arcR;
+    Image arcL, digitImg, arcR, ghostRed, ghostCyan;
+    float glitchAt = -10f; // unscaled time the glitch started
+    int glitchStep = -1;   // -1 = idle (settled on the real digit)
 
     void Awake() { BuildUi(); }
 
@@ -104,12 +108,38 @@ public class BroadcastHackUi : MonoBehaviour
             hudText.text = "((( " + b.Number + " )))";
             hudText.color = b.IsHacked ? HackedCyan : BroadcastGold;
             if (digitRow != null) ShowDigits(b);
+            glitchAt = Time.unscaledTime;
+            glitchStep = -1;
         }
+        UpdateGlitch(b);
         float k = Mathf.Clamp01((Time.unscaledTime - punchAt) / 0.3f);
         float s = Mathf.Lerp(1.4f, 1f, k); // short scale punch on a new / changed number
         (digitRow != null ? digitRow : hudText.rectTransform).localScale = new Vector3(s, s, 1f);
         barRoot.SetActive(showCounterHackBar && b.IsHacked);
         if (barRoot.activeSelf) barFill.anchorMax = new Vector2(b.CounterHackProgress, 1f);
+    }
+
+    // Glitch on a new / hacked number: random digit every 0.04s + red / cyan ghost copies jittering in whole pixels, settles on the real digit.
+    void UpdateGlitch(BroadcastBoard b)
+    {
+        float t = Time.unscaledTime - glitchAt;
+        int step = t < GlitchSeconds ? (int)(t / GlitchStep) : -1;
+        if (step == glitchStep) return;
+        glitchStep = step;
+        bool on = step >= 0;
+        int digit = on ? Random.Range(0, 10) : Mathf.Clamp(b.Number, 0, 9);
+        if (digitRow != null)
+        {
+            Sprite s = DraftHud.BroadcastDigits(b.IsHacked)[digit];
+            Place(digitImg, s);
+            ghostRed.enabled = ghostCyan.enabled = on;
+            if (!on) return;
+            Place(ghostRed, s);
+            Place(ghostCyan, s);
+            ghostRed.rectTransform.anchoredPosition = new Vector2(Random.Range(2, 4) * (Random.value < 0.5f ? -1 : 1), 0f);
+            ghostCyan.rectTransform.anchoredPosition = new Vector2(Random.Range(2, 4) * (Random.value < 0.5f ? -1 : 1), 0f);
+        }
+        else hudText.text = "((( " + (on ? digit : b.Number) + " )))"; // no art: scramble the text only
     }
 
     // ---- Dial ----
@@ -130,7 +160,7 @@ public class BroadcastHackUi : MonoBehaviour
         switch (dial.Read())
         {
             case NumberDial.Input.Cancel: Close(); break;
-            case NumberDial.Input.Confirm: dialBoard.Hack(dial.Selected); Close(); break;
+            case NumberDial.Input.Confirm: if (player != null) MomentFx.HackPulse(player.transform.position); dialBoard.Hack(dial.Selected); Close(); break;
         }
     }
 
@@ -186,6 +216,11 @@ public class BroadcastHackUi : MonoBehaviour
             DraftHud.BroadcastArcs(false) == null || DraftHud.BroadcastArcs(true) == null) return;
         digitRow = UiKit.Rect("DigitRow", parent, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(114f, 54f));
         arcL = DigitPiece("ArcL", -40.5f);
+        ghostRed = DigitPiece("GhostRed", 0f);   // drawn behind the real digit
+        ghostCyan = DigitPiece("GhostCyan", 0f);
+        ghostRed.color = GlitchRed;
+        ghostCyan.color = GlitchCyan;
+        ghostRed.enabled = ghostCyan.enabled = false;
         digitImg = DigitPiece("Digit", 0f);
         arcR = DigitPiece("ArcR", 40.5f);
         hudText.enabled = false;

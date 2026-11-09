@@ -120,6 +120,8 @@ public class BossFight : MonoBehaviour
         if (template == null) return;
         GameObject clone = Instantiate(template, point.position, Quaternion.identity);
         clone.SetActive(true);
+        Collider2D body = clone.GetComponent<Collider2D>();
+        MomentFx.EnemyWarpIn(new Vector2(point.position.x, body != null ? body.bounds.min.y : point.position.y));
         var enemy = clone.GetComponent<TestEnemy>();
         if (enemy != null) alive.Add(enemy);
     }

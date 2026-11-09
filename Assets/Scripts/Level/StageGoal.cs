@@ -6,8 +6,9 @@ public class StageGoal : MonoBehaviour
 {
     [SerializeField] float delay = 0.5f; // (T) seconds of locked input before the switch
 
-    float loadAt = -1f, nextCheckAt;
+    float loadAt = -1f, nextCheckAt, nextOpenCheckAt;
     PlayerController player;
+    GameObject openFx; // looping pad effect, shown once the exit is open (all enemies dead + spawners broken)
 
     void Awake() => GetComponent<Collider2D>().isTrigger = true;
 
@@ -33,6 +34,12 @@ public class StageGoal : MonoBehaviour
 
     void Update()
     {
+        if (openFx == null && Time.time >= nextOpenCheckAt)
+        {
+            nextOpenCheckAt = Time.time + 0.5f;
+            Bounds b = GetComponent<Collider2D>().bounds;
+            if (StageClear.TryClear(transform.position, false)) openFx = MomentFx.GoalOpen(new Vector2(b.center.x, b.min.y));
+        }
         if (loadAt < 0f) return;
         if (GameFlow.IsPlayerDead(player)) { loadAt = -1f; GameFlow.InputLocked = false; return; } // died during the delay: the respawn reload takes over
         if (Time.unscaledTime < loadAt) return;

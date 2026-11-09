@@ -92,7 +92,12 @@ public static class UiKit
         btn.targetGraphic = border;
         btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(onClick);
-        outer.gameObject.AddComponent<ButtonHighlight>().Init(border, label, t);
+        outer.gameObject.AddComponent<RectMask2D>(); // clips the shine band to the button
+        var shine = FilledImage(Rect("Shine", outer, new Vector2(0f, 0.5f), Vector2.zero, new Vector2(ButtonHighlight.ShineWidth, t.buttonSize2.y * 2f)), new Color(1f, 1f, 1f, 0.35f));
+        shine.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 20f);
+        shine.enabled = false;
+        outer.gameObject.AddComponent<CanvasGroup>();
+        outer.gameObject.AddComponent<ButtonHighlight>().Init(border, label, t, shine, index);
         return btn;
     }
 
@@ -115,18 +120,81 @@ public static class UiKit
     }
 }
 
-// Selection / hover look for UiKit buttons (placeholder: color swap only).
-public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, IPointerEnterHandler, IPointerExitHandler
+// Selection / hover look for UiKit buttons (color swap) plus GUI motion, all on unscaled time (the pause menu runs at timeScale 0):
+// shine sweep on enter/select, press scale with back-out release, and a staggered slide+fade-in whenever the button becomes active.
+public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
-    Image border; TMP_Text label; UiTheme theme;
-    bool selected, hover;
+    public const float ShineWidth = 24f;
+    const float ShineTime = 0.35f, PressScale = 0.93f, ReleaseTime = 0.2f, InTime = 0.2f, InStep = 0.06f, InSlide = 16f;
 
-    public void Init(Image b, TMP_Text l, UiTheme t) { border = b; label = l; theme = t; Apply(); }
-    public void OnSelect(BaseEventData e) { selected = true; Sfx.Play(SfxId.UiSelect); Apply(); }
+    Image border; TMP_Text label; UiTheme theme; Image shine; CanvasGroup group; RectTransform rt;
+    int index;
+    bool selected, hover, down;
+    float shineT = ShineTime, releaseT = ReleaseTime, introT = InTime, baseX;
+
+    public void Init(Image b, TMP_Text l, UiTheme t, Image s, int i)
+    {
+        border = b; label = l; theme = t; shine = s; index = i;
+        rt = (RectTransform)transform; group = GetComponent<CanvasGroup>(); baseX = rt.anchoredPosition.x;
+        Apply();
+        StartIntro();
+    }
+    public void OnSelect(BaseEventData e) { selected = true; Sfx.Play(SfxId.UiSelect); StartShine(); Apply(); }
     public void OnDeselect(BaseEventData e) { selected = false; Apply(); }
-    public void OnPointerEnter(PointerEventData e) { hover = true; Apply(); }
+    public void OnPointerEnter(PointerEventData e) { hover = true; StartShine(); Apply(); }
     public void OnPointerExit(PointerEventData e) { hover = false; Apply(); }
-    void OnDisable() { selected = hover = false; if (border != null) Apply(); }
+    public void OnPointerDown(PointerEventData e) { down = true; transform.localScale = new Vector3(PressScale, PressScale, 1f); }
+    public void OnPointerUp(PointerEventData e) { if (down) { down = false; releaseT = 0f; } }
+    void OnEnable() { if (theme != null) StartIntro(); }
+    void OnDisable()
+    {
+        selected = hover = down = false;
+        shineT = ShineTime; releaseT = ReleaseTime;
+        if (shine != null) shine.enabled = false;
+        if (rt != null) transform.localScale = Vector3.one;
+        if (border != null) Apply();
+    }
+
+    void StartShine() { if (shineT >= ShineTime) shineT = 0f; }
+
+    void StartIntro()
+    {
+        introT = -index * InStep;
+        group.alpha = 0f;
+        rt.anchoredPosition = new Vector2(baseX - InSlide, rt.anchoredPosition.y);
+    }
+
+    void Update()
+    {
+        float dt = Time.unscaledDeltaTime;
+        if (introT < InTime)
+        {
+            introT += dt;
+            float k = Mathf.Clamp01(introT / InTime);
+            k = 1f - (1f - k) * (1f - k); // ease-out
+            group.alpha = k;
+            rt.anchoredPosition = new Vector2(baseX - InSlide * (1f - k), rt.anchoredPosition.y);
+        }
+        if (shineT < ShineTime)
+        {
+            shineT += dt;
+            bool on = shineT < ShineTime;
+            shine.enabled = on;
+            if (on)
+            {
+                float k = shineT / ShineTime;
+                shine.rectTransform.anchoredPosition = new Vector2(Mathf.Lerp(-ShineWidth, rt.rect.width + ShineWidth, k), 0f);
+            }
+        }
+        if (!down && releaseT < ReleaseTime)
+        {
+            releaseT += dt;
+            float u = Mathf.Clamp01(releaseT / ReleaseTime) - 1f;
+            float back = 1f + 2.70158f * u * u * u + 1.70158f * u * u; // back-out
+            float s = Mathf.LerpUnclamped(PressScale, 1f, back);
+            transform.localScale = new Vector3(s, s, 1f);
+        }
+    }
 
     void Apply()
     {
