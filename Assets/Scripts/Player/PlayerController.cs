@@ -142,6 +142,14 @@ public class PlayerController : MonoBehaviour
         draftSprite = DraftSprites.Setup(visual, DraftSprites.Hero);
         rb.gravityScale = gravityScale;
         bodyCols = GetComponents<Collider2D>();
+        // Zero friction: velocity is written directly, so ground grip isn't needed, and walls must not hold the player up.
+        PhysicsMaterial2D slick = null;
+        foreach (Collider2D b in bodyCols)
+        {
+            if (b.isTrigger || b.sharedMaterial != null) continue;
+            if (slick == null) slick = new PhysicsMaterial2D("PlayerSlick") { friction = 0f, bounciness = 0f };
+            b.sharedMaterial = slick;
+        }
         enemyFilter.SetLayerMask(enemyMask);
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
@@ -394,6 +402,7 @@ public class PlayerController : MonoBehaviour
                 float vx = input.MoveX * moveSpeed;
                 if (Time.time < grappleCarryUntil && !grounded) // rope release: keep the swing, blend into air control
                     vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, DashRules.GrappleAirAccel * Time.fixedDeltaTime);
+                if (!grounded && vx != 0f && PushingIntoWall(vx > 0f ? 1 : -1)) vx = 0f; // airborne against a wall face: no push, so gravity slides us down
                 rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
                 break;
             case State.Grapple:
@@ -432,6 +441,23 @@ public class PlayerController : MonoBehaviour
             hit = col;
         }
         return best;
+    }
+
+    // True when a solid (non one-way) ground collider is right next to the body on side `dir` (+1 / -1).
+    readonly RaycastHit2D[] wallHits = new RaycastHit2D[4];
+    ContactFilter2D wallFilter;
+    bool PushingIntoWall(int dir)
+    {
+        wallFilter.SetLayerMask(groundMask);
+        wallFilter.useTriggers = false;
+        foreach (Collider2D b in bodyCols)
+        {
+            if (b == null || b.isTrigger) continue;
+            int n = b.Cast(new Vector2(dir, 0f), wallFilter, wallHits, 0.06f);
+            for (int i = 0; i < n; i++)
+                if (!wallHits[i].collider.usedByEffector && Mathf.Abs(wallHits[i].normal.y) < 0.5f) return true;
+        }
+        return false;
     }
 
     // Ground within ledgeProbeDepth under the feet of a player centred at `at` (probe starts just above the feet so a floor we stand on counts).
