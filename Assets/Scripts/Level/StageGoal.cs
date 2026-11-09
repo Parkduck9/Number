@@ -15,6 +15,7 @@ public class StageGoal : MonoBehaviour
     {
         var pc = other.GetComponentInParent<PlayerController>();
         if (loadAt >= 0f || pc == null || GameFlow.IsPlayerDead(pc)) return;
+        if (!StageClear.TryClear()) return; // enemies left / spawner unbroken
         player = pc;
         GameFlow.InputLocked = true;
         loadAt = Time.unscaledTime + delay;

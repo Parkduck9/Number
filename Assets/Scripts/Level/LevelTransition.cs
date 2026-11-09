@@ -55,6 +55,7 @@ public class LevelTransition : MonoBehaviour
         if (busy) return;
         PlayerController pc = other.GetComponentInParent<PlayerController>();
         if (pc == null || GameFlow.IsPlayerDead(pc)) return;
+        if (mode == Mode.Goal && !StageClear.TryClear()) return; // DECISIONS 15: all enemies dead + spawners broken
         StartCoroutine(Run(pc));
     }
 
