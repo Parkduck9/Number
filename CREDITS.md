@@ -35,7 +35,7 @@
 | android overload v2 draft — reference samples/enemy_android_stand_big.png only | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Sprites/android_overload_v2_big.png, Assets/Art/Drafts/Sprites/android_overload_v2.png |
 | Dialogue portrait drafts (lineup set) — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Art/Drafts/Portraits/lineup/ |
 | AI bug enemy DRAFT sprites — reference docs/design/concept/11_character_lineup.jpg | AI 생성 (Codex, OpenAI GPT image generation) | Assets/Resources/DraftSprites/bug_walk_2f.png, bug_attack_3f.png, bug_flyer_2f.png, bug_flyer_attack_3f.png; Assets/Art/Drafts/Sprites/bug_sprites_preview4x.png |
-| Dialogue portrait yudo (in game) — source image made by the user with Google Gemini from the team's hero art; grid-snapped and cleaned to native pixel size by Codex | AI 생성 (Google Gemini, Codex gpt-6.1-sol) | Assets/Resources/Portraits/yudo.png; source docs/design/concept/portraits/yudo_gemini.png |
+| Dialogue portraits yudo / citizen / luddite / broadcast (in game, 100x100) — source images made by the user with Google Gemini from the team's character art; grid-snapped and cleaned to native pixel size by Codex, with integer enlargement and transparent margin padding where needed | AI 생성 (Google Gemini, Codex gpt-6.1-sol) | Assets/Resources/Portraits/*.png (yudo, citizen, luddite, broadcast); sources docs/design/concept/portraits/*_gemini.png |
 
 ## Generative AI disclosure (draft)
 - Claude Fable (Anthropic, via Claude Code) — architecture and system design
@@ -43,4 +43,4 @@
 - Claude Opus (Anthropic, via Claude Code) — code review and planning
 - Codex CLI (OpenAI GPT-6 Astra / GPT-6.1 Sol / GPT-6 Luna) — concept art and background image generation (the STG-00/STG-01 background in the build is AI-generated), asset creation and asset setup
 - Antigravity CLI (Google) — QA, testing and bug reports (QA round 2 on 2026-11-09 was done by Claude Sonnet instead, Antigravity quota exhausted; verified by Claude Opus)
-- Google Gemini — high-resolution reference images for the dialogue portraits (made by the user from the team's character art); the in-game 48x48 portraits are converted from them by Codex
+- Google Gemini — high-resolution reference images for the dialogue portraits (made by the user from the team's character art); the in-game 100x100 portraits are grid-snapped and cleaned from them by Codex
