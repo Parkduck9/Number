@@ -1,0 +1,53 @@
+// NUMBER review draft. Original choreography drawn with pixelfx (MIT).
+import { Rng, fit } from '../../core/index.js';
+
+export const meta = {
+  name: 'Number kill burst',
+  desc: 'One white contact frame, rightward mechanical fragments and red sparks, then four falling broken data cells. Ends empty.',
+  tags: ['combat', 'kill', 'debris', 'directional', 'one-shot', 'number', 'draft'],
+  size: [96, 96], origin: [28, 42], duration: 0.34, fps: 50, loop: false, bg: 'dark',
+  options: { palette: ['#24182e','#432135','#773145','#ad384d','#f24f60','#ff7d82','#ffc6be','#ffffff'], seed: 11, spread: 1.2, fragments: 7, sparks: 12 },
+};
+
+export function draw(p, t, o) {
+  if (t >= meta.duration - 1e-8) return;
+  const C = fit(o.palette, 8), R = new Rng(o.seed), u = t / meta.duration;
+  if (t < 0.02) {
+    p.poly([[-13,-2],[-5,-5],[-7,-12],[1,-6],[10,-9],[7,-3],[25,0],[9,3],[14,8],[3,6],[-3,11],[-3,4],[-12,5]], C[5]);
+    p.poly([[-9,-1],[-3,-4],[-3,-8],[2,-4],[8,-5],[6,-1],[18,0],[6,2],[8,5],[1,4],[-2,7],[-2,2]], C[7]);
+    p.glow(0,0,17,C[4],0.24);
+  }
+  for (let i=0;i<o.fragments;i++) {
+    const a=(-1.05+i/(o.fragments-1)*1.9+R.range(-.12,.12))*o.spread, speed=R.range(95,315), life=R.range(0.21,0.31);
+    const sx=R.range(-6,9), sy=R.range(-9,7), spin=R.range(-12,12), size=R.range(2.5,4.2);
+    if(t<0.02 || t>=life) continue;
+    const v=(1-Math.exp(-5*t))/5, x=sx+Math.cos(a)*speed*v, y=sy+Math.sin(a)*speed*v+170*t*t;
+    const angle=a+spin*t, ca=Math.cos(angle), sa=Math.sin(angle), s=size*(t>life-0.05?0.65:1);
+    const point=(dx,dy)=>[Math.round(x+dx*ca-dy*sa),Math.round(y+dx*sa+dy*ca)];
+    const pts=[point(-s,-s*.55),point(s*.7,-s*.55),point(s,s*.3),point(-s*.65,s*.55)];
+    p.poly(pts,C[t<life*.55?2:1]);
+    p.line(...pts[0],...pts[1],C[t<life*.65?4:3]);
+    p.line(...pts[1],...pts[2],C[4]);
+    p.glow(x,y,3,C[4],0.12*(1-t/life));
+  }
+  for(let i=0;i<o.sparks;i++) {
+    const a=(-1.1+i/(o.sparks-1)*2+R.range(-.1,.1))*o.spread, sp=R.range(175,310), life=R.range(.10,.24), delay=R.range(0,.018);
+    const q=t-delay;
+    if(q<0.005 || q>=life) continue;
+    const d=(1-Math.exp(-6*q))/6, x=Math.cos(a)*sp*d, y=Math.sin(a)*sp*d+150*q*q;
+    const len=(2+6*(1-q/life)), c=C[q/life<.4?4:3];
+    p.line(x-Math.cos(a)*len,y-Math.sin(a)*len,x,y,c);
+    p.px(x,y,C[q/life<.35?6:4]);
+  }
+  for(let i=0;i<4;i++) {
+    const sx=R.range(-2,10), sy=R.range(-7,3), vx=R.range(22,85), vy=R.range(-55,-18), life=.28+i*.012;
+    if(t<.04 || t>=life) continue;
+    const x=Math.round(sx+vx*(1-Math.exp(-3*t))/3), y=Math.round(sy+vy*t+260*t*t);
+    const c=C[t<life*.7?4:3], w=i%2?2:3;
+    // Tiny data cells, never characters or readable numerals.
+    p.line(x,y,x+w,y,c); p.line(x,y,x,y+3,c);
+    p.line(x,y+3,x+w,y+3,c); p.line(x+w,y,x+w,y+3,c);
+    if(t<life*.6) p.px(x+1,y+1,C[6]);
+    p.glow(x+1,y+1,4,C[4],.16*(1-u));
+  }
+}

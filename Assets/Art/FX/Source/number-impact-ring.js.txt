@@ -1,0 +1,29 @@
+// NUMBER review draft. Original thin-ring choreography, pixelfx (MIT).
+import { Rng, fit, TAU } from '../../core/index.js';
+
+export const meta = {
+  name: 'Number impact ring',
+  desc: 'A thin circular cyan pressure rim snaps outward with eight short radial ticks and a tiny white contact core. Ends empty.',
+  tags: ['combat', 'impact', 'ring', 'one-shot', 'number', 'draft'],
+  size: [64,64], origin: [32,32], duration: .18, fps: 50, loop: false, bg: 'dark',
+  options: { palette: ['#102039','#16425b','#20758b','#25a7bf','#4ff0ff','#97f8ff','#c7fcff','#ffffff'], seed: 11, radius: 26, rays: 8 },
+};
+export function draw(p,t,o) {
+  if(t>=meta.duration-1e-8) return;
+  const C=fit(o.palette,8), R=new Rng(o.seed), u=t/meta.duration;
+  const r=3+(o.radius-3)*(1-Math.pow(1-u,2.4));
+  const c=C[u<.18?6:u<.65?4:u<.85?3:2];
+  if(u<.7) p.ring(0,0,r,1,c);
+  else for(let i=0;i<4;i++) {
+    const gap=.12+(u-.7)*1.1;
+    p.arc(0,0,r,1,i*TAU/4+gap,i*TAU/4+1.27-gap,c);
+  }
+  if(t<.08) p.glowRing(0,0,r,2,C[4],.12*(1-t/.08));
+  if(t<.02) p.circle(0,0,2,C[7]);
+  for(let i=0;i<o.rays;i++) {
+    const a=i/o.rays*TAU+R.range(-.08,.08), length=(i%2?3:5)*(1-u*.6);
+    if(t>(i%2?.06:.10)) continue;
+    const d=r+1;
+    p.line(Math.cos(a)*d,Math.sin(a)*d,Math.cos(a)*(d+length),Math.sin(a)*(d+length),C[u<.3?4:3]);
+  }
+}

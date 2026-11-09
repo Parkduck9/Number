@@ -1,0 +1,39 @@
+// NUMBER review draft. Original reflected-spark choreography, pixelfx (MIT).
+import { Rng, fit, TAU } from '../../core/index.js';
+
+export const meta = {
+  name: 'Number parry clash',
+  desc: 'A cyan four-point cross with a white contact core rings out; a tight spark fan reflects right toward the attacker. Ends empty.',
+  tags: ['combat','parry','clash','directional','one-shot','number','draft'],
+  size: [80,80], origin: [32,40], duration: .28, fps: 50, loop: false, bg: 'dark',
+  options: { palette: ['#102039','#16425b','#20758b','#25a7bf','#4ff0ff','#97f8ff','#c7fcff','#ffffff'], seed: 11, sparks: 10, fan: .95, arm: 29 },
+};
+export function draw(p,t,o) {
+  if(t>=meta.duration-1e-8) return;
+  const C=fit(o.palette,8), R=new Rng(o.seed);
+  if(t<.10) {
+    const k=1-t/.10, L=o.arm*(.75+.25*Math.min(1,t/.02))*k, w=1+2*k;
+    p.poly([[-L,0],[-w,-w],[0,-L*.72],[w,-w],[L,0],[w,w],[0,L*.72],[-w,w]],C[t<.04?4:3]);
+    p.line(-L,0,L,0,(u)=>C[Math.abs(u-.5)<.15?7:6]);
+    p.line(0,-L*.72,0,L*.72,(u)=>C[Math.abs(u-.5)<.2?7:5]);
+    if(t<.04) p.poly([[0,-4],[3,0],[0,4],[-3,0]],C[7]);
+    p.glow(0,0,18,C[4],.22*k);
+  }
+  if(t>=.02 && t<.18) {
+    const u=(t-.02)/.16, r=6+16*(1-Math.pow(1-u,2));
+    const c=C[u<.4?5:u<.7?4:2];
+    if(u<.25) p.ring(0,0,r,1,c);
+    else for(let i=0;i<4;i++) p.arc(0,0,r,1,i*TAU/4+.18+u*.18,i*TAU/4+1.25-u*.2,c);
+    if(u<.5) p.glowRing(0,0,r,2,C[4],.1*(1-u*2));
+  }
+  for(let i=0;i<o.sparks;i++) {
+    const a=(-1+2*i/(o.sparks-1))*o.fan+R.range(-.06,.06)-.12, sp=R.range(185,270), life=R.range(.15,.26), delay=i>6?.02:0;
+    const q=t-delay;
+    if(q<.02 || q>=life) continue;
+    const d=(1-Math.exp(-5*q))/5, x=Math.cos(a)*sp*d, y=Math.sin(a)*sp*d+90*q*q;
+    const len=1+6*(1-q/life), c=C[q/life<.3?5:q/life<.65?4:2];
+    p.line(x-Math.cos(a)*len,y-Math.sin(a)*len,x,y,c);
+    p.px(x,y,C[q<.08?6:4]);
+    p.glow(x,y,2,C[4],.12*(1-q/life));
+  }
+}
