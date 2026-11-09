@@ -38,8 +38,9 @@ public class FrameStats : MonoBehaviour
         if (frozen && !wasFrozen) hitStops++;
         wasFrozen = frozen;
         if (acc < Window) return;
-        text = string.Format("{0:0} FPS  avg {1:0.0} ms  worst {2:0.0} ms  spikes(>33ms) {3}  hit-stops {4}",
-                             frames / acc, acc * 1000f / frames, worst * 1000f, spikes, hitStops);
+        text = string.Format("{0:0} FPS  avg {1:0.0} ms  worst {2:0.0} ms  spikes(>33ms) {3}  hit-stops {4}  parry {5}/{6} (hit while parrying {7})",
+                             frames / acc, acc * 1000f / frames, worst * 1000f, spikes, hitStops,
+                             PlayerController.ParryCount, PlayerController.ParryTries, PlayerController.ParryFailHits);
         acc = worst = 0f;
         frames = 0;
     }
@@ -49,7 +50,7 @@ public class FrameStats : MonoBehaviour
         if (!show) return;
         if (style == null) style = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = Color.yellow } };
         bool hitStop = Time.timeScale == 0f && !PauseMenu.IsOpen;
-        GUI.Label(new Rect(8f, 8f, 700f, 24f), text, style);
+        GUI.Label(new Rect(8f, 8f, 1100f, 24f), text, style);
         if (hitStop) GUI.Label(new Rect(8f, 30f, 200f, 24f), "HIT-STOP", style);
     }
 }

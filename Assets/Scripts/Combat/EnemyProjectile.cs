@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // Placeholder ranged-enemy shot: flies straight, one hit test against the player.
-// Parried or hit = destroyed. Dodged (dash/invulnerable) = passes through, never tests again.
+// Hit = destroyed. Parried = flies back harmlessly for a moment. Dodged (dash/invulnerable) = passes through, never tests again.
 public class EnemyProjectile : MonoBehaviour
 {
     const float Lifetime = 3f;
@@ -72,6 +72,16 @@ public class EnemyProjectile : MonoBehaviour
         info.TravelDirX = Mathf.Abs(velocity.x) > 0.01f ? Mathf.Sign(velocity.x) : 0f; // front/back parry test uses travel direction
         HitResult result = pc.ReceiveEnemyHit(info);
         if (result == HitResult.Dodged) passedPlayer = true;
+        else if (result == HitResult.Parried) Reflect();
         else Destroy(gameObject);
+    }
+
+    // Parried: fly back the way it came, white, harmless (never tests the player again), and vanish soon.
+    void Reflect()
+    {
+        velocity = -velocity * Juice.ReflectSpeedMul;
+        passedPlayer = true;
+        dieAt = Time.time + Juice.ReflectLife;
+        GetComponent<SpriteRenderer>().color = Color.white;
     }
 }

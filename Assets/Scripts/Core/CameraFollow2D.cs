@@ -35,14 +35,17 @@ public class CameraFollow2D : MonoBehaviour
     Vector2 shakeOffset;
 
     // Strongest shake wins; a weaker one never cuts a stronger one short.
-    public static void Shake(float amplitude, float duration)
+    // blowDir != 0: Juice.ShakeKick of the amplitude pushes the view along it (a kick that decays), the rest stays random.
+    public static void Shake(float amplitude, float duration, Vector2 blowDir = default)
     {
         if (active == null || amplitude <= 0f || duration <= 0f) return;
         float currentAmp = active.shakeLeft > 0f ? active.shakeAmp * active.shakeLeft / active.shakeTime : 0f;
         if (amplitude < currentAmp) return;
         active.shakeAmp = amplitude;
         active.shakeTime = active.shakeLeft = duration;
+        active.shakeDir = blowDir.sqrMagnitude > 0.0001f ? blowDir.normalized : Vector2.zero;
     }
+    Vector2 shakeDir;
 
     void OnEnable() => active = this;
     void OnDisable() { if (active == this) active = null; }
@@ -86,7 +89,9 @@ public class CameraFollow2D : MonoBehaviour
             shakeLeft = Mathf.Max(0f, shakeLeft - Time.unscaledDeltaTime);
             float ppu = ppc != null && ppc.assetsPPU > 0 ? ppc.assetsPPU : 32f;
             float a = shakeTime > 0f ? shakeAmp * shakeLeft / shakeTime : 0f;
-            Vector2 r = new Vector2(Random.Range(-a, a), Random.Range(-a, a));
+            float kick = shakeDir == Vector2.zero ? 0f : Juice.ShakeKick;
+            float j = a * (1f - kick);
+            Vector2 r = shakeDir * (a * kick) + new Vector2(Random.Range(-j, j), Random.Range(-j, j));
             shakeOffset = new Vector2(Mathf.Round(r.x * ppu), Mathf.Round(r.y * ppu)) / ppu; // pixel-snapped
         }
         transform.position += new Vector3(shakeOffset.x, shakeOffset.y, 0f);

@@ -104,11 +104,17 @@ public class PlayerController : MonoBehaviour
     bool pendingParry, pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
+    // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
+    public static int ParryTries, ParryCount, ParryFailHits;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetParryStats() => ParryTries = ParryCount = ParryFailHits = 0; // Domain Reload is off
+
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
     public bool Grounded => grounded;
     public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveFor;
     float parryActiveFor; // parryActiveTime, or longer for an LMB parry so it covers the threat it was chosen for (DashRules.ParryCoverMargin)
+    float ParryLength => Mathf.Max(parryDuration, parryActiveFor); // the Parry state never ends while its active window is still open
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
@@ -202,7 +208,7 @@ public class PlayerController : MonoBehaviour
                 if (elapsed >= attackDuration) EnterState(State.Locomotion);
                 break;
             case State.Parry:
-                if (elapsed >= parryDuration) EnterState(State.Locomotion);
+                if (elapsed >= ParryLength) EnterState(State.Locomotion);
                 break;
             case State.Dash:
                 SpawnAfterimage(now);
@@ -241,7 +247,7 @@ public class PlayerController : MonoBehaviour
         switch (state)
         {
             case State.Attack: return stateEnteredAt + attackDuration;
-            case State.Parry: return stateEnteredAt + parryDuration;
+            case State.Parry: return stateEnteredAt + ParryLength;
             case State.Dash: return stateEnteredAt + dashEndsAfter;
         }
         return Time.time;
@@ -259,7 +265,8 @@ public class PlayerController : MonoBehaviour
             if (FaceParryThreat(out float eta))
             {
                 EnterState(State.Parry);
-                parryActiveFor = Mathf.Clamp(eta + DashRules.ParryCoverMargin, parryActiveTime, parryDuration);
+                // No upper cap: a strike seen at eta 0.3 lands up to 2 frames later (Windup->Strike->DoStrike); the Parry state stretches to match.
+                parryActiveFor = Mathf.Max(eta + DashRules.ParryCoverMargin, parryActiveTime);
             }
             else EnterState(State.Attack);
             return;
@@ -317,6 +324,7 @@ public class PlayerController : MonoBehaviour
                 if (!TryStartLunge(aim) && grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
                 break;
             case State.Parry:
+                ParryTries++;
                 attackBufferedUntil = -999f;
                 parryActiveFor = parryActiveTime;
                 if (grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -648,8 +656,8 @@ public class PlayerController : MonoBehaviour
         Sfx.Play(SfxId.Hit);
         PlayHitSpark(col.ClosestPoint(from), Facing);
         bool down = enemy.Current == TestEnemy.State.Stunned; // the hit that finishes the enemy
-        if (lunge && down)
-            for (int i = 0; i < DashRules.LungeKillSparks; i++) // cheap "shatter"
+        if (down)
+            for (int i = 0; i < Juice.KillSparks; i++) // cheap "shatter"
                 PlayHitSpark((Vector2)enemy.transform.position + new Vector2(Random.Range(-0.4f, 0.4f), Random.Range(-0.5f, 0.6f)), Random.value < 0.5f ? -1f : 1f);
         if (swingHitStops < DashRules.LungeMaxHitStops)
         {
@@ -657,7 +665,9 @@ public class PlayerController : MonoBehaviour
             // a blow landing right after a hit-stop ended (2nd lunge kill, chained swings) gets no new freeze: back-to-back stops read as lag
             if (hitStopEndsAt >= 0f || Time.unscaledTime - hitStopEndedAt >= DashRules.HitStopGap)
                 StartHitStop(down ? Juice.HitStopKill : Juice.HitStopHit);
-            Juice.Shake(down ? Juice.ShakeKillAmp : Juice.ShakeHitAmp, down ? Juice.ShakeKillTime : Juice.ShakeHitTime);
+            Vector2 blow = (Vector2)enemy.transform.position - rb.position; // player -> enemy (`from` may be the swing box centre, past the enemy)
+            if (down) Juice.Shake(Juice.ShakeKillAmp, Juice.ShakeKillTime, blow.sqrMagnitude > 0.0001f ? blow : new Vector2(Facing, 0f));
+            else Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
         }
         return true;
     }
@@ -688,13 +698,17 @@ public class PlayerController : MonoBehaviour
             if (state == State.Parry) EnterState(State.Locomotion);
             parryFlashUntil = Time.time + parryFlashTime;
             parryGuardUntil = Time.time + parryGuardTime;
-            SpriteFx.Play("parry", (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f) - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
+            ParryCount++;
+            Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f);
+            SpriteFx.Play("parry", contact - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
+            ParryFeedback.Show(contact); // screen flash + "PARRY!" popup (playtest 11-09: parries were not readable)
             Sfx.Play(SfxId.Parry);
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
         }
 
+        if (state == State.Parry) ParryFailHits++;
         health.TakeDamage(info.Damage);
         Sfx.Play(SfxId.Hurt);
         EnterState(State.Hurt);
@@ -717,7 +731,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Dead) c = Color.gray;
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
-        if (now < parryFlashUntil) c = Color.white;
+        if (now < parryFlashUntil) c = Juice.ParryPlayerTint; // white was invisible on the (white) draft sprite
         visual.color = c;
     }
 

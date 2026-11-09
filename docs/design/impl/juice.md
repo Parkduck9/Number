@@ -5,12 +5,12 @@
 | 이름 | 파일 | 값 | 설명 |
 |---|---|---|---|
 | ShakeHitAmp / ShakeHitTime | Juice.cs | 0.04 / 0.08 | 플레이어 타격 성공 흔들림 (월드 단위, 1px = 1/32) |
-| ShakeParryAmp / Time | Juice.cs | 0.07 / 0.12 | 패링 |
+| ShakeParryAmp / Time | Juice.cs | 0.1 / 0.15 | 패링 (11-09: 0.07 / 0.12) |
 | ShakeHurtAmp / Time | Juice.cs | 0.12 / 0.2 | 플레이어 피격 |
-| ShakeKillAmp / Time | Juice.cs | 0.12 / 0.2 | 적을 쓰러뜨린 타격 |
-| HitStopHit | Juice.cs | 0.04 s | 일반 타격 히트스톱 |
-| HitStopKill | Juice.cs | 0.08 s | 적 기절(마무리) 타격 히트스톱 |
-| hitStopTime | PlayerController.cs (직렬화) | 0.06 s | 패링 히트스톱 (기존) |
+| ShakeKillAmp / Time | Juice.cs | 0.14 / 0.22 | 적을 쓰러뜨린 타격. 타격 방향으로 밀림 (`ShakeKick` 0.6) |
+| HitStopHit | Juice.cs | 0.05 s | 일반 타격 히트스톱 (11-09: 0.04) |
+| HitStopKill | Juice.cs | 0.12 s | 적 기절(마무리) 타격 히트스톱 (11-09: 0.08). 처치 때 불꽃 `KillSparks` 3개 추가 |
+| hitStopTime | PlayerController.cs (직렬화) | 0.06 s | 패링 히트스톱. 실제로는 `DashRules.ParryHitStop` 0.15 s가 최소값이라 그쪽이 쓰인다 |
 | PopTime / PopScale | EnemyNumber.cs | 0.12 s / 0.5 | 적 공격마다 숫자 라벨이 커졌다 돌아오는 펀치 |
 | 피격 붉은 틴트 | PlayerController.UpdateVisual | (1, 0.35, 0.35) | Hurt 상태(0.25s) 동안 |
 
@@ -22,7 +22,7 @@
 
 ## 제거 방법
 - 흔들림 전체: Juice.cs의 Shake* 값을 0으로, 또는 `Juice.Shake` 호출 3곳(PlayerController) 삭제 + CameraFollow2D의 Shake/ApplyShake 삭제.
-- 일반 타격 히트스톱: HitStopHit/HitStopKill을 0으로 (패링 것은 hitStopTime).
+- 일반 타격 히트스톱: HitStopHit/HitStopKill을 0으로 (패링 것은 DashRules.ParryHitStop).
 - 숫자 팝: `number.Pop()` 호출(TestEnemy.DoStrike) 삭제, EnemyNumber의 Pop 관련 줄 삭제.
 - 피격 붉은 틴트: PlayerController.UpdateVisual의 `State.Hurt` 줄 삭제.
 
@@ -37,7 +37,7 @@
 ## 일반 적 한 방 처치 (2026-11-08 결정)
 - 일반 적(Citizen, Bug)은 어떤 상태에서든 한 대 맞으면 쓰러진다 (`TestEnemy.ReceivePlayerHit`의 `kind != Android` 블록). 맞는 순간 Stunned 상태(눕는 연출 + 숫자 숨김) + 작은 넉백, 이후 `KillVanishDelay` 뒤 `SetActive(false)`로 사라진다 (hit-spark 재생). 처치 히트스톱/흔들림은 그대로 발동.
 - Android(특수 적)는 기존 규칙(hp 5, 숫자가 0이 되기 전엔 막힘) 유지.
-- 튜너블 (Juice.cs): `KillVanishDelay` 0.5 s, `KillKnockback` (3, 2).
+- 튜너블 (Juice.cs): `KillVanishDelay` 0.5 s, `KillKnockback` (6, 3.5) (11-09: (3, 2)).
 - 다시 여러 대 맞게 되돌리기: TestEnemy.ReceivePlayerHit의 `if (kind != Kind.Android) { ... }` 블록과 Update의 vanish 블록(`Juice.KillVanishDelay`)을 삭제하면 기존 hp/막힘 규칙이 돌아온다.
 
 ## 일반 적 템포 (한 방 처치 보상)
@@ -52,3 +52,10 @@ Citizen/Bug만 해당 (Android 제외). `Juice.NormalTimeMul` **0.55**(이전 0.
 | 접근 속도 (3) | 3 | 4.5 |
 
 되돌리기: 두 배율을 1로 설정.
+
+## 패링 성공 표시 (플레이테스트 11-09 "패링이 잘 되는지 모르겠음")
+- 원인: 드래프트 스프라이트는 흰색이라 색을 곱하는 흰색 번쩍임(플레이어·적)이 보이지 않았다. 흰색 대신 색으로 칠한다: `ParryPlayerTint`(청록), `ParryEnemyTint`(파랑, 0.25 s), 안드로이드 막기 `BlockTint`(회청).
+- `ParryFeedback`: 화면 전체 흰색 번쩍임(`ParryFlashAlpha` 0.35, `ParryFlashTime` 0.12 s) + 접촉 지점 위 "PARRY!/패링!" 글자(금색, 24px, 0.5 s 동안 24px 올라가며 뒤 절반에 사라짐). 실제 시간 기준이라 히트스톱 중에도 보인다.
+- 패링 히트스톱 `DashRules.ParryHitStop` 0.1 → 0.15 s (처치 0.12보다 길다).
+- 패링된 탄은 사라지지 않고 1.3배 속도로 되돌아가며 흰색으로 0.35 s 날다 사라진다(아무것도 맞히지 않음).
+- 개발 빌드 F3: `parry 성공/시도 (hit while parrying N)` 카운터.

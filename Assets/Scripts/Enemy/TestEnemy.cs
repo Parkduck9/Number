@@ -392,7 +392,7 @@ public class TestEnemy : MonoBehaviour
         // Android gimmick A: parrying the last strike (or dashing through the unparryable 7th) overloads it.
         if (kind == Kind.Android && special && (result == HitResult.Parried || (unparryable && dashedThrough && result == HitResult.Dodged)))
         {
-            if (result == HitResult.Parried) Flash(Color.white);
+            if (result == HitResult.Parried) Flash(Juice.ParryEnemyTint, Juice.ParryEnemyTintTime);
             EnterState(State.Overload);
             return;
         }
@@ -411,7 +411,7 @@ public class TestEnemy : MonoBehaviour
             EnterState(State.Charge);
             return;
         }
-        if (result == HitResult.Parried) Flash(Color.white);
+        if (result == HitResult.Parried) Flash(Juice.ParryEnemyTint, Juice.ParryEnemyTintTime);
         EnterState(playerBehind ? State.Turn : State.Recover);
     }
 
@@ -489,10 +489,21 @@ public class TestEnemy : MonoBehaviour
     public bool MeleeThreatens(Vector2 playerPos, float imminentWindow, out float eta)
     {
         eta = 0f;
-        if (ranged || (state != State.Windup && state != State.Strike) || !gameObject.activeInHierarchy) return false;
+        if (ranged || (state != State.Windup && state != State.Strike && state != State.Charge) || !gameObject.activeInHierarchy) return false;
+        if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
+        if (state == State.Charge)
+        {
+            // Charge enters Strike on reaching attackRangeX and strikes the next frame, so without this the only parryable frame
+            // was that one Strike frame (Fable review 11-09: an arriving Android got a lunge -> block -> hit). A late last strike
+            // goes through Windup first and is caught there.
+            if (strikesLeft == 1 && lastStrikeDelay > 0f) return false;
+            float ahead = (playerPos.x - transform.position.x) * facing;
+            if (ahead < 0f || Mathf.Abs(playerPos.y - transform.position.y) > attackRangeY) return false;
+            eta = Mathf.Max(0f, ahead - attackRangeX) / (rushing ? DashRules.RushSpeed : chargeSpeed);
+            return eta <= imminentWindow;
+        }
         if (state == State.Windup) eta = Mathf.Max(0f, WindupWait() - (Time.time - stateEnteredAt));
         if (eta > imminentWindow) return false;
-        if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;
     }
@@ -503,7 +514,7 @@ public class TestEnemy : MonoBehaviour
         if (state == State.Stunned) return false;
         if (kind == Kind.Android && state != State.Overload) // Android blocks every hit except while overloaded
         {
-            Flash(Color.white);
+            Flash(Juice.BlockTint); // white was invisible on the (white) draft sprite
             return false;
         }
         // Citizen/Bug in any state, Android while overloaded: one hit knocks it down.
@@ -527,10 +538,12 @@ public class TestEnemy : MonoBehaviour
         SpriteFx.Play("hit-spark", (Vector2)transform.position - new Vector2(12f, 16f) / SpriteFx.Ppu);
     }
 
-    void Flash(Color c)
+    void Flash(Color c) => Flash(c, flashTime);
+
+    void Flash(Color c, float seconds)
     {
         flashColor = c;
-        flashUntil = Time.time + flashTime;
+        flashUntil = Time.time + seconds;
     }
 
     // Stunned / Overload = stunned frame; Approach = walk frames while moving; windup (and the android's fan tell) / strike / recover = attack frames 0 / 1 / 2; the rest rests on the recover pose.

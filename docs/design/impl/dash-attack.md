@@ -11,10 +11,10 @@ DECISIONS 11의 "공격 자동 접근"을 대체한다. 수치는 모두 `Assets
 | `LungeBehind` | 1.2 u | 적 중심 뒤로 관통해서 멈추는 거리 |
 | `LungeStopInFront` | 1.0 u | 안드로이드(과부하 아님)·뒤가 낭떠러지일 때 적 앞에서 멈춤 |
 | `LungeSweepWidth` | 1.4 u | 돌진 경로 판정 두께 (시작점 ~ 몸 앞 0.6u) |
-| `LungeMaxHitStops` / `LungeKillSparks` | 2 / 2 | 한 번 공격에 히트스톱 최대 2번 / 돌진 처치 시 추가 불꽃 |
+| `LungeMaxHitStops` | 2 | 한 번 공격에 히트스톱 최대 2번 (처치 시 추가 불꽃은 `Juice.KillSparks`로 옮김, 모든 처치에 적용) |
 | `ParryShotRange` / `ParryShotLateral` | 3 / 1.3 u | 좌클릭이 패링이 되는 탄 거리 / 탄 진로와 몸 중심 거리 (11-09 플레이: 2 → 3) |
 | `ParryMeleeWindow` | 0.3 s | 근접 일격이 이 시간 안에 들어올 때만 좌클릭 = 패링 (11-09: 0.2 → 0.3) |
-| `ParryCoverMargin` | 0.05 s | 좌클릭 패링은 고른 위협이 닿을 때 + 이 값까지 유효 (최소 parryActiveTime 0.2, 최대 parryDuration 0.35). 우클릭은 0.2 그대로 |
+| `ParryCoverMargin` | 0.1 s | 좌클릭 패링은 고른 위협이 닿을 때 + 이 값까지 유효 (최소 parryActiveTime 0.2, 상한 없음: 더 길면 패링 상태도 그만큼 늘어난다, 11-09). 돌진(Charge) 중인 적도 0.3 s 안에 닿으면 패링 대상. 우클릭은 0.2 그대로 |
 | `ParryHitStop` | 0.1 s | 패링 성공 히트스톱 최소값 (프리팹 0.06은 거의 안 보였음) |
 | `MeleeDetectMin` | 7 u | 근접 적 인지 거리 = max(빌더 값, 7). 한 번 보면 계속 쫓음. 원거리는 빌더 값 그대로 |
 | `RushRange` / `RushWindup` | 5 u / 0.3 s | 적 돌진 예고 거리 / 예고 시간 |

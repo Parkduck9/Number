@@ -13,7 +13,6 @@ public static class DashRules
     public const float LungeSweepWidth = 1.4f;  // thickness of the kill sweep (= attack box height)
     public const int LungeMaxHitStops = 2;      // hit-stop + shake only for the first N blows of one swing (many kills must not freeze the game)
     public const float HitStopGap = 0.25f;      // s (real time): a hit/kill hit-stop never starts within this after the previous one ended (parry exempt)
-    public const int LungeKillSparks = 2;       // extra hit-sparks on a lunge kill (cheap "shatter")
 
     // ---- LMB parry merge (PlayerController.FaceParryThreat): parry wins over the lunge when a threat is about to land ----
     public const float ParryShotRange = 3f;     // a parryable shot this close (u) and flying at the player (playtest 11-09: 2 was too late for humans)
@@ -22,7 +21,7 @@ public static class DashRules
     public const float ParryMeleeWindow = 0.3f; // s; was parryActiveTime 0.2 (playtest 11-09: too strict)
     public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (capped by parryDuration); RMB keeps parryActiveTime.
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
-    public const float ParryHitStop = 0.1f;     // minimum hit-stop on a successful parry (Player prefab hitStopTime 0.06 read as nothing)
+    public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 
     // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter) ----
     public const float ShiftAssistRange = 4f;   // u (centre to centre, horizontal): enemy this close on either side -> dash behind it and counter
