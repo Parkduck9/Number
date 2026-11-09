@@ -60,6 +60,8 @@ public static class Stg05Builder
             var bg = new GameObject("Background (boss room)").AddComponent<SpriteRenderer>();
             bg.sprite = bgSprite;
             bg.sortingOrder = -100;
+            // spill light from the big broadcast screen (gold) + the stone lantern right of the stairs (warm), px on the image
+            StageBuildKit.AddLamps(bg.transform, RoomW, new StageBuildKit.Lamp(480f, 230f, StageBuildKit.LampWarm, 8f, 0.1f), new StageBuildKit.Lamp(750f, 420f, StageBuildKit.LampWarm, 4f));
         }
         else Todo.Add("Background image missing (Assets/Art/Backgrounds/bg_stg05_boss_room.png)");
 
@@ -144,7 +146,6 @@ public static class Stg05Builder
         SetObj(view, "board", board);
         SetObj(view, "message", message);
 
-        BuildLight();
         BuildCamera();
         new GameObject("RespawnManager").AddComponent<RespawnManager>();
         BuildHud(font);
@@ -153,6 +154,7 @@ public static class Stg05Builder
         var dp = new GameObject("DialoguePlayer").AddComponent<DialoguePlayer>();
         SetObj(dp, "speakers", DialogueSetup.EnsureSpeakers());
         SetObj(dp, "font", font);
+        StageBuildKit.BuildLighting(false);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         AppendBuildScene();
@@ -312,13 +314,6 @@ public static class Stg05Builder
 
         var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
         if (font != null) SetObj(ui, "font", font);
-    }
-
-    static void BuildLight()
-    {
-        var l = new GameObject("Global Light 2D").AddComponent<Light2D>();
-        l.lightType = Light2D.LightType.Global;
-        l.intensity = 1f;
     }
 
     // Fixed camera: the whole room fits one screen, no follow.

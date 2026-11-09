@@ -14,7 +14,10 @@ public static class LightingSetup
     public const string PostFxPath = Dir + "/NightPostFx.asset";
     public static readonly string[] NewSortingLayers = { "Background", "World", "Characters", "FX" };
 
-    // Adds missing sorting layers only; never renames or removes.
+    // Adds missing sorting layers; never renames or removes. Also keeps Default just BELOW FX (order: Background, World, Characters,
+    // Default, FX): the stage builders put every scene renderer on Background/World/Characters, so only runtime-spawned objects that
+    // never set a layer stay on Default (enemy holo numbers, projectiles, swing flashes). They must not vanish behind the backgrounds,
+    // and FX (sparks, the number ember drawn over the holo number) must stay on top of them. Default + FX share the white FX light.
     public static void EnsureSortingLayers()
     {
         var tm = new SerializedObject(AssetDatabase.LoadMainAssetAtPath("ProjectSettings/TagManager.asset"));
@@ -31,6 +34,18 @@ public static class LightingSetup
             e.FindPropertyRelative("name").stringValue = name;
             e.FindPropertyRelative("uniqueID").uintValue = (uint)Random.Range(1000, int.MaxValue);
             e.FindPropertyRelative("locked").boolValue = false;
+            changed = true;
+        }
+        int def = -1, fxIndex = -1;
+        for (int i = 0; i < layers.arraySize; i++)
+        {
+            var e = layers.GetArrayElementAtIndex(i);
+            if (e.FindPropertyRelative("uniqueID").uintValue == 0) def = i;
+            if (e.FindPropertyRelative("name").stringValue == "FX") fxIndex = i;
+        }
+        if (def >= 0 && fxIndex >= 0 && def != fxIndex - 1)
+        {
+            layers.MoveArrayElement(def, def < fxIndex ? fxIndex - 1 : fxIndex);
             changed = true;
         }
         if (changed) { tm.ApplyModifiedProperties(); AssetDatabase.SaveAssets(); }
@@ -77,18 +92,19 @@ public static class LightingSetup
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var l = go.AddComponent<Light2D>();
+        l.targetSortingLayers = layerIds; // before the type: a global light that briefly targets every layer logs "more than one global light"
         l.lightType = Light2D.LightType.Global;
-        l.targetSortingLayers = layerIds;
         return l;
     }
 
-    // Camera is optional: if given, post-processing is turned on and AA off.
-    public static LightingController BuildInScene(Camera cam)
+    // Camera is optional: if given, post-processing is turned on and AA off. day = start on the Day profile (STG-00, LIGHTING Q7).
+    public static LightingController BuildInScene(Camera cam, bool startDay = false)
     {
         EnsureSortingLayers();
         EnsureProfiles();
         var night = AssetDatabase.LoadAssetAtPath<LightingProfile>(NightPath);
         var day = AssetDatabase.LoadAssetAtPath<LightingProfile>(DayPath);
+        var start = startDay ? day : night;
 
         if (cam != null)
         {
@@ -97,12 +113,17 @@ public static class LightingSetup
             data.antialiasing = AntialiasingMode.None;
         }
 
+        // One global light per layer: World light = Background/World; Characters get their own (world look + lift);
+        // FX and Default (runtime sparks, numbers, shots) a constant white light so effects keep their own colours at night.
         var all = new System.Collections.Generic.List<int>();
-        foreach (var sl in SortingLayer.layers) if (sl.name != "Characters") all.Add(sl.id); // one global light per layer: World light skips Characters
+        foreach (var sl in SortingLayer.layers) if (sl.name != "Characters" && sl.name != "FX" && sl.id != 0) all.Add(sl.id);
 
         var root = new GameObject("Lighting");
         var world = NewGlobal("Global Light (World)", root.transform, all.ToArray());
         var chars = NewGlobal("Global Light (Characters)", root.transform, new[] { LayerId("Characters") });
+        var fx = NewGlobal("Global Light (FX)", root.transform, new[] { LayerId("FX"), 0 });
+        fx.color = Color.white;
+        fx.intensity = 1f;
 
         var volGo = new GameObject("PostFx Volume");
         volGo.transform.SetParent(root.transform, false);
@@ -118,11 +139,11 @@ public static class LightingSetup
         so.FindProperty("worldLight").objectReferenceValue = world;
         so.FindProperty("characterLight").objectReferenceValue = chars;
         so.FindProperty("volume").objectReferenceValue = vol;
-        so.FindProperty("profile").objectReferenceValue = night;
+        so.FindProperty("profile").objectReferenceValue = start;
         so.FindProperty("dayProfile").objectReferenceValue = day;
         so.FindProperty("nightProfile").objectReferenceValue = night;
         so.ApplyModifiedProperties();
-        ctrl.Apply(night, 0f);
+        ctrl.Apply(start, 0f);
         return ctrl;
     }
 
@@ -134,7 +155,7 @@ public static class LightingSetup
         var go = new GameObject(name);
         if (parent != null) go.transform.SetParent(parent, false);
         go.transform.position = pos;
-        var sr = go.AddComponent<SpriteRenderer>();
+        var sr = go.AddComponent<SpriteRenderer>(); // sprite may be null: a light-only lamp until the neon PNG exists
         sr.sprite = sprite;
         if (mat != null) sr.sharedMaterial = mat;
         sr.sortingLayerName = sortingLayer;

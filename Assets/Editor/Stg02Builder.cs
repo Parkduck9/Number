@@ -10,6 +10,10 @@ public static class Stg02Builder
     const string ScenePath = "Assets/Scenes/STG02.unity";
     const int A = 0, B = 1;
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C: x1.5). Old layout kept at x 0~45, new group + mid platforms at x 46~70, gate/goal moved by +25.3125.
+    // Spill lights, px on the background images (LIGHTING_DESIGN 3.1). A: two stone lanterns on the street.
+    // B: the lantern by the gate (flickers) + two shop signboards (vermilion, teal) above the shutters.
+    static readonly Lamp[] LampsA = { new Lamp(452f, 450f, LampWarm, 4f), new Lamp(990f, 450f, LampWarm, 4f) };
+    static readonly Lamp[] LampsB = { new Lamp(1403f, 425f, LampWarm, 4f, 0.2f), new Lamp(410f, 390f, LampRed, 5f), new Lamp(905f, 385f, LampTeal, 5f) };
 
     // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
     static readonly float[] SegX = { 0f, 110f };
@@ -82,6 +86,7 @@ public static class Stg02Builder
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
             BuildImageBackground(roots[i], i == A ? "Assets/Art/Backgrounds/bg_stg02_segA_rooftops.png" : "Assets/Art/Backgrounds/bg_stg02_segB_elevated_rail.png", W, SegHeight, SegColor[i]);
             foreach (var w in Walls(i == A ? "A" : "B", i, W)) BuildCollider(roots[i], w, true);
+            AddLamps(roots[i], W, i == A ? LampsA : LampsB);
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);
 
@@ -102,10 +107,10 @@ public static class Stg02Builder
         var goal = BuildTrigger(roots[GoalB.seg], GoalB).AddComponent<LevelTransition>();
         SetInt(goal, "mode", (int)LevelTransition.Mode.Goal);
 
-        BuildLight(1f, Color.white);
         BuildCamera(playerGo.transform, new[] { SegRect(SegX[A], W), SegRect(SegX[B], W) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(false); // number HUD shown, no hack dial: the device is obtained in STG-03
+        BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
     }
 }

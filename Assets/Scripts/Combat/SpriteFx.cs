@@ -80,6 +80,8 @@ public static class SpriteFx
     // Pool: finished one-shots / afterimages are disabled and reused (no GameObject churn per run-dust / speed-line / spark).
     // Pooled objects live in the scene, so a scene change destroys them; Get skips those. Callers that Destroy a returned loop are fine.
     static readonly Stack<Fx> pool = new Stack<Fx>();
+    static int fxLayer = -1;
+    static int FxLayer => fxLayer >= 0 ? fxLayer : (fxLayer = SortingLayer.NameToID("FX")); // DECISIONS 9 Q6; 0 (Default) if missing
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => pool.Clear(); // Domain Reload is off
@@ -100,7 +102,7 @@ public static class SpriteFx
         SpriteRenderer sr = fx.sr;
         sr.flipX = sr.flipY = false;
         sr.color = Color.white;
-        sr.sortingLayerID = 0;
+        sr.sortingLayerID = FxLayer; // PlayBehind / Afterimage then copy the source's layer
         sr.enabled = true;
         fx.frames = null;
         fx.t = 0f;

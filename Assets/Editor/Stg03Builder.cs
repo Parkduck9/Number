@@ -37,6 +37,8 @@ public static class Stg03Builder
         var root = new GameObject("ROOM").transform;
         BuildImageBackground(root, "Assets/Art/Backgrounds/bg_stg03_hideout_room.png", RoomWidth, SegHeight, BgColor);
         foreach (var b in Boxes) BuildCollider(root, b, true);
+        // px on bg_stg03_hideout_room.png: brazier (warm, flickers), the two old monitors on the left shelf (teal)
+        AddLamps(root, RoomWidth, new Lamp(430f, 445f, LampWarm, 5f, 0.25f), new Lamp(105f, 235f, LampTeal, 3f), new Lamp(105f, 360f, LampTeal, 3f));
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);
@@ -59,11 +61,11 @@ public static class Stg03Builder
         SetObj(meeting, "talk", talk);
         SetObj(meeting, "exit", exit);
 
-        BuildLight(1f, Color.white);
         BuildCamera(playerGo.transform, new[] { new Rect(0f, 0f, RoomWidth, SegHeight) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(false);
         BuildDialoguePlayer();
+        BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
     }
 }

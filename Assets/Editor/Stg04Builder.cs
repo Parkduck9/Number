@@ -10,6 +10,10 @@ public static class Stg04Builder
     const string ScenePath = "Assets/Scenes/STG04.unity";
     const int A = 0, B = 1;
     const float W = WideWidth; // 75.9375 (DECISIONS 12-C: x1.5). Old layout kept at x 0~45, new group + crate/catwalk at x 48~66, gate/goal moved by +25.3125.
+    // Spill lights, px on the background images (LIGHTING_DESIGN 3.1). A: hazard plates of the two robot arms (vermilion) + the scanner screen (teal).
+    // B: work lamps on the two ceiling cranes (warm) + the red gate (vermilion).
+    static readonly Lamp[] LampsA = { new Lamp(325f, 480f, LampRed, 4f), new Lamp(1090f, 480f, LampRed, 4f), new Lamp(725f, 430f, LampTeal, 5f, 0.15f) };
+    static readonly Lamp[] LampsB = { new Lamp(425f, 200f, LampWarm, 5f), new Lamp(995f, 200f, LampWarm, 5f), new Lamp(1440f, 420f, LampRed, 5f) };
 
     // Segments at world x 0 and 110 (>= 101.25 apart: the mirrored background fill reaches 25.3u left of each segment).
     static readonly float[] SegX = { 0f, 110f };
@@ -80,6 +84,7 @@ public static class Stg04Builder
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
             BuildImageBackground(roots[i], i == A ? "Assets/Art/Backgrounds/bg_stg04_segA_production_line.png" : "Assets/Art/Backgrounds/bg_stg04_segB_inspection_hall.png", W, SegHeight, SegColor[i]);
             foreach (var w in Walls(i == A ? "A" : "B", i, W)) BuildCollider(roots[i], w, true);
+            AddLamps(roots[i], W, i == A ? LampsA : LampsB);
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);
 
@@ -100,10 +105,10 @@ public static class Stg04Builder
         var goal = BuildTrigger(roots[GoalB.seg], GoalB).AddComponent<LevelTransition>();
         SetInt(goal, "mode", (int)LevelTransition.Mode.Goal);
 
-        BuildLight(1f, Color.white);
         BuildCamera(playerGo.transform, new[] { SegRect(SegX[A], W), SegRect(SegX[B], W) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(true);
+        BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
     }
 }

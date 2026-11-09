@@ -13,8 +13,6 @@ public static class Stg00Builder
     const string DialogueDir = "Assets/Data/Dialogue/";
 
     // (T) day profile, LIGHTING_DESIGN Q7
-    const float DayIntensity = 1.15f;
-    static readonly Color DayColor = new Color(1.0f, 0.96f, 0.88f);
     static readonly Color SkyColor = new Color32(0x9F, 0xC6, 0xE0, 0xFF);
 
     // Same colliders as STG-01 SEG-A, invisible (the background image is the ground).
@@ -62,9 +60,9 @@ public static class Stg00Builder
         SetObj(seq, "line02Talk", LoadLine("stg00_line02_placeholder.txt"));
         SetObj(seq, "line03Radio", LoadLine("stg00_line03_placeholder.txt"));
 
-        BuildLight(DayIntensity, DayColor);
         BuildCamera(playerGo.transform, new[] { SegRect(0f) }, SkyColor);
         BuildDialoguePlayer(); // no HUD, no RespawnManager, no checkpoints: nothing can hurt the player here
+        BuildLighting(true); // the only daytime stage (LIGHTING Q7): Day profile, neon off
         SaveScene(scene, Tag, ScenePath);
     }
 

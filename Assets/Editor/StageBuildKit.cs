@@ -292,13 +292,63 @@ public static class StageBuildKit
         }
     }
 
-    public static void BuildLight(float intensity, Color color)
+    // ------------------------------------------------------------------ lighting (docs/design/LIGHTING_DESIGN.md, DECISIONS 9 Q6/Q7)
+
+    // Call last, right before saving: neon lighting rig (global lights, bloom Volume, LightingController) on the scene camera,
+    // Day profile for STG-00, Night elsewhere; then every scene renderer gets its sorting layer.
+    public static void BuildLighting(bool day)
     {
-        var go = new GameObject("Global Light 2D");
-        var l = go.AddComponent<Light2D>();
-        l.lightType = Light2D.LightType.Global;
-        l.intensity = intensity;
-        l.color = color;
+        LightingSetup.BuildInScene(UnityEngine.Object.FindFirstObjectByType<Camera>(), day);
+        AssignSortingLayers();
+    }
+
+    // Background images -> Background; player / enemies / NPCs (and their number labels) -> Characters; everything else -> World.
+    // Sprites and world TMP only (UI canvases are not Renderers). Orders are kept. Runtime FX use the FX layer (SpriteFx).
+    public static void AssignSortingLayers()
+    {
+        foreach (var r in UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (!(r is SpriteRenderer) && r.GetComponent<TextMeshPro>() == null) continue;
+            r.sortingLayerName = IsCharacter(r.transform) ? "Characters"
+                : r.name.StartsWith("Background") || r.sortingOrder <= -100 ? "Background" : "World";
+        }
+    }
+
+    static bool IsCharacter(Transform t) =>
+        t.GetComponentInParent<PlayerController>(true) != null || t.GetComponentInParent<TestEnemy>(true) != null ||
+        t.GetComponentInParent<OpeningCitizen>(true) != null || t.GetComponentInParent<DraftIdleAnim>(true) != null;
+
+    // Lamp / sign spill light painted over a background image (LIGHTING_DESIGN 3.1): px = pixel from the image's top-left.
+    // No neon sprite yet (Codex neon PNGs + neon_list.csv not made): light only, driven by LightingController like a NeonSign.
+    public struct Lamp
+    {
+        public float px, py, radius, flicker; public Color color;
+        public Lamp(float px, float py, Color color, float radius, float flicker = 0f) { this.px = px; this.py = py; this.color = color; this.radius = radius; this.flicker = flicker; }
+    }
+    public static readonly Color LampWarm = new Color32(0xD9, 0xA6, 0x4A, 0xFF);  // lantern / gold sign (desaturated, LIGHTING Q1)
+    public static readonly Color LampRed = new Color32(0xE0, 0x60, 0x4A, 0xFF);   // dancheong vermilion sign
+    public static readonly Color LampTeal = new Color32(0x3A, 0xA8, 0x95, 0xFF);  // dancheong teal sign / screens
+
+    // Places each lamp on every background image under root (a wide segment draws the image twice, once mirrored) whose
+    // world x falls inside [root.x, root.x + width]. Background sprites have a bottom-left pivot (BackgroundImporter).
+    public static void AddLamps(Transform root, float width, params Lamp[] lamps)
+    {
+        var parent = new GameObject("Lamps (light only)").transform;
+        parent.SetParent(root, false);
+        float xMin = root.position.x, xMax = xMin + width;
+        foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (!sr.name.StartsWith("Background") || sr.sprite == null || sr.sprite == Square) continue; // solid fallback: no art to match
+            float ppu = sr.sprite.pixelsPerUnit, h = sr.sprite.rect.height;
+            foreach (var l in lamps)
+            {
+                Vector3 p = sr.transform.TransformPoint(new Vector3(l.px / ppu, (h - l.py) / ppu, 0f));
+                if (p.x < xMin || p.x > xMax) continue;
+                var n = LightingSetup.BuildNeon("Lamp", parent, p, null, l.color, l.radius, l.flicker, 0, "World");
+                // Unlike LIGHTING_DESIGN 3.1 (World + Characters): here the lit street / room IS the background image, so light it too.
+                n.GetComponentInChildren<Light2D>().targetSortingLayers = new[] { SortingLayer.NameToID("Background"), SortingLayer.NameToID("World"), SortingLayer.NameToID("Characters") };
+            }
+        }
     }
 
     public static Rect SegRect(float worldX, float width = SegWidth) => new Rect(worldX, 0f, width, SegHeight);

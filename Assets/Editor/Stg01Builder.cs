@@ -182,13 +182,13 @@ public static class Stg01Builder
         var goalLt = goal.AddComponent<LevelTransition>();
         SetInt(goalLt, "mode", (int)LevelTransition.Mode.Goal);
 
-        BuildLight();
         var cam = BuildCamera(playerGo.transform, roots);
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud();
         BuildBoard(roots[BoardSeg]); // SEG-B only (5-B); the HUD (BuildHud) shows the board of the player's zone
         StageBuildKit.BuildDialoguePlayer(); // radio hint needs DialoguePlayer.Instance
         BuildHint(roots[HintA.seg]);
+        StageBuildKit.BuildLighting(false); // night (no lamps: the SEG-A background is a concept placeholder)
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         StageBuildKit.SyncBuildSettings();
@@ -434,14 +434,6 @@ public static class Stg01Builder
         SetInt(board, "aiNumber", BoardNumber);
         SetObj(board, "label", tmp);
         Apply(board, "zoneX", p => p.vector2Value = new Vector2(Segs[BoardSeg].worldX, Segs[BoardSeg].worldX + SegWidth));
-    }
-
-    static void BuildLight()
-    {
-        var go = new GameObject("Global Light 2D");
-        var l = go.AddComponent<Light2D>();
-        l.lightType = Light2D.LightType.Global;
-        l.intensity = 1f;
     }
 
     static GameObject BuildCamera(Transform player, Transform[] roots)

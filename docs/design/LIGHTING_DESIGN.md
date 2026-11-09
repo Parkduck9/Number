@@ -237,3 +237,12 @@ Assets/Settings/Renderer2D.asset, UniversalRP.asset  변경 없음
 - **Q5 배경 밝기 규칙(1.3절)**: Codex 배경을 "불 꺼진 해질녘" 값으로 그리고 조명이 어둡게 만드는 방식 — AI 원화 생성 프롬프트에 영향. 확인 부탁.
 - **Q6 소팅 레이어 이름**: `Background / World / Characters / FX` — **확정 (2026-11-09, DECISIONS 9)**.
 - **Q7 낮/밤**: 한 씬 안에서 시간이 바뀌는 연출은 없고 스테이지마다 프로필 하나(STG-00만 Day) — 맞는지.
+
+---
+
+## 9. 실제 스테이지 연결 (2026-11-09, Opus 구현 · Fable 검수)
+- 빌더 끝에서 `StageBuildKit.BuildLighting(day)`: STG-00만 Day, STG-01~05는 Night. 기존 `Global Light 2D` 하나는 없앴다.
+- 소팅 레이어 순서: **Background, World, Characters, Default, FX**. `AssignSortingLayers`가 배경 이미지→Background, 플레이어·적·NPC(+머리 위 숫자 TMP)→Characters, 나머지(바닥·발판·전광판·체크포인트)→World. 레이어를 안 정하는 런타임 오브젝트(홀로 숫자, 탄, 스윙 섬광)는 Default라 캐릭터 위·FX 아래에 그려진다. `SpriteFx` 이펙트는 FX.
+- 전역 라이트 3개: World(Background+World), Characters(Characters), **FX(FX+Default, 흰색 1.0 고정)** — 이펙트가 밤에도 제 색으로 보이게.
+- 3.1과 다른 점: 아직 네온 PNG가 없어 배경 그림 위의 등불·간판 자리에 **라이트만** 둔다(`StageBuildKit.AddLamps`, 배경 PNG 픽셀 좌표). 실제 스테이지는 길·방 자체가 배경 이미지라 이 라이트는 **Background도 비춘다**(Background+World+Characters). 위치: STG-02 등불·간판 5곳, STG-03 화로·모니터 3곳, STG-04 로봇팔·스캐너·크레인·문 6곳, STG-05 대형 화면·석등 2곳. 화면당 전역 3 + 등불 2~5 = 예산 10 이하.
+- 캐릭터 밝기: Night에서 캐릭터 ≈ 배경 × 1.3. 탁해 보이면 `Night.asset characterLightIntensity` 0.2 → 0.3.
