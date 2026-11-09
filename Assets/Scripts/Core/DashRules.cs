@@ -19,7 +19,7 @@ public static class DashRules
     public const float ParryShotLateral = 1.3f; // ...whose line passes within this of the player's centre (half height 1 + shot 0.25)
     // melee: an enemy in Windup/Strike whose attack box overlaps the player box and whose strike lands within this (TestEnemy.MeleeThreatens)
     public const float ParryMeleeWindow = 0.3f; // s; was parryActiveTime 0.2 (playtest 11-09: too strict)
-    public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (capped by parryDuration); RMB keeps parryActiveTime.
+    public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (at least parryActiveTime; the Parry state stretches to cover it)
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
     public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 

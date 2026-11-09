@@ -8,13 +8,12 @@ public class PlayerInputReader : MonoBehaviour
     [SerializeField] InputActionAsset asset;
 
     InputActionMap map;
-    InputAction move, jump, attack, parry, dash, shockwave;
+    InputAction move, jump, attack, dash, shockwave; // right mouse button: intentionally unbound (DECISIONS 15)
 
     public float MoveX { get; private set; }
     public bool JumpPressed { get; private set; }
     public bool JumpHeld { get; private set; }
     public bool AttackPressed { get; private set; }
-    public bool ParryPressed { get; private set; }
     public bool DashPressed { get; private set; }
     public bool ShockwavePressed { get; private set; }
 
@@ -24,7 +23,6 @@ public class PlayerInputReader : MonoBehaviour
         move = map.FindAction("Move", true);
         jump = map.FindAction("Jump", true);
         attack = map.FindAction("Attack", true);
-        parry = map.FindAction("Parry", true);
         dash = map.FindAction("Dash", true);
         shockwave = new InputAction("Shockwave", InputActionType.Button, "<Keyboard>/space");
         shockwave.AddBinding("<Gamepad>/buttonEast");
@@ -38,14 +36,13 @@ public class PlayerInputReader : MonoBehaviour
         if (GameFlow.InputLocked) // blocking dialogue: no input
         {
             MoveX = 0f;
-            JumpPressed = JumpHeld = AttackPressed = ParryPressed = DashPressed = ShockwavePressed = false;
+            JumpPressed = JumpHeld = AttackPressed = DashPressed = ShockwavePressed = false;
             return;
         }
         MoveX = move.ReadValue<Vector2>().x;
         JumpPressed = jump.WasPressedThisFrame();
         JumpHeld = jump.IsPressed();
         AttackPressed = attack.WasPressedThisFrame();
-        ParryPressed = parry.WasPressedThisFrame();
         DashPressed = dash.WasPressedThisFrame();
         ShockwavePressed = shockwave.WasPressedThisFrame();
     }

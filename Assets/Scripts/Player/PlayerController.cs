@@ -101,7 +101,7 @@ public class PlayerController : MonoBehaviour
     TestEnemy dashTarget;               // DECISIONS 13: enemy the Shift dash goes behind and counters at the dash end
     Collider2D dashTargetCol;
     Vector2 dashVelocity;               // Shift dash velocity (horizontal, plus a small vertical step onto the target's ground level)
-    bool pendingParry, pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
+    bool pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
 
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
@@ -118,7 +118,6 @@ public class PlayerController : MonoBehaviour
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
-    bool ParryPressed => input.ParryPressed || pendingParry;
     bool DashPressed => input.DashPressed || pendingDash;
 
     void Awake()
@@ -165,7 +164,7 @@ public class PlayerController : MonoBehaviour
         }
         if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
         {
-            pendingParry = pendingDash = false;
+            pendingDash = false;
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
@@ -226,7 +225,7 @@ public class PlayerController : MonoBehaviour
                 break;
         }
 
-        pendingParry = pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
+        pendingDash = false; // replayed (or ignored by the current state, like a live press) this frame
         if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
         UpdateSpeedFx(now);
         UpdateVisual(now);
@@ -237,7 +236,6 @@ public class PlayerController : MonoBehaviour
     {
         if (input.JumpPressed) jumpBufferedUntil = Time.time + jumpBuffer;
         if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
-        pendingParry |= input.ParryPressed;
         pendingDash |= input.DashPressed;
     }
 
@@ -258,7 +256,6 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
         if (TryDash(now)) return;
-        if (ParryPressed) { EnterState(State.Parry); return; } // RMB alias: parry facing as before
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
             // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
@@ -326,7 +323,6 @@ public class PlayerController : MonoBehaviour
             case State.Parry:
                 ParryTries++;
                 attackBufferedUntil = -999f;
-                parryActiveFor = parryActiveTime;
                 if (grounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
                 break;
             case State.Dash:
@@ -417,11 +413,21 @@ public class PlayerController : MonoBehaviour
             Vector2 d = (Vector2)enemy.transform.position - pos;
             float dist = d.magnitude;
             if (dist > range || dist >= bestDist || (dist > 0.001f && Vector2.Dot(d / dist, aim) < minDot)) continue;
+            if (!ClearLine(pos, enemy.transform.position)) continue; // behind a wall / under a roof: the lunge would only hit the wall
             bestDist = dist;
             best = enemy;
             hit = col;
         }
         return best;
+    }
+
+    // Line of sight between centres: no solid ground in between. One-way platforms block only a downward line (as in WallDistance).
+    bool ClearLine(Vector2 from, Vector2 to)
+    {
+        bool down = to.y - from.y < -0.01f;
+        foreach (RaycastHit2D h in Physics2D.LinecastAll(from, to, groundMask))
+            if (!h.collider.usedByEffector || down) return false;
+        return true;
     }
 
     // Lunge toward the locked target: through it (end LungeBehind past its centre) or, if it blocks hits (Android), LungeStopInFront before it.
@@ -460,11 +466,17 @@ public class PlayerController : MonoBehaviour
 
     // Free distance along dir for a slightly slimmer player box (0.8 x 1.8 of 0.9 x 2). One-way platforms are ignored unless the
     // lunge heads downward: the effector blocks a body coming from above, so such a lunge would hang on the platform until LungeMaxTime.
+    // A floor under a shallow down-slanted lunge (or a ceiling over a shallow up-slanted one) is not a wall: the body slides along it,
+    // so it must not cut the lunge short (playtest 11-09 "the attack stops at walls when an enemy is there").
     float WallDistance(Vector2 pos, Vector2 dir, float maxLen)
     {
         float best = maxLen;
         foreach (RaycastHit2D h in Physics2D.BoxCastAll(pos, new Vector2(0.8f, 1.8f), 0f, dir, maxLen, groundMask))
-            if ((!h.collider.usedByEffector || dir.y < -0.01f) && h.distance < best) best = h.distance;
+        {
+            if (h.collider.usedByEffector && dir.y >= -0.01f) continue;
+            if ((h.normal.y > 0.7f && dir.y > -0.5f) || (h.normal.y < -0.7f && dir.y < 0.5f)) continue; // slide along floor / ceiling
+            if (h.distance < best) best = h.distance;
+        }
         return Mathf.Min(maxLen, best - 0.05f);
     }
 
@@ -472,7 +484,13 @@ public class PlayerController : MonoBehaviour
     {
         SpawnAfterimage(now);
         SweepLunge();
-        if (lunging && (Vector2.Dot(lungeEnd - rb.position, lungeDir) <= 0.05f || elapsed >= DashRules.LungeMaxTime)) EndLunge();
+        if (!lunging) return;
+        float remain = Vector2.Dot(lungeEnd - rb.position, lungeDir);
+        // Held up by geometry the cast did not predict (a corner, a step): end where the body stands instead of pushing until LungeMaxTime.
+        // Compared with the speed FixedUpdate asked for (it slows down near the end), so the last steps never count as blocked.
+        bool blocked = elapsed > 2f * Time.fixedDeltaTime &&
+            Vector2.Dot(rb.linearVelocity, lungeDir) < 0.25f * Mathf.Min(DashRules.LungeSpeed, remain / Time.fixedDeltaTime);
+        if (remain <= 0.05f || blocked || elapsed >= DashRules.LungeMaxTime) EndLunge();
     }
 
     // Kill sweep: everything between the lunge start and LungeTolerance ahead of the body. A blocking enemy (Android) stops the lunge.
@@ -748,7 +766,10 @@ public class PlayerController : MonoBehaviour
         }
         if (!grounded) return DraftSprites.Pick(DraftSprites.HeroJump, rb.linearVelocity.y > 0.1f ? 0 : 1, DraftSprites.Hero);
         if (Mathf.Abs(rb.linearVelocity.x) > 0.1f)
-            return DraftSprites.Hero[Mathf.FloorToInt(now * DraftSprites.WalkFps) % 3];
+        {
+            Sprite[] run = DraftSprites.HeroRun ?? DraftSprites.Hero; // DECISIONS 15: normal movement shows the run cycle (walk = fallback)
+            return run[Mathf.FloorToInt(now * (run == DraftSprites.Hero ? DraftSprites.WalkFps : DraftSprites.RunFps)) % run.Length];
+        }
         return DraftSprites.Pick(DraftSprites.HeroIdle, Mathf.FloorToInt(now * DraftSprites.IdleFps) % 2, DraftSprites.Hero);
     }
 

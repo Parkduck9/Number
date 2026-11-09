@@ -8,11 +8,13 @@ public static class DraftSprites
     public const bool Use = true;
     public const float WalkFps = 8f;
     public const float IdleFps = 2f;
+    public const float RunFps = 12f; // hero run cycle (6 frames = 0.5 s per cycle)
 
-    static Sprite[] hero, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
+    static Sprite[] hero, heroRun, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
         heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
         bug, bugWalk, bugFlyer, bugFlyerAttack;
     public static Sprite[] Hero => hero ??= Load("hero_walk_3f", 3);
+    public static Sprite[] HeroRun => heroRun ??= Load("hero_run_6f", 6);                   // test strip (Codex); null = walk
     public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_2f", 2);
     public static Sprite[] HeroAttack => heroAttack ??= Load("hero_attack_3f", 3);
     public static Sprite[] HeroDash => heroDash ??= Load("hero_dash_2f", 2);
