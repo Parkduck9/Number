@@ -21,6 +21,17 @@ public class EnemyNumber : MonoBehaviour
     [SerializeField] float pulseSpeed = 2.5f; // (T) pulses per second
     [SerializeField] float pulseScale = 1.3f; // (T)
 
+    // Hologram window tunables (T). World units (1 px = 1/32). The window sits in front of the eyes on the facing side and flips when the enemy turns.
+    const float HoloEyeX = 0.15f, HoloEyeY = 0.55f;   // visor/eye point, relative to the enemy root (x mirrored by facing)
+    const float HoloWinX = 0.95f, HoloWinY = 1.05f;   // window centre, relative to the enemy root (x mirrored by facing)
+    const float HoloSquashX = 0.75f;                   // panel seen at an angle: X squash
+    const float HoloAlpha = 0.85f, HoloFlickerAlpha = 0.35f;
+    const float HoloFlickerMin = 1.5f, HoloFlickerMax = 4f;   // seconds between 1-frame flickers
+    const float HoloJitterMin = 3f, HoloJitterMax = 7f;       // seconds between 1-px jitters (each lasts HoloJitterTime)
+    const float HoloJitterTime = 0.06f;
+    const float HoloBobSpeed = 1.5f;                   // rad/s, 1 px amplitude (rounded to the pixel grid)
+    const float HoloUnfoldTime = 0.12f;                // vertical unfold on appear / collapse on Hide
+    const float HoloBeamAlpha = 0.18f, HoloBeamWidth = 1f / 32f;
     const float EmberDigitWidth = 14f; // px: the digit width number-ember was drawn for
     static readonly Color Red = new Color(1f, 0.1647f, 0.1647f); // #FF2A2A
 
@@ -34,9 +45,18 @@ public class EnemyNumber : MonoBehaviour
     GameObject flame;
 
     // DraftHud hologram window (20x16 px window + 7x11 glyph, gold = ranged, red = melee) replaces the TMP number; the label stays but empty.
-    Transform holoRoot;
+    Transform holoRoot, holoPanel;
     SpriteRenderer holoWindow, holoDigit;
-    bool holoGold;
+    LineRenderer[] holoBeams;
+    bool holoGold, holoFront; // holoFront = in front of the eyes (humanoids); bugs keep it above the head
+    SpriteRenderer faceRenderer;
+    Color holoTint = Color.white;
+    float unfoldFrom = -10f, collapseFrom = -10f; // Time.time of the unfold / collapse start
+    float nextFlicker, nextJitter, jitterUntil;
+    int flickerFrame = -1;
+    Vector2 jitter;
+    int lastFace = 1;
+    static Material beamMat;
 
     void Awake()
     {
@@ -50,15 +70,41 @@ public class EnemyNumber : MonoBehaviour
         holoGold = numberColor.g > 0.5f; // gold #FFC93C vs red #FF2A2A
         holoRoot = new GameObject("HoloNumber").transform;
         holoRoot.SetParent(label.transform.parent, false);
-        holoRoot.localPosition = label.transform.localPosition;
+        holoRoot.localPosition = Vector3.zero; // positions are set per frame, relative to the enemy root
+        holoPanel = new GameObject("Panel").transform;
+        holoPanel.SetParent(holoRoot, false);
         holoWindow = NewHoloPart("Window", 19, DraftHud.HoloWindow(holoGold));
         holoDigit = NewHoloPart("Digit", 20, null);
+        var te = GetComponent<TestEnemy>();
+        holoFront = te == null || !BugSwarmBootstrap.IsBug(te);
+        if (holoFront && Shader.Find("Sprites/Default") != null) BuildBeams();
+        unfoldFrom = Time.time; // spawn: unfold
+        nextFlicker = Time.time + Random.Range(HoloFlickerMin, HoloFlickerMax);
+        nextJitter = Time.time + Random.Range(HoloJitterMin, HoloJitterMax);
+    }
+
+    void BuildBeams()
+    {
+        if (beamMat == null) beamMat = new Material(Shader.Find("Sprites/Default"));
+        holoBeams = new LineRenderer[2];
+        for (int i = 0; i < 2; i++)
+        {
+            var go = new GameObject("Beam" + i);
+            go.transform.SetParent(holoRoot, false);
+            var lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = false;
+            lr.positionCount = 2;
+            lr.sharedMaterial = beamMat;
+            lr.startWidth = lr.endWidth = HoloBeamWidth;
+            lr.sortingOrder = 18;
+            holoBeams[i] = lr;
+        }
     }
 
     SpriteRenderer NewHoloPart(string name, int order, Sprite sprite)
     {
         var go = new GameObject(name);
-        go.transform.SetParent(holoRoot, false);
+        go.transform.SetParent(holoPanel, false);
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = sprite;
         sr.sortingOrder = order;
@@ -70,9 +116,70 @@ public class EnemyNumber : MonoBehaviour
     {
         holoDigit.sprite = DraftHud.HoloDigits(holoGold)[Mathf.Clamp(Value, 0, 9)];
         holoDigit.enabled = !err;
-        Color c = err ? Color.white : flameOn ? Color.Lerp(Color.white, Red, 0.6f) : Color.white;
+        holoTint = err ? Color.white : flameOn ? Color.Lerp(Color.white, Red, 0.6f) : Color.white;
+        ApplyHoloColor(HoloAlpha);
+    }
+
+    void ApplyHoloColor(float alpha)
+    {
+        Color c = holoTint;
+        c.a = alpha;
         holoWindow.color = c;
         holoDigit.color = c;
+        if (holoBeams == null) return;
+        Color b = holoGold ? new Color(1f, 0.788f, 0.235f) : Red;
+        b.a = HoloBeamAlpha * alpha / HoloAlpha;
+        foreach (var lr in holoBeams) lr.startColor = lr.endColor = b;
+    }
+
+    // Window position relative to the enemy root: in front of the eyes on the facing side (bugs: where the label is, above the head).
+    Vector2 HoloPos(int face) => holoFront ? new Vector2(face * HoloWinX, HoloWinY) : (Vector2)label.transform.localPosition;
+
+    int Face()
+    {
+        if (faceRenderer == null)
+            foreach (var r in transform.GetComponentsInChildren<SpriteRenderer>(true))
+                if (!r.transform.IsChildOf(holoRoot)) { faceRenderer = r; break; }
+        if (faceRenderer != null) lastFace = faceRenderer.flipX ? -1 : 1; // TestEnemy.ApplyVisual: flipX = facing < 0
+        return lastFace;
+    }
+
+    // Hologram life: placement, angled panel, beams, flicker/jitter/bob, unfold/collapse. Time.time stands still in hit-stop / pause, so it all freezes with the rest.
+    void UpdateHolo(float s)
+    {
+        float now = Time.time;
+        int face = Face();
+        float unfold = Mathf.Clamp01((now - unfoldFrom) / HoloUnfoldTime);
+        if (collapseFrom >= 0f)
+        {
+            unfold = 1f - Mathf.Clamp01((now - collapseFrom) / HoloUnfoldTime);
+            if (unfold <= 0f) { collapseFrom = -10f; holoRoot.gameObject.SetActive(false); return; }
+        }
+        if (Time.timeScale > 0f)
+        {
+            if (now >= nextFlicker) { flickerFrame = Time.frameCount; nextFlicker = now + Random.Range(HoloFlickerMin, HoloFlickerMax); }
+            if (now >= nextJitter)
+            {
+                jitterUntil = now + HoloJitterTime;
+                jitter = new Vector2(Random.value < 0.5f ? -1f : 1f, Random.value < 0.5f ? -1f : 0f) / SpriteFx.Ppu;
+                nextJitter = now + Random.Range(HoloJitterMin, HoloJitterMax);
+            }
+        }
+        Vector2 j = now < jitterUntil ? jitter : Vector2.zero;
+        float bob = Mathf.Round(Mathf.Sin(now * HoloBobSpeed) * 0.5f + 0.5f) / SpriteFx.Ppu; // 0..1 px, stays on the pixel grid
+        Vector2 pos = HoloPos(face) + j + new Vector2(0f, bob);
+        holoPanel.localPosition = pos;
+        float sx = holoFront ? HoloSquashX : 1f;
+        holoPanel.localScale = new Vector3(s * sx, s * Mathf.Max(0.01f, unfold), 1f);
+        ApplyHoloColor(Time.frameCount == flickerFrame ? HoloFlickerAlpha : HoloAlpha);
+        if (flame != null) flame.transform.localPosition = new Vector3(pos.x, pos.y + 8f / SpriteFx.Ppu * s * unfold, 0f);
+        if (holoBeams == null) return;
+        // Beams: eye point -> the window's near-side corners (near = toward the enemy), narrowing with the unfold.
+        Vector3 eye = new Vector3(face * HoloEyeX, HoloEyeY, 0f);
+        float hw = 10f / SpriteFx.Ppu * s * sx, hh = 8f / SpriteFx.Ppu * s * unfold;
+        float nx = pos.x - face * hw;
+        holoBeams[0].SetPosition(0, eye); holoBeams[0].SetPosition(1, new Vector3(nx, pos.y + hh, 0f));
+        holoBeams[1].SetPosition(0, eye); holoBeams[1].SetPosition(1, new Vector3(nx, pos.y - hh, 0f));
     }
 
     void Update()
@@ -96,7 +203,15 @@ public class EnemyNumber : MonoBehaviour
         float pop = (Time.time - popAt) / PopTime; // brief punch on top of the pulse
         if (pop >= 0f && pop < 1f) s *= 1f + PopScale * (1f - pop);
         label.transform.localScale = new Vector3(s, s, 1f);
-        if (holoRoot != null) holoRoot.localScale = new Vector3(s, s, 1f);
+        holoScale = s;
+    }
+
+    float holoScale = 1f;
+
+    // After TestEnemy.Update has set the sprite's flipX, so the window never lags a frame behind a turn.
+    void LateUpdate()
+    {
+        if (label != null && holoRoot != null && holoRoot.gameObject.activeSelf) UpdateHolo(holoScale);
     }
 
     const float PopTime = 0.12f, PopScale = 0.5f; // (T) punch length / extra scale when a strike uses up one count
@@ -161,7 +276,11 @@ public class EnemyNumber : MonoBehaviour
             label.gameObject.SetActive(false);
             label.transform.localScale = Vector3.one;
         }
-        if (holoRoot != null) holoRoot.gameObject.SetActive(false);
+        if (holoRoot != null)
+        {
+            if (gameObject.activeInHierarchy && holoRoot.gameObject.activeSelf) collapseFrom = Time.time; // UpdateHolo switches it off after the collapse
+            else holoRoot.gameObject.SetActive(false);
+        }
     }
 
     public void SetPulse(bool on)
@@ -187,7 +306,8 @@ public class EnemyNumber : MonoBehaviour
         float scale;
         if (holoRoot != null) // holo window: 16 px tall, 20 px wide
         {
-            top = label.transform.localPosition + new Vector3(0f, 8f / SpriteFx.Ppu, 0f);
+            Vector2 hp = HoloPos(lastFace); // UpdateHolo keeps it on the window afterwards
+            top = new Vector3(hp.x, hp.y + 8f / SpriteFx.Ppu, 0f);
             scale = Mathf.Max(1f, Mathf.Round(20f / EmberDigitWidth));
         }
         else
@@ -210,6 +330,8 @@ public class EnemyNumber : MonoBehaviour
         if (holoRoot != null)
         {
             label.text = ""; // the hologram window shows the number
+            collapseFrom = -10f;
+            if (!holoRoot.gameObject.activeSelf) unfoldFrom = Time.time; // appears: vertical unfold
             holoRoot.gameObject.SetActive(true);
             ShowHolo(false);
         }
