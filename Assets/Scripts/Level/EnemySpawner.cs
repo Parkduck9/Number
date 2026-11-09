@@ -17,11 +17,12 @@ public class EnemySpawner : MonoBehaviour
     public static event Action<EnemySpawner> BrokenEvent;
     public bool Broken { get; private set; }
 
-    class Entry { public GameObject template, current; public Vector3 pos; public Quaternion rot; public Transform parent; public float diedAt = -1f; }
+    class Entry { public GameObject template, current; public Vector3 pos; public Quaternion rot; public Transform parent; public float diedAt = -1f; public TestEnemy spawned; public float graceUntil; }
     readonly List<Entry> entries = new List<Entry>();
 
     // Player's in-place swing box (PlayerController attackOffset 0.9 / attackSize 1.6 x 1.4) plus a little slack for the swing start.
     static readonly Vector2 SwingOffset = new Vector2(0.9f, 0f), SwingSize = new Vector2(2.1f, 1.8f);
+    const float SafeRadius = 4f, SpawnGrace = 0.6f; // no respawn while the player is this close; a fresh enemy waits this long before acting
     const float ShakeAmp = 0.12f, ShakeTime = 0.15f;
 
     SpriteRenderer sr;
@@ -44,6 +45,7 @@ public class EnemySpawner : MonoBehaviour
             sr = new GameObject("Look").AddComponent<SpriteRenderer>();
             sr.transform.SetParent(transform, false);
             sr.sprite = Resources.Load<Sprite>("DraftHud/holo_window_red"); // placeholder look: 20x16 holo window, tinted and scaled up
+            sr.sortingLayerName = "World"; // behind the characters, like the other level props
             sr.sortingOrder = 5;
             sr.transform.localScale = new Vector3(size.x / 0.625f, size.y / 0.5f, 1f); // sprite is 20x16 px at PPU 32
         }
@@ -86,9 +88,24 @@ public class EnemySpawner : MonoBehaviour
     void Update()
     {
         UpdateLook();
+        UpdateGrace();
         if (Broken) return;
         UpdateHit();
         UpdateRespawns();
+    }
+
+    // Respawned enemies act again after SpawnGrace (also when the device breaks during the grace).
+    void UpdateGrace()
+    {
+        foreach (var e in entries)
+            if (e.spawned == null || Time.time < e.graceUntil) continue;
+            if (e.spawned.Current == TestEnemy.State.Stunned) // hit during the grace: stay dead (Start would revive it)
+            {
+                SpriteFx.Play("hit-spark", (Vector2)e.spawned.transform.position - new Vector2(12f, 16f) / SpriteFx.Ppu);
+                e.spawned.gameObject.SetActive(false);
+            }
+            else e.spawned.enabled = true;
+            e.spawned = null;
     }
 
     void UpdateHit()
@@ -131,10 +148,13 @@ public class EnemySpawner : MonoBehaviour
             if (e.current != null && e.current.activeSelf) continue; // alive (or still falling over: inactive only after the vanish delay)
             if (e.diedAt < 0f) { e.diedAt = Time.time; continue; }
             if (Time.time - e.diedAt < respawnDelay) continue;
+            if (player != null && Vector2.Distance(player.transform.position, e.pos) < SafeRadius) continue; // wait until the player steps away
             if (e.current != null) Destroy(e.current); // the dead body (inactive) would otherwise pile up
             e.current = Instantiate(e.template, e.pos, e.rot, e.parent);
             e.current.name = e.template.name.Replace(" (spawn template)", "");
             e.current.SetActive(true);
+            e.spawned = e.current.GetComponent<TestEnemy>();
+            if (e.spawned != null) { e.spawned.enabled = false; e.graceUntil = Time.time + SpawnGrace; } // frozen AI: cannot attack for a moment
             e.diedAt = -1f;
             SpriteFx.Play("dash-burst", (Vector2)e.pos - new Vector2(0f, 1f)); // spawn puff (reuses the dash burst sheet)
         }

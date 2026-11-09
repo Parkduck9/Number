@@ -47,11 +47,12 @@ public static class StageClear
     }
 
     // goalPos = the exit trigger. true = the player may leave; false = the hint was shown.
-    public static bool TryClear(Vector2 goalPos)
+    public static bool TryClear(Vector2 goalPos, bool showHint = true)
     {
         SegmentAt(goalPos.x, out float xMin, out float xMax);
         int enemies = EnemiesLeft(xMin, xMax), spawners = SpawnersLeft(xMin, xMax);
         if (enemies == 0 && spawners == 0) return true;
+        if (!showHint) return false;
         string en = "", ko = "";
         if (enemies > 0) { en = "Enemies left: " + enemies; ko = "적 " + enemies + " 남음"; }
         if (spawners > 0)

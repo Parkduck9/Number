@@ -18,6 +18,7 @@ public class LevelTransition : MonoBehaviour
     static Image fadeImage;
     static bool fadeInPending; // set before a stage change; the next scene starts black and fades in
     bool busy;
+    float nextCheckAt;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Hook()
@@ -50,12 +51,22 @@ public class LevelTransition : MonoBehaviour
 
     void Awake() => GetComponent<Collider2D>().isTrigger = true;
 
-    void OnTriggerEnter2D(Collider2D other)
+    void OnTriggerEnter2D(Collider2D other) => Touch(other, true);
+
+    // Goal only: standing in the exit after a refusal re-checks every 0.2 s (no hint spam).
+    void OnTriggerStay2D(Collider2D other)
+    {
+        if (mode != Mode.Goal || Time.unscaledTime < nextCheckAt) return;
+        nextCheckAt = Time.unscaledTime + 0.2f;
+        Touch(other, false);
+    }
+
+    void Touch(Collider2D other, bool hint)
     {
         if (busy) return;
         PlayerController pc = other.GetComponentInParent<PlayerController>();
         if (pc == null || GameFlow.IsPlayerDead(pc)) return;
-        if (mode == Mode.Goal && !StageClear.TryClear(transform.position)) return; // DECISIONS 15: all enemies dead + spawners broken
+        if (mode == Mode.Goal && !StageClear.TryClear(transform.position, hint)) return; // DECISIONS 15: all enemies dead + spawners broken
         StartCoroutine(Run(pc));
     }
 
