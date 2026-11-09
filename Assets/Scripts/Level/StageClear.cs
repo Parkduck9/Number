@@ -11,11 +11,24 @@ public static class StageClear
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Spawners.Clear(); // Domain Reload is off
 
-    public static int EnemiesLeft()
+    // The goal's camera segment (SegmentCameraBounds): enemies and spawners in other segments do not count, so running past
+    // SEG-A (one-way door) or respawning in SEG-B cannot soft-lock the exit. No segments in the scene = the whole scene counts.
+    public static bool SegmentAt(float worldX, out float xMin, out float xMax)
+    {
+        var seg = Object.FindFirstObjectByType<SegmentCameraBounds>();
+        if (seg != null && seg.TryGetRangeAt(worldX, out xMin, out xMax)) return true;
+        xMin = float.NegativeInfinity; xMax = float.PositiveInfinity;
+        return false;
+    }
+
+    public static int EnemiesLeft(float xMin, float xMax)
     {
         int n = 0;
         foreach (var e in Object.FindObjectsByType<TestEnemy>(FindObjectsSortMode.None))
-            if (e.Current != TestEnemy.State.Stunned) n++; // inactive (vanished) enemies are not returned
+        {
+            float x = e.transform.position.x;
+            if (e.Current != TestEnemy.State.Stunned && x >= xMin && x <= xMax) n++; // inactive (vanished) enemies are not returned
+        }
         return n;
     }
 
@@ -25,17 +38,19 @@ public static class StageClear
         return false;
     }
 
-    public static int SpawnersLeft()
+    public static int SpawnersLeft(float xMin, float xMax)
     {
         int n = 0;
-        foreach (var s in Spawners) if (s != null && !s.Broken) n++;
+        foreach (var s in Spawners)
+            if (s != null && !s.Broken && s.transform.position.x >= xMin && s.transform.position.x <= xMax) n++;
         return n;
     }
 
-    // true = the player may leave; false = the hint was shown.
-    public static bool TryClear()
+    // goalPos = the exit trigger. true = the player may leave; false = the hint was shown.
+    public static bool TryClear(Vector2 goalPos)
     {
-        int enemies = EnemiesLeft(), spawners = SpawnersLeft();
+        SegmentAt(goalPos.x, out float xMin, out float xMax);
+        int enemies = EnemiesLeft(xMin, xMax), spawners = SpawnersLeft(xMin, xMax);
         if (enemies == 0 && spawners == 0) return true;
         string en = "", ko = "";
         if (enemies > 0) { en = "Enemies left: " + enemies; ko = "적 " + enemies + " 남음"; }

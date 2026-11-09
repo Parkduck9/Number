@@ -60,8 +60,11 @@ public class EnemySpawner : MonoBehaviour
     void BuildTemplates()
     {
         if (watched.Count == 0)
+        {
+            StageClear.SegmentAt(transform.position.x, out float xMin, out float xMax); // default: this device's own segment
             foreach (var e in FindObjectsByType<TestEnemy>(FindObjectsSortMode.None))
-                if (!StageClear.IsWatched(e)) watched.Add(e); // a second spawner with an empty list takes only what is still free
+                if (e.transform.position.x >= xMin && e.transform.position.x <= xMax && !StageClear.IsWatched(e)) watched.Add(e); // a second spawner with an empty list takes only what is still free
+        }
         foreach (var e in watched)
         {
             if (e == null || !e.gameObject.activeSelf) continue; // placed inactive on purpose: not ours to respawn

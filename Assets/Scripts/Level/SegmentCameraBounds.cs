@@ -10,6 +10,16 @@ public class SegmentCameraBounds : MonoBehaviour
 
     int current = -1;
 
+    // x range of the segment containing worldX (StageClear: only the goal's segment counts). false = no segment there.
+    public bool TryGetRangeAt(float worldX, out float xMin, out float xMax)
+    {
+        xMin = xMax = 0f;
+        if (segments == null) return false;
+        foreach (var r in segments)
+            if (worldX >= r.xMin && worldX <= r.xMax) { xMin = r.xMin; xMax = r.xMax; return true; }
+        return false;
+    }
+
     void Update()
     {
         if (player == null || cameraFollow == null) return;
