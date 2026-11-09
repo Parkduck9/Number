@@ -383,7 +383,7 @@ public class PlayerController : MonoBehaviour
         foreach (Collider2D col in Physics2D.OverlapBoxAll(center, new Vector2(maxDx + 1f, maxDy * 2f + 2f), 0f, enemyMask))
         {
             TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
-            if (enemy == null || enemy.Current == TestEnemy.State.Stunned || enemy.Current == TestEnemy.State.Frozen || !enemy.gameObject.activeInHierarchy) continue; // downed / vanishing / frozen (STG-00)
+            if (enemy == null || enemy.Current == TestEnemy.State.Stunned || !enemy.gameObject.activeInHierarchy) continue; // downed / vanishing (NUM-0 frozen citizens stay targetable)
             Vector2 d = (Vector2)enemy.transform.position - pos;
             float dx = d.x * side;
             if (dx <= 0f || dx > maxDx || Mathf.Abs(d.y) > maxDy || dx >= bestDx) continue;
@@ -413,7 +413,7 @@ public class PlayerController : MonoBehaviour
         {
             Collider2D col = enemyHits[i];
             TestEnemy enemy = col.GetComponentInParent<TestEnemy>();
-            if (enemy == null || enemy.Current == TestEnemy.State.Stunned || enemy.Current == TestEnemy.State.Frozen || !enemy.gameObject.activeInHierarchy) continue;
+            if (enemy == null || enemy.Current == TestEnemy.State.Stunned || !enemy.gameObject.activeInHierarchy) continue;
             Vector2 d = (Vector2)enemy.transform.position - pos;
             float dist = d.magnitude;
             if (dist > range || dist >= bestDist || (dist > 0.001f && Vector2.Dot(d / dist, aim) < minDot)) continue;
