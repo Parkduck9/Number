@@ -26,7 +26,19 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] float chargeSpeed = 14f;
     [SerializeField] float chargeMaxTime = 0.6f;
 
-    public enum Kind { Citizen, Bug, Android }
+    public enum Kind { Citizen, Bug, Android, Sniper } // new kinds go last (serialized as int)
+
+    // ---- Sniper (DECISIONS 15): stands still, laser tracks the player, locks, fires one fast parryable shot along the locked line ----
+    const float SniperRange = 19f;       // (T) u from the muzzle, needs a clear line (groundMask): about a whole screen
+    const float SniperTrackTime = 1.0f;  // (T) laser follows the player
+    const float SniperLockTime = 0.25f;  // (T) laser fixed + flashing, then the shot
+    const float SniperShotSpeed = 14f;   // (T) u/s; LMB parry window = (DashRules.ParryShotRange 3 - contact 0.7) / this = 0.16 s (22 gave 0.1 s: too tight, Fable review)
+    const float SniperReaimDelay = 0.3f; // (T) s after losing sight before aiming again (no tell flicker at the range / ledge edge)
+    static readonly Color SniperTint = new Color(0.72f, 0.8f, 1f); // steel-blue tint on the ranged-citizen frames
+
+    // ---- Android guard (DECISIONS 15): frontal hits are blocked; from behind or above it dies in one hit ----
+    const float AndroidTurnGrace = 0.35f; // (T) s: a hit this soon after it turned around during a player dash still counts as from behind (Shift dash-behind)
+    const float AndroidAboveDy = 2.0f;    // (T) attacker centre at least this far above the android's centre = attacker's feet at its head top (boxes 0.9 x 2)
 
     [Header("Variants (defaults = melee citizen)")]
     [SerializeField] Kind kind = Kind.Citizen;       // NUM-0 freezes citizens only; Android uses the gold fan special
@@ -54,7 +66,8 @@ public class TestEnemy : MonoBehaviour
     public int Hp => hp;
     public EnemyNumber Number => number;
     public int StrikesLeft => strikesLeft;
-    public bool BlocksHits => kind == Kind.Android && state != State.Overload; // player lunge stops in front instead of passing through
+    // player lunge stops in front instead of passing through (frontal approach to a guarding Android only)
+    public bool BlocksHits => kind == Kind.Android && state != State.Overload && !(player != null && AndroidExposedTo(player.transform.position));
 
     Rigidbody2D rb;
     EnemyNumber number;
@@ -81,6 +94,11 @@ public class TestEnemy : MonoBehaviour
     bool rushing;             // DECISIONS 12: the current Charge is a rush (RushSpeed, RushMaxDistance)
     float nextRushAt;         // no new rush tell before this
     bool aggro;               // melee: spotted the player once -> stays active (DashRules.MeleeDetectMin)
+    float facingChangedAt = -10f; // Android guard: last turn-around (AndroidTurnGrace)
+    SniperSight sight;
+    Vector2 sniperDir;        // aim (unit), fixed once locked
+    bool sniperLocked;
+    float nextAimAt;          // sniper: no new aim before this (SniperReaimDelay)
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -97,13 +115,14 @@ public class TestEnemy : MonoBehaviour
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
         // Bugs: spider (melee) / flyer (ranged) frames; without them BugSwarmVisual draws the dot swarm. Ranged citizens use the
         // hooded ranged-citizen frames (DECISIONS 14). Bugs have no stunned frame: the recover frame, tipped over.
+        if (kind == Kind.Sniper) ranged = true; // a sniper is a ranged citizen that never walks (ranged rules: no NUM-3 pin, no rush, no melee parry)
         bool bug = kind == Kind.Bug;
         draftFrames = kind == Kind.Android ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
         draftSprite = DraftSprites.Setup(visual, draftFrames);
         draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
         draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
         flyer = bug && ranged && draftSprite;
-        if (visual != null) baseColor = visual.color; // white after the draft sprite swap
+        if (visual != null) baseColor = kind == Kind.Sniper ? SniperTint : visual.color; // white after the draft sprite swap
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
         hp = maxHp;
@@ -146,6 +165,7 @@ public class TestEnemy : MonoBehaviour
         }
         if (state != State.Stunned) UpdateDope();
         if (player != null && state != State.Stunned) UpdateState();
+        if (kind == Kind.Sniper) UpdateSight();
         ApplyVisual();
     }
 
@@ -157,7 +177,8 @@ public class TestEnemy : MonoBehaviour
         bool chasing = false; // spotted the player and heading for them: may drop off a roof edge (see DropOk)
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
         // Only toward a player in front: Recover does not re-face, so never walk away from one who got behind.
-        if ((state == State.Approach || state == State.Recover) && player != null &&
+        if (kind == Kind.Sniper) { } // stands still
+        else if ((state == State.Approach || state == State.Recover) && player != null &&
             (player.transform.position.x - transform.position.x) * facing > attackRangeX)
         {
             vx = facing * Speed; // stop under a jumping player instead of jittering
@@ -186,7 +207,7 @@ public class TestEnemy : MonoBehaviour
         // NUM-7: doping starts. Leaving 7 early just clears it (no exhaustion when the number is hacked away).
         if (n == 7) exhaustedCycle = -1;
         // NUM-0: citizens stop breathing; the number changing away releases them.
-        if (n == 0 && kind == Kind.Citizen) EnterState(State.Frozen);
+        if (n == 0 && (kind == Kind.Citizen || kind == Kind.Sniper)) EnterState(State.Frozen); // the sniper is a citizen too
         else if (old == 0 && state == State.Frozen) FinishReset();
     }
 
@@ -249,6 +270,16 @@ public class TestEnemy : MonoBehaviour
         switch (state)
         {
             case State.Approach:
+                if (kind == Kind.Sniper)
+                {
+                    if (Time.time >= nextAimAt && SniperSees()) // Windup = aiming
+                    {
+                        FacePlayer();
+                        sniperDir = ((Vector2)player.transform.position - Muzzle).normalized; // this frame's laser already points at the player
+                        EnterState(State.Windup);
+                    }
+                    break;
+                }
                 if (!IsActive()) break; // idle until the player comes close
                 FacePlayer();
                 Vector2 d = player.transform.position - transform.position;
@@ -266,6 +297,7 @@ public class TestEnemy : MonoBehaviour
                 }
                 break;
             case State.Windup:
+                if (kind == Kind.Sniper && !UpdateSniperAim(t)) break; // lost sight: back to Approach
                 if (t >= WindupWait()) EnterState(State.Strike);
                 break;
             case State.Strike:
@@ -336,6 +368,50 @@ public class TestEnemy : MonoBehaviour
         }
     }
 
+    Vector2 Muzzle => (Vector2)transform.position + new Vector2(muzzleOffset.x * facing, muzzleOffset.y);
+
+    // Sniper: player within SniperRange of the muzzle and no ground in between.
+    bool SniperSees()
+    {
+        Vector2 m = Muzzle, p = player.transform.position;
+        if ((p - m).sqrMagnitude > SniperRange * SniperRange) return false;
+        return groundMask.value == 0 || Physics2D.Linecast(m, p, groundMask).collider == null;
+    }
+
+    // Sniper Windup: track for SniperTrackTime (losing sight aborts), then lock the line. false = aborted.
+    bool UpdateSniperAim(float t)
+    {
+        if (t >= SniperTrackTime) { sniperLocked = true; return true; }
+        if (!SniperSees())
+        {
+            number.SetPulse(false);
+            number.SetFlame(false);
+            nextAimAt = Time.time + SniperReaimDelay;
+            EnterState(State.Approach);
+            return false;
+        }
+        FacePlayer();
+        Vector2 d = (Vector2)player.transform.position - Muzzle;
+        sniperDir = d.sqrMagnitude > 0.0001f ? d.normalized : new Vector2(facing, 0f);
+        return true;
+    }
+
+    // Laser while aiming (Windup), to the first ground hit or SniperRange.
+    void UpdateSight()
+    {
+        if (sight == null) sight = SniperSight.For(gameObject);
+        if (state != State.Windup) { sight.Hide(); return; }
+        Vector2 m = Muzzle;
+        Vector2 dir = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
+        float len = SniperRange;
+        if (groundMask.value != 0)
+        {
+            RaycastHit2D h = Physics2D.Raycast(m, dir, SniperRange, groundMask);
+            if (h.collider != null) len = h.distance;
+        }
+        sight.Show(m, m + dir * len, sniperLocked);
+    }
+
     void FinishReset()
     {
         number.SetBroken(false);
@@ -360,8 +436,10 @@ public class TestEnemy : MonoBehaviour
         Collider2D col = null;
         if (ranged)
         {
-            Vector2 muzzle = (Vector2)transform.position + new Vector2(muzzleOffset.x * facing, muzzleOffset.y);
-            EnemyProjectile.Spawn(muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor);
+            if (kind == Kind.Sniper)
+                EnemyProjectile.Spawn(Muzzle, (sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f)) * SniperShotSpeed, playerMask, groundMask, hit, projectileColor);
+            else
+                EnemyProjectile.Spawn(Muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor);
         }
         else
         {
@@ -433,6 +511,7 @@ public class TestEnemy : MonoBehaviour
                 break;
             case State.Windup:
             case State.RushWindup:
+                sniperLocked = false;
                 number.SetPulse(true);
                 number.SetFlame(strikesLeft == 1); // single-strike chain: tell during its windup
                 Sfx.Play(strikesLeft == 1 ? SfxId.LastTell : SfxId.EnemyTell);
@@ -475,11 +554,27 @@ public class TestEnemy : MonoBehaviour
     {
         if (player == null) return;
         float dx = player.transform.position.x - transform.position.x;
-        if (Mathf.Abs(dx) > 0.01f) facing = dx > 0f ? 1 : -1;
+        if (Mathf.Abs(dx) <= 0.01f) return;
+        int f = dx > 0f ? 1 : -1;
+        if (f == facing) return;
+        facing = f;
+        // Only a turn made while the player dashes past opens the behind grace (Shift counter), not every turn (Fable review).
+        if (player.CurrentState == PlayerController.State.Dash) facingChangedAt = Time.time;
+    }
+
+    // Android guard: an attacker at `from` hits its back or comes from above (DECISIONS 15).
+    // Behind = on the side it does not face, or it turned around within AndroidTurnGrace (it turns to face a player who just
+    // dashed past, before the Shift counter lands). Above = attacker centre >= AndroidAboveDy over its centre.
+    bool AndroidExposedTo(Vector2 from)
+    {
+        bool behind = (from.x - transform.position.x) * facing < 0f || Time.time - facingChangedAt < AndroidTurnGrace;
+        bool above = from.y - transform.position.y >= AndroidAboveDy;
+        return behind || above;
     }
 
     float WindupWait()
     {
+        if (kind == Kind.Sniper) return SniperTrackTime + SniperLockTime;
         float chainWait = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3ChainWindupTime : chainWindupTime;
         float wait = chainStarted ? chainWait * TimeMul : Mathf.Max(windupTime * TimeMul, Normal ? Juice.MinFirstWindup : 0f);
         if (Doped) wait /= BroadcastRules.Num7SpeedMul;
@@ -516,12 +611,15 @@ public class TestEnemy : MonoBehaviour
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (kind == Kind.Android && state != State.Overload) // Android blocks every hit except while overloaded
+        if (kind == Kind.Android && state != State.Overload && !AndroidExposedTo(info.SourcePosition)) // frontal hit on a guarding Android
         {
             Flash(Juice.BlockTint); // white was invisible on the (white) draft sprite
+            Vector2 p = (Vector2)transform.position + new Vector2(0.45f * facing, 0.3f); // deflect spark on its front
+            SpriteFx.Play("hit-spark", p - new Vector2(facing * 12f, 16f) / SpriteFx.Ppu, facing < 0);
+            Sfx.Play(SfxId.Parry, 0.5f);
             return false;
         }
-        // Citizen/Bug in any state, Android while overloaded: one hit knocks it down.
+        // Citizen/Bug/Sniper in any state; Android overloaded, or hit from behind / above: one hit knocks it down.
         Flash(Color.red);
         hp = 0;
         EnterState(State.Stunned);
