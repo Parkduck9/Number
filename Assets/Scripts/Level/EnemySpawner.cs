@@ -98,6 +98,7 @@ public class EnemySpawner : MonoBehaviour
     void UpdateGrace()
     {
         foreach (var e in entries)
+        {
             if (e.spawned == null || Time.time < e.graceUntil) continue;
             if (e.spawned.Current == TestEnemy.State.Stunned) // hit during the grace: stay dead (Start would revive it)
             {
@@ -106,6 +107,7 @@ public class EnemySpawner : MonoBehaviour
             }
             else e.spawned.enabled = true;
             e.spawned = null;
+        }
     }
 
     void UpdateHit()
