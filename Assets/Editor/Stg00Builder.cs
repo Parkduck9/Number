@@ -44,8 +44,11 @@ public static class Stg00Builder
         var board = BuildBoard(root, "BOARD-A", BoardPos, 1, new Vector2(0f, SegWidth));
         foreach (float x in CitizenX)
         {
-            var c = AddSquare(root, "CITIZEN (PLACEHOLDER)", new Vector2(x, 2.25f + 1f), new Vector2(1f, 2f), CitizenColor, 2);
-            c.AddComponent<OpeningCitizen>();
+            var c = new GameObject("CITIZEN").transform; // OpeningCitizen swaps the square child for the draft art (feet at the ground)
+            c.SetParent(root, false);
+            c.localPosition = new Vector3(x, 2.25f + 1f, 0f);
+            AddSquare(c, "CITIZEN (PLACEHOLDER)", Vector2.zero, new Vector2(1f, 2f), CitizenColor, 2);
+            c.gameObject.AddComponent<OpeningCitizen>();
         }
 
         var exit = BuildTrigger(root, Exit);
