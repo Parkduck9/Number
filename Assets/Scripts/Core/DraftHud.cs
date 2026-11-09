@@ -18,6 +18,14 @@ public static class DraftHud
 
     public static Sprite Ui(string name) => DraftSprites.Use ? Resources.Load<Sprite>("DraftUi/" + name) : null;
 
+    // Frames of a Multiple-mode DraftUi sheet in name order (null when missing or the count differs).
+    public static Sprite[] UiFrames(string name, int count)
+    {
+        if (!DraftSprites.Use) return null;
+        Sprite[] s = Resources.LoadAll<Sprite>("DraftUi/" + name).OrderBy(x => x.name).ToArray();
+        return s.Length == count ? s : null;
+    }
+
     static void Init()
     {
         if (loaded) return;

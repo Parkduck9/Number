@@ -1,0 +1,44 @@
+{
+  "panel_9s": [
+    9,
+    9,
+    9,
+    9
+  ],
+  "button_9s_normal": [
+    5,
+    5,
+    4,
+    4
+  ],
+  "button_9s_hover": [
+    5,
+    5,
+    4,
+    4
+  ],
+  "button_9s_pressed": [
+    5,
+    5,
+    4,
+    4
+  ],
+  "dialogue_box_9s": [
+    10,
+    10,
+    8,
+    8
+  ],
+  "dialogue_nameplate_9s": [
+    9,
+    9,
+    7,
+    7
+  ],
+  "hint_plate_9s": [
+    4,
+    4,
+    3,
+    3
+  ]
+}

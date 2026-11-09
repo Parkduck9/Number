@@ -14,6 +14,7 @@ public class MouseCrosshair : MonoBehaviour
 
     PlayerController player;
     SpriteRenderer cross;
+    Sprite idleArt, lockArt;
     readonly SpriteRenderer[] brackets = new SpriteRenderer[4];
 
     public static void Create(PlayerController player)
@@ -21,8 +22,12 @@ public class MouseCrosshair : MonoBehaviour
         var go = new GameObject("MouseCrosshair");
         var c = go.AddComponent<MouseCrosshair>();
         c.player = player;
-        c.cross = MakeRenderer(go.transform, CrossSprite());
-        Sprite corner = CornerSprite();
+        // Kit art (16x16 crosshair, 8x8 bracket) is pre-colored: white renderer + sprite swap. Missing art = the code-baked sprites + tint.
+        c.idleArt = DraftHud.Ui("crosshair_idle"); c.lockArt = DraftHud.Ui("crosshair_lock");
+        Sprite bracketArt = DraftHud.Ui("lock_bracket");
+        if (c.idleArt == null || c.lockArt == null) c.idleArt = c.lockArt = null;
+        c.cross = MakeRenderer(go.transform, c.idleArt != null ? c.idleArt : CrossSprite());
+        Sprite corner = bracketArt != null ? bracketArt : CornerSprite();
         for (int i = 0; i < 4; i++)
         {
             var b = new GameObject("LockBracket" + i);
@@ -30,7 +35,7 @@ public class MouseCrosshair : MonoBehaviour
             // corner art is the top-left L; mirror it for the other corners (scale flips around the corner pivot)
             b.transform.localScale = new Vector3(i % 2 == 0 ? 1f : -1f, i < 2 ? 1f : -1f, 1f);
             c.brackets[i] = MakeRenderer(b.transform, corner);
-            c.brackets[i].color = LockTint;
+            c.brackets[i].color = bracketArt != null ? Color.white : LockTint;
             c.brackets[i].enabled = false;
         }
     }
@@ -61,7 +66,8 @@ public class MouseCrosshair : MonoBehaviour
         Collider2D col = null;
         bool locked = aim.sqrMagnitude > 0.0001f && player.CurrentState != PlayerController.State.Dead
             && player.FindLungeTarget(aim.normalized, out col) != null;
-        cross.color = locked ? LockTint : IdleTint;
+        if (idleArt != null) cross.sprite = locked ? lockArt : idleArt;
+        else cross.color = locked ? LockTint : IdleTint;
         SetBrackets(locked);
         if (!locked) return;
         Bounds b = col.bounds;

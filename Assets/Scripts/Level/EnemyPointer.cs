@@ -40,6 +40,7 @@ public class EnemyPointer : MonoBehaviour
     Camera cam;
     Texture2D tex;
     Sprite sprite;
+    bool ownsSprite; // true = the code-made fallback (destroyed with us); false = a loaded resource
     PlayerController player;
     float flashUntil = -1f, nextScan;
     int remaining;
@@ -54,13 +55,19 @@ public class EnemyPointer : MonoBehaviour
 
         var canvas = UiKit.CreateCanvas("EnemyPointerCanvas", transform, 90);
         canvasRect = canvas.GetComponent<RectTransform>();
-        tex = new Texture2D(9, 9, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-        var px = new Color32[81];
-        for (int y = 0; y < 9; y++)                       // triangle pointing right (+x): column x is filled while |y-4| <= (8-x)/2
-            for (int x = 0; x < 9; x++)
-                px[y * 9 + x] = Mathf.Abs(y - 4) * 2 <= 8 - x ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
-        tex.SetPixels32(px); tex.Apply();
-        sprite = Sprite.Create(tex, new Rect(0, 0, 9, 9), new Vector2(0.5f, 0.5f), 9f);
+        Sprite art = DraftHud.Ui("enemy_pointer"); // white 9x9 stencil (tinted below); fallback = code-made triangle
+        if (art != null) sprite = art;
+        else
+        {
+            tex = new Texture2D(9, 9, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[81];
+            for (int y = 0; y < 9; y++)                       // triangle pointing right (+x): column x is filled while |y-4| <= (8-x)/2
+                for (int x = 0; x < 9; x++)
+                    px[y * 9 + x] = Mathf.Abs(y - 4) * 2 <= 8 - x ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
+            tex.SetPixels32(px); tex.Apply();
+            sprite = Sprite.Create(tex, new Rect(0, 0, 9, 9), new Vector2(0.5f, 0.5f), 9f);
+            ownsSprite = true;
+        }
         for (int i = 0; i < MaxArrows; i++)
         {
             var rt = UiKit.Rect("Arrow", canvas.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(ArrowSize, ArrowSize));
@@ -75,7 +82,7 @@ public class EnemyPointer : MonoBehaviour
     void OnDestroy()
     {
         if (instance == this) instance = null;
-        if (sprite != null) Destroy(sprite);
+        if (ownsSprite && sprite != null) Destroy(sprite);
         if (tex != null) Destroy(tex);
     }
 

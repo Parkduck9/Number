@@ -157,7 +157,7 @@ public class StopButton : MonoBehaviour
         panel = NewRect("Choice", canvasGo.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(720f, 200f));
         panel.AddComponent<Image>().color = BorderColor;
         GameObject fill = NewRect("Fill", panel.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(716f, 196f));
-        fill.AddComponent<Image>().color = BoxColor;
+        if (!UiKit.Slice(panel.GetComponent<Image>(), DraftHud.Ui("panel_9s"))) fill.AddComponent<Image>().color = BoxColor; // skin = pixel panel, else flat box
         TMP_Text t = choiceText = NewText(fill.transform, TextSize, TextAlignmentOptions.Center);
         t.textWrappingMode = TextWrappingModes.Normal;
         t.color = Color.white;

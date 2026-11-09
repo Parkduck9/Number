@@ -88,7 +88,8 @@ public class ControlHints : MonoBehaviour
         fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         // Readability on any ground: dark translucent plate behind the strip (sized by the fitter + padding), light text.
         row.padding = new RectOffset(12, 12, 6, 6);
-        UiKit.FilledImage(strip, PlateColor);
+        var plate = UiKit.FilledImage(strip, PlateColor);
+        if (UiKit.Slice(plate, DraftHud.Ui("hint_plate_9s"))) row.padding = new RectOffset(14, 14, 8, 8); // skin borders are 8 x 6 ref px
 
         var textColor = UiTheme.Current.text;
         foreach (var e in entries)

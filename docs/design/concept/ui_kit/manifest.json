@@ -1,0 +1,279 @@
+{
+  "panel_9s.png": {
+    "size": [
+      48,
+      48
+    ],
+    "colors": 8,
+    "alpha": [
+      255
+    ],
+    "sha256": "bf66e44dbbfb97ba89c095c751681e7f62014dd3a9c42c5e3fd823dcf34cc16e"
+  },
+  "button_9s_normal.png": {
+    "size": [
+      32,
+      16
+    ],
+    "colors": 5,
+    "alpha": [
+      255
+    ],
+    "sha256": "7f5bf855bdb70a0898544fe5fb9f49951bdd6378980f65f83eb9996e7a5e2906"
+  },
+  "button_9s_hover.png": {
+    "size": [
+      32,
+      16
+    ],
+    "colors": 5,
+    "alpha": [
+      255
+    ],
+    "sha256": "3a17fd90dbcb93cbdb9fde130258f5cb8711438a45f58eaba877a36dc0f23d6c"
+  },
+  "button_9s_pressed.png": {
+    "size": [
+      32,
+      16
+    ],
+    "colors": 6,
+    "alpha": [
+      255
+    ],
+    "sha256": "5c6b5463297d1bc5e3224eb52ce0448d48e5d7d8ceafe5bafbaefeb5a0e1966b"
+  },
+  "dialogue_box_9s.png": {
+    "size": [
+      64,
+      48
+    ],
+    "colors": 10,
+    "alpha": [
+      255
+    ],
+    "sha256": "18a73168690f7ebdfccc7ff0e8d5bf5f9db9c2bb8d35eda2caa45f92b77d3aa2"
+  },
+  "dialogue_nameplate_9s.png": {
+    "size": [
+      32,
+      16
+    ],
+    "colors": 9,
+    "alpha": [
+      255
+    ],
+    "sha256": "93991cf500d672b603497371945af7c2fea0e22ab38c6318a95244c80b66f01a"
+  },
+  "dialogue_next.png": {
+    "size": [
+      8,
+      8
+    ],
+    "colors": 1,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "7f8d25878e5e1103b3b1847bd478064144be742553225f6eacb965ac6c0c46fe"
+  },
+  "dialogue_next_2f.png": {
+    "size": [
+      16,
+      8
+    ],
+    "colors": 2,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "83eecd2b48c669d276c5adafc4f8ea7e3559ec733bcec1d3bf81068567b7db39"
+  },
+  "portrait_frame.png": {
+    "size": [
+      56,
+      56
+    ],
+    "colors": 7,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "d6b225c5ec763cb70a39fa46d14b99f7d0f484f4b3af48d97ab0c26edc551f08"
+  },
+  "hud_face_bezel.png": {
+    "size": [
+      56,
+      56
+    ],
+    "colors": 9,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "556a58b489d13b9a70ceb0a893401017b7cec056b115f07231df377212a8ae28"
+  },
+  "hint_plate_9s.png": {
+    "size": [
+      32,
+      12
+    ],
+    "colors": 4,
+    "alpha": [
+      255
+    ],
+    "sha256": "aa2db0cc7d1e63ad0141345e9d15c0f0615295f16916c08c4426e718d3f7d457"
+  },
+  "cursor_arrow.png": {
+    "size": [
+      16,
+      16
+    ],
+    "colors": 3,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "78fa565a11210dd3b86fe8b7a05cf41b9b87c0b70d8de5f695b5a8eebc3a91ed"
+  },
+  "crosshair_idle.png": {
+    "size": [
+      16,
+      16
+    ],
+    "colors": 2,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "833af324eb679fbeb65dfa436f10ff5d4e3f8a491100459e7347e96415591ff8"
+  },
+  "crosshair_lock.png": {
+    "size": [
+      16,
+      16
+    ],
+    "colors": 2,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "666e18bb9156cd2598687b43aafa97bd4d1eef499c95a1862da22a84df7cd85d"
+  },
+  "lock_bracket.png": {
+    "size": [
+      8,
+      8
+    ],
+    "colors": 2,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "61f186f6947074dc177b1d1a409cbb523166316f7f1f848d69fed8e888393701"
+  },
+  "enemy_pointer.png": {
+    "size": [
+      9,
+      9
+    ],
+    "colors": 1,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "ccc09476f4cce70c9824a818344d0fb87564ffe6bb234b4c80f6f595e4714306"
+  },
+  "logo_number.png": {
+    "size": [
+      160,
+      40
+    ],
+    "colors": 4,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "59741353abddc350c390b4be70068cdf102761cd74c30c571f8acd1cb9f5aa88"
+  },
+  "logo_number_2x.png": {
+    "size": [
+      320,
+      80
+    ],
+    "colors": 4,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "a28fd6e0b371c06bd453a4225f92de1291943c4e269bb882c4fe5d46d816f987"
+  },
+  "app_icon.png": {
+    "size": [
+      128,
+      128
+    ],
+    "colors": 4,
+    "alpha": [
+      255
+    ],
+    "sha256": "a50fc6015e4a5ef9222c987190659b6507bc8ea45513c145957518cfb5ef918e"
+  },
+  "favicon_32.png": {
+    "size": [
+      32,
+      32
+    ],
+    "colors": 5,
+    "alpha": [
+      255
+    ],
+    "sha256": "b76c631abf7e59854d21ca938ff74a90ce58a9924aeb26d39460a9b7ed578fd4"
+  },
+  "portrait_android.png": {
+    "size": [
+      100,
+      100
+    ],
+    "colors": 16,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "5789b30aabac9daf5c3ce48b212a08c4b6e241688a1280640df4fbd2d4c6d191"
+  },
+  "portrait_bug.png": {
+    "size": [
+      100,
+      100
+    ],
+    "colors": 16,
+    "alpha": [
+      0,
+      255
+    ],
+    "sha256": "85fcd0f884a6c69b2f3929ee72ffa52e60f09238998a2042ef49f176afbaf10d"
+  },
+  "mockup_preview.png": {
+    "size": [
+      960,
+      540
+    ],
+    "colors": 66,
+    "alpha": [
+      255
+    ],
+    "sha256": "0b0bddb1c685fd823e956912e7daf327484be2b63170251b6dc4830367cb4f33"
+  },
+  "mockup_preview_2x.png": {
+    "size": [
+      1920,
+      1080
+    ],
+    "colors": 66,
+    "alpha": [
+      255
+    ],
+    "sha256": "d6af3c82e443afb68b23de0bf7f3ab83148e85555645dc7eeb62b9a08d219067"
+  }
+}

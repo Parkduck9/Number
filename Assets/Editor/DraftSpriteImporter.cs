@@ -9,7 +9,26 @@ using UnityEngine;
 public class DraftSpriteImporter : AssetPostprocessor
 {
     const float StripFeetGap = 2f; // px: every 64x64 strip has its feet on row 61, two empty rows below
-    public override uint GetVersion() => 3; // 3: strip pivot lifted to the feet (2 empty rows under them)
+    public override uint GetVersion() => 4; // 4: UI kit 9-slice borders, crosshair pivots, dialogue_next_2f frames
+
+    // UI kit 9-slice borders (docs/design/concept/ui_kit/borders.json: left, right, top, bottom in source px) as Unity spriteBorder (x=left, y=bottom, z=right, w=top).
+    static readonly System.Collections.Generic.Dictionary<string, Vector4> NineSlice = new System.Collections.Generic.Dictionary<string, Vector4>
+    {
+        { "panel_9s", new Vector4(9, 9, 9, 9) },
+        { "button_9s_normal", new Vector4(5, 4, 5, 4) },
+        { "button_9s_hover", new Vector4(5, 4, 5, 4) },
+        { "button_9s_pressed", new Vector4(5, 4, 5, 4) },
+        { "dialogue_box_9s", new Vector4(10, 8, 10, 8) },
+        { "dialogue_nameplate_9s", new Vector4(9, 7, 9, 7) },
+        { "hint_plate_9s", new Vector4(4, 3, 4, 3) },
+    };
+
+    // crosshair art: ink centre is pixel (7,7) from the top-left of the 16x16 sheet = pivot (7.5/16, 8.5/16); lock bracket: top-left corner.
+    static bool CrosshairPivot(string name, out Vector2 pivot)
+    {
+        pivot = name.StartsWith("crosshair_") ? new Vector2(7.5f / 16f, 8.5f / 16f) : new Vector2(0f, 1f);
+        return name.StartsWith("crosshair_") || name == "lock_bracket";
+    }
 
     void OnPreprocessTexture()
     {
@@ -26,15 +45,28 @@ public class DraftSpriteImporter : AssetPostprocessor
         ti.npotScale = TextureImporterNPOTScale.None;
 
         string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
-        bool digits = name.Contains("_digits_"), arcs = name.Contains("_arcs_");
-        if (!strip && !digits && !arcs)
+        bool digits = name.Contains("_digits_"), arcs = name.Contains("_arcs_"), next2 = name == "dialogue_next_2f";
+        if (!strip && !digits && !arcs && !next2)
         {
             ti.spriteImportMode = SpriteImportMode.Single; // default pivot = center
+            if (NineSlice.TryGetValue(name, out Vector4 border)) ti.spriteBorder = border; // UI kit 9-slice
+            if (CrosshairPivot(name, out Vector2 pivot))
+            {
+                var st = new TextureImporterSettings();
+                ti.ReadTextureSettings(st);
+                st.spriteAlignment = (int)SpriteAlignment.Custom;
+                st.spritePivot = pivot;
+                ti.SetTextureSettings(st);
+            }
             return;
         }
 
         int count; float w, h, step;
-        if (strip)
+        if (next2) // UI kit blinking arrow: two 8x8 frames side by side, no gap
+        {
+            count = 2; w = h = step = 8f;
+        }
+        else if (strip)
         {
             string tail = name.Substring(name.LastIndexOf('_') + 1); // "3f"
             count = int.TryParse(tail.TrimEnd('f'), out int n) ? n : 1;

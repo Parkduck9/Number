@@ -51,14 +51,27 @@ public static class UiKit
         return img;
     }
 
+    // Pixel UI kit skin (Assets/Resources/DraftUi, docs/design/concept/ui_kit): 9-slice corners keep the art's 2x pixel scale on the 960x540 canvas
+    // (1 source px = 2 reference px). Returns false (image untouched) when the sprite is missing, so callers keep the flat look.
+    public static bool Slice(Image img, Sprite s)
+    {
+        if (s == null) return false;
+        img.sprite = s;
+        img.type = Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 50f / s.pixelsPerUnit; // Image divides by (spritePPU / 100 reference PPU): 0.5 units per source px = 2 ref px per art pixel
+        img.color = Color.white;
+        return true;
+    }
+
     // Square pixel frame: border-colored rect with a fill rect inset by frameWidth. Returns the fill rect (content parent).
+    // With the panel_9s skin the outer image is the skin and the fill rect is an empty content parent.
     public static RectTransform Frame(string name, Transform parent, Vector2 anchor, Vector2 pos, Vector2 size, out Image border)
     {
         var t = UiTheme.Current;
         var outer = Rect(name, parent, anchor, pos, size);
         border = FilledImage(outer, t.border);
         var fill = Stretch("Fill", outer, t.frameWidth);
-        FilledImage(fill, t.panelFill);
+        if (!Slice(border, DraftHud.Ui("panel_9s"))) FilledImage(fill, t.panelFill);
         return fill;
     }
 
@@ -85,7 +98,9 @@ public static class UiKit
         outer.pivot = new Vector2(0.5f, 1f);
         var border = FilledImage(outer, t.border, true);
         var fill = Stretch("Fill", outer, t.frameWidth);
-        FilledImage(fill, t.panelFill);
+        Sprite[] skin = { DraftHud.Ui("button_9s_normal"), DraftHud.Ui("button_9s_hover"), DraftHud.Ui("button_9s_pressed") };
+        bool skinned = Slice(border, skin[0]) && skin[1] != null && skin[2] != null;
+        if (!skinned) FilledImage(fill, t.panelFill);
         var label = Label("Label", fill, new Vector2(0.5f, 0.5f), Vector2.zero, t.buttonSize2, en, ko, t.buttonSize, t.dim);
 
         var btn = outer.gameObject.AddComponent<Button>();
@@ -97,7 +112,7 @@ public static class UiKit
         shine.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 20f);
         shine.enabled = false;
         outer.gameObject.AddComponent<CanvasGroup>();
-        outer.gameObject.AddComponent<ButtonHighlight>().Init(border, label, t, shine, index);
+        outer.gameObject.AddComponent<ButtonHighlight>().Init(border, label, t, shine, index, skinned ? skin : null);
         return btn;
     }
 
@@ -132,9 +147,11 @@ public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, 
     bool selected, hover, down;
     float shineT = ShineTime, releaseT = ReleaseTime, introT = InTime, baseX;
 
-    public void Init(Image b, TMP_Text l, UiTheme t, Image s, int i)
+    Sprite[] skin; // normal, hover/selected, pressed (null = flat color look)
+
+    public void Init(Image b, TMP_Text l, UiTheme t, Image s, int i, Sprite[] skinSprites = null)
     {
-        border = b; label = l; theme = t; shine = s; index = i;
+        border = b; label = l; theme = t; shine = s; index = i; skin = skinSprites;
         rt = (RectTransform)transform; group = GetComponent<CanvasGroup>(); baseX = rt.anchoredPosition.x;
         Apply();
         StartIntro();
@@ -143,8 +160,8 @@ public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, 
     public void OnDeselect(BaseEventData e) { selected = false; Apply(); }
     public void OnPointerEnter(PointerEventData e) { hover = true; StartShine(); Apply(); }
     public void OnPointerExit(PointerEventData e) { hover = false; Apply(); }
-    public void OnPointerDown(PointerEventData e) { down = true; transform.localScale = new Vector3(PressScale, PressScale, 1f); }
-    public void OnPointerUp(PointerEventData e) { if (down) { down = false; releaseT = 0f; } }
+    public void OnPointerDown(PointerEventData e) { down = true; transform.localScale = new Vector3(PressScale, PressScale, 1f); Apply(); }
+    public void OnPointerUp(PointerEventData e) { if (down) { down = false; releaseT = 0f; Apply(); } }
     void OnEnable() { if (theme != null) StartIntro(); }
     void OnDisable()
     {
@@ -199,7 +216,9 @@ public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, 
     void Apply()
     {
         bool on = selected || hover;
-        border.color = on ? theme.selectedBorder : theme.border;
+        if (skin != null) border.sprite = down ? skin[2] : on ? skin[1] : skin[0];
+        else border.color = on ? theme.selectedBorder : theme.border;
+        label.rectTransform.anchoredPosition = skin != null && down ? new Vector2(0f, -2f) : Vector2.zero; // pressed: text drops 1 art px (2 ref px)
         label.color = on ? theme.text : theme.dim;
     }
 }

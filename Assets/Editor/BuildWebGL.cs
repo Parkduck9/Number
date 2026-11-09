@@ -24,8 +24,8 @@ public static class BuildWebGL
         Set(changes, "decompressionFallback", PlayerSettings.WebGL.decompressionFallback, true, v => PlayerSettings.WebGL.decompressionFallback = v);
         // Threads are not allowed on itch.io (no cross-origin isolation).
         Set(changes, "threadsSupport", PlayerSettings.WebGL.threadsSupport, false, v => PlayerSettings.WebGL.threadsSupport = v);
-        // Default template (has a fullscreen button). The canvas is a fixed WxH px, so set the itch.io viewport to 960x540 + fullscreen button.
-        Set(changes, "template", PlayerSettings.WebGL.template, "APPLICATION:Default", v => PlayerSettings.WebGL.template = v);
+        // Custom template Assets/WebGLTemplates/Number (scales a 16:9 canvas to fit, own fullscreen button). Set the itch.io viewport to 960x540.
+        Set(changes, "template", PlayerSettings.WebGL.template, "PROJECT:Number", v => PlayerSettings.WebGL.template = v);
         // Default canvas 960x540 (16:9, matches the UI reference; fits an itch.io embed, fullscreen button stays).
         Set(changes, "defaultWebScreenWidth", PlayerSettings.defaultWebScreenWidth, 960, v => PlayerSettings.defaultWebScreenWidth = v);
         Set(changes, "defaultWebScreenHeight", PlayerSettings.defaultWebScreenHeight, 540, v => PlayerSettings.defaultWebScreenHeight = v);

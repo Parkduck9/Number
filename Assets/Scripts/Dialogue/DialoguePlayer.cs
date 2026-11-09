@@ -26,9 +26,11 @@ public class DialoguePlayer : MonoBehaviour
     class Box
     {
         public GameObject root;
-        public Image portrait;
+        public Image portrait, next;
         public TMP_Text nameText, body;
     }
+
+    Sprite[] nextFrames; // dialogue_next_2f: 2 frames, 2 fps blink, shown when a talk line finished typing
 
     Box radioBox, talkBox;
     readonly Queue<DialogueLine> radioQueue = new Queue<DialogueLine>();
@@ -119,6 +121,11 @@ public class DialoguePlayer : MonoBehaviour
         int total = talkBox.body.textInfo.characterCount;
         bool typing = Mathf.FloorToInt(talkTime * TypeSpeed) < total;
         talkBox.body.maxVisibleCharacters = typing ? Mathf.FloorToInt(talkTime * TypeSpeed) : int.MaxValue;
+        if (talkBox.next != null)
+        {
+            talkBox.next.enabled = !typing;
+            talkBox.next.sprite = nextFrames[(int)(Time.unscaledTime * 2f) & 1];
+        }
 
         bool advance = (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ||
                        (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
@@ -185,25 +192,74 @@ public class DialoguePlayer : MonoBehaviour
 
     Box BuildBox(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, float portraitSize, bool compact)
     {
+        // Pixel UI kit skin (2 ref px per art pixel): sliced box, portrait frame (56 art px around the 50 px portrait art), nameplate, next arrow.
+        Sprite boxArt = DraftHud.Ui("dialogue_box_9s"), frameArt = DraftHud.Ui("portrait_frame"), plateArt = DraftHud.Ui("dialogue_nameplate_9s");
+        bool skin = boxArt != null;
+        float frameSize = portraitSize * 1.12f;
+        if (skin) size.y = frameSize + 36f; // 16 ref px border above and below, 2 ref px fill inset
+
         var b = new Box();
         b.root = NewRect(name, parent, anchor, anchor, anchor, pos, size);
         var border = b.root.AddComponent<Image>();
         border.color = BorderColor;
         border.raycastTarget = false;
+        UiKit.Slice(border, boxArt);
         var fill = NewRect("Fill", b.root.transform, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(-4f, -4f));
-        var fillImg = fill.AddComponent<Image>();
-        fillImg.color = BoxColor;
-        fillImg.raycastTarget = false;
+        if (!skin)
+        {
+            var fillImg = fill.AddComponent<Image>();
+            fillImg.color = BoxColor;
+            fillImg.raycastTarget = false;
+        }
 
-        var pr = NewRect("Portrait", fill.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(12f, 0f), new Vector2(portraitSize, portraitSize));
+        float portraitX = skin ? 18f + (frameSize - portraitSize) * 0.5f : 12f;
+        var pr = NewRect("Portrait", fill.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(portraitX, 0f), new Vector2(portraitSize, portraitSize));
         b.portrait = pr.AddComponent<Image>();
         b.portrait.raycastTarget = false;
+        if (skin && frameArt != null)
+        {
+            var fr = NewRect("PortraitFrame", pr.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(frameSize, frameSize));
+            var frImg = fr.AddComponent<Image>();
+            frImg.sprite = frameArt;
+            frImg.raycastTarget = false;
+        }
 
-        float left = 24f + portraitSize;
+        float left = skin ? portraitX + frameSize + 14f : 24f + portraitSize;
         float nameH = NameSize + 6f;
-        b.nameText = NewText("Name", fill.transform, NameSize, left, nameH, true);
         b.body = NewText("Body", fill.transform, BodySize, left, compact ? 0f : nameH, false);
+        if (skin)
+        {
+            var bodyRt = b.body.rectTransform;
+            bodyRt.offsetMin = new Vector2(left, 14f);
+            bodyRt.offsetMax = new Vector2(compact ? -20f : -44f, -14f - (compact || plateArt != null ? 0f : nameH));
+        }
+        if (skin && !compact && plateArt != null)
+        {
+            // nameplate straddles the top edge of the box; the name text sits inside it
+            var plate = NewRect("Nameplate", fill.transform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(left - 12f, -10f), new Vector2(240f, 40f));
+            var plateImg = plate.AddComponent<Image>();
+            plateImg.raycastTarget = false;
+            UiKit.Slice(plateImg, plateArt);
+            b.nameText = NewText("Name", plate.transform, NameSize, 0f, 0f, true);
+            var nrt = b.nameText.rectTransform;
+            nrt.anchorMin = Vector2.zero; nrt.anchorMax = Vector2.one; nrt.pivot = new Vector2(0.5f, 0.5f);
+            nrt.offsetMin = new Vector2(18f, 4f); nrt.offsetMax = new Vector2(-18f, -4f);
+            b.nameText.alignment = TextAlignmentOptions.MidlineLeft;
+        }
+        else b.nameText = NewText("Name", fill.transform, NameSize, left, nameH, true);
         if (compact) b.nameText.gameObject.SetActive(false); // radio: portrait + subtitle only
+
+        if (skin && !compact)
+        {
+            nextFrames = DraftHud.UiFrames("dialogue_next_2f", 2);
+            if (nextFrames != null)
+            {
+                var nx = NewRect("Next", fill.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 18f), new Vector2(16f, 16f));
+                b.next = nx.AddComponent<Image>();
+                b.next.raycastTarget = false;
+                b.next.enabled = false;
+            }
+        }
         return b;
     }
 

@@ -42,6 +42,13 @@ public class FaceHealthHud : MonoBehaviour
         stages = art;
         face.rectTransform.sizeDelta = new Vector2(96f, 96f);
         face.preserveAspect = true;
+        Sprite bezel = DraftHud.Ui("hud_face_bezel"); // 56x56 art at 2x = 112, its 48x48 hole is exactly the face; child of the face so it shakes with it
+        if (bezel != null)
+        {
+            var bz = UiKit.FilledImage(UiKit.Rect("Bezel", face.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(112f, 112f)), Color.white);
+            bz.sprite = bezel;
+            bz.transform.SetSiblingIndex(0); // under the hit flash overlay
+        }
         if (label != null) { label.gameObject.SetActive(false); label = null; }
     }
 

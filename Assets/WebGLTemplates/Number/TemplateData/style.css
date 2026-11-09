@@ -1,0 +1,28 @@
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0B0F1E; overflow: hidden }
+/* 16:9 frame that scales to fit the iframe / window (960x540 at 1x). */
+#unity-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); background: #0B0F1E }
+/* Fullscreen: the browser forces the container to the whole screen; keep the canvas 16:9 and centred (navy bars). */
+#unity-container:fullscreen { display: flex; align-items: center; justify-content: center }
+#unity-container:fullscreen #unity-canvas { width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)) }
+#unity-canvas { display: block; width: 100%; height: 100%; background: {{{ BACKGROUND_COLOR }}}; image-rendering: pixelated }
+#unity-loading-bar { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: #0B0F1E }
+#unity-logo { width: min(640px, 70%); image-rendering: pixelated }
+#unity-progress-bar-empty { width: min(320px, 50%); height: 12px; margin-top: 32px; border: 2px solid #C8CCD8; box-sizing: content-box; background: #0B0F1E }
+#unity-progress-bar-full { width: 0%; height: 100%; background: #4CE8D8 }
+#unity-warning { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: none; max-width: 90%;
+  font: 14px monospace; color: #fff; text-align: center }
+.banner-warning, .banner-error { padding: 6px 10px; border: 2px solid #C8CCD8 }
+.banner-warning { background: #226076 }
+.banner-error { background: #7A3A3C }
+#unity-fullscreen-button { position: absolute; right: 6px; bottom: 6px; width: 24px; height: 24px; cursor: pointer; opacity: .6;
+  background:
+    linear-gradient(#C8CCD8,#C8CCD8) 4px 4px / 8px 2px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 4px 4px / 2px 8px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 12px 4px / 8px 2px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 18px 4px / 2px 8px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 4px 18px / 8px 2px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 4px 12px / 2px 8px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 12px 18px / 8px 2px no-repeat,
+    linear-gradient(#C8CCD8,#C8CCD8) 18px 12px / 2px 8px no-repeat }
+#unity-fullscreen-button:hover { opacity: 1 }
