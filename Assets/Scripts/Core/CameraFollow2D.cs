@@ -2,7 +2,9 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 // Smooth 2D follow with a dead-zone, look-ahead in the facing direction and level-bounds clamp.
-// Facing is derived from the target's own horizontal movement, so no dependency on PlayerController.
+// Facing is derived from the target's own horizontal movement. Vertical: while the target (a PlayerController, read only) is in the
+// air the camera holds the last ground height, so hops don't bob the view; falls lead downward; a landing eases the view in.
+// The follow runs on an unsnapped position; the transform gets that position snapped to the pixel grid plus the (pixel) shake.
 [RequireComponent(typeof(Camera))]
 public class CameraFollow2D : MonoBehaviour
 {
@@ -12,24 +14,31 @@ public class CameraFollow2D : MonoBehaviour
     [Tooltip("Half-size of the dead-zone around the camera center (world units). Target moves freely inside.")]
     [SerializeField] Vector2 deadZone = new Vector2(0.75f, 0.5f);
     [SerializeField] float smoothTime = 0.15f;
-    // Look-ahead distance / smoothing: Juice.LookAhead*.
+    // Look-ahead distance / smoothing: Juice.LookAhead*. Vertical follow: Juice.Cam*.
     [SerializeField] bool useBounds = true;
     [Tooltip("Level rectangle in world units (x, y = bottom-left). The camera view stays inside it.")]
     [SerializeField] Rect levelBounds = new Rect(-20f, -6f, 60f, 24f);
 
     Camera cam;
     PixelPerfectCamera ppc;
+    PlayerController player; // optional: target's grounded state for the vertical follow (none = plain vertical dead-zone follow)
     float basePpu, baseOrtho;
+    Vector2 followPos;       // unsnapped follow state (the transform shows it pixel-snapped)
     Vector2 velocity;
     float lookAhead, lookAheadVelocity;
+    float fallLead, fallLeadVelocity;
     float facing = 1f;
-    float lastTargetX;
+    float lastTargetX, lastTargetY;
+    float groundY;           // target y at its last grounded frame
+    bool wasGrounded = true;
 
-    // Camera shake: decaying random offset added after the follow step, in unscaled time. Removed again at the start of the next
-    // LateUpdate, so it never feeds into the follow position.
+    // Camera shake: decaying random offset added on top of the snapped follow position, in unscaled time.
     static CameraFollow2D active;
     float shakeAmp, shakeTime, shakeLeft;
     Vector2 shakeOffset;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => active = null; // Domain Reload is off
 
     // Strongest shake wins; a weaker one never cuts a stronger one short.
     // blowDir != 0: Juice.ShakeKick of the amplitude pushes the view along it (a kick that decays), the rest stays random.
@@ -38,8 +47,8 @@ public class CameraFollow2D : MonoBehaviour
         if (active == null || amplitude <= 0f || duration <= 0f) return;
         // Punch zoom keyed off the shake size (no PlayerController call needed): kill = big directional shake, parry = its own amplitude.
         // Decided before the shake gate: a parry right after a kill / hit still punches.
-        if (blowDir.sqrMagnitude > 0.0001f && amplitude >= Juice.ShakeKillAmp - 0.0001f) active.Punch(Juice.PunchKill);
-        else if (Mathf.Abs(amplitude - Juice.ShakeParryAmp) < 0.0001f) active.Punch(Juice.PunchParry);
+        if (blowDir.sqrMagnitude > 0.0001f && amplitude >= Juice.ShakeKillAmp - 0.0001f) active.DoPunch(Juice.PunchKill);
+        else if (Mathf.Abs(amplitude - Juice.ShakeParryAmp) < 0.0001f) active.DoPunch(Juice.PunchParry);
         float currentAmp = active.shakeLeft > 0f ? active.shakeAmp * active.shakeLeft / active.shakeTime : 0f;
         if (amplitude < currentAmp) return;
         active.shakeAmp = amplitude;
@@ -47,9 +56,13 @@ public class CameraFollow2D : MonoBehaviour
         active.shakeDir = blowDir.sqrMagnitude > 0.0001f ? blowDir.normalized : Vector2.zero;
     }
 
+    // Brief zoom-in (fraction of the view size, e.g. Juice.PunchKill) that eases back over Juice.PunchTime, real time.
+    // Kills and parries already punch through Shake; call this for anything else (dice result, boss phase...).
+    public static void Punch(float strength) { if (active != null) active.DoPunch(strength); }
+
     // Strongest wins, never stacks: a new punch only restarts if it is at least as strong as what is left.
     float punchStrength, punchLeft;
-    void Punch(float strength)
+    void DoPunch(float strength)
     {
         if (strength <= 0f || Juice.PunchTime <= 0f) return;
         float current = punchLeft > 0f ? punchStrength * punchLeft / Juice.PunchTime : 0f;
@@ -68,6 +81,7 @@ public class CameraFollow2D : MonoBehaviour
         ppc = GetComponent<PixelPerfectCamera>();
         baseOrtho = cam.orthographicSize;
         if (ppc != null) basePpu = ppc.assetsPPU;
+        followPos = transform.position;
     }
 
     void Start() => Snap();
@@ -79,24 +93,37 @@ public class CameraFollow2D : MonoBehaviour
     public void Snap()
     {
         if (target == null) return;
+        player = target.GetComponent<PlayerController>();
         lastTargetX = target.position.x;
-        lookAhead = 0f;
+        lastTargetY = target.position.y;
+        groundY = target.position.y;
+        wasGrounded = true;
+        lookAhead = fallLead = 0f;
         velocity = Vector2.zero;
-        lookAheadVelocity = 0f;
+        lookAheadVelocity = fallLeadVelocity = 0f;
         shakeOffset = Vector2.zero;
+        shakeLeft = 0f;
         punchLeft = 0f;
         ApplyZoom(0f);
-        Vector2 p = Clamp((Vector2)target.position + offset);
-        transform.position = new Vector3(p.x, p.y, transform.position.z);
+        followPos = Clamp((Vector2)target.position + offset);
+        ApplyTransform();
     }
 
     void LateUpdate()
     {
-        transform.position -= new Vector3(shakeOffset.x, shakeOffset.y, 0f);
         float dt = Time.deltaTime;
         if (target != null && dt > 0f) Follow(dt); // dt is 0 during hit-stop / pause: hold position
-        ApplyShake();
+        UpdateShake();
         ApplyPunch();
+        ApplyTransform();
+    }
+
+    // Snapped follow position + pixel shake. Grid = the Pixel Perfect Camera's current PPU (the punch zoom changes it for a moment).
+    void ApplyTransform()
+    {
+        float ppu = ppc != null && ppc.assetsPPU > 0 ? ppc.assetsPPU : (basePpu > 0f ? basePpu : 32f);
+        Vector2 p = new Vector2(Mathf.Round(followPos.x * ppu), Mathf.Round(followPos.y * ppu)) / ppu + shakeOffset;
+        transform.position = new Vector3(p.x, p.y, transform.position.z);
     }
 
     // Zoom in via the Pixel Perfect Camera's PPU (it owns the orthographic size); plain camera: orthographic size. Real time, so it
@@ -115,31 +142,42 @@ public class CameraFollow2D : MonoBehaviour
         else if (ppc == null) cam.orthographicSize = baseOrtho / (1f + amount);
     }
 
-    void ApplyShake()
+    void UpdateShake()
     {
-        if (!PauseMenu.IsOpen) // paused: no progress, keep the current offset
-        {
-            shakeLeft = Mathf.Max(0f, shakeLeft - Time.unscaledDeltaTime);
-            float ppu = basePpu > 0 ? basePpu : 32f;
-            float a = shakeTime > 0f ? shakeAmp * shakeLeft / shakeTime : 0f;
-            float kick = shakeDir == Vector2.zero ? 0f : Juice.ShakeKick;
-            float j = a * (1f - kick);
-            Vector2 r = shakeDir * (a * kick) + new Vector2(Random.Range(-j, j), Random.Range(-j, j));
-            shakeOffset = new Vector2(Mathf.Round(r.x * ppu), Mathf.Round(r.y * ppu)) / ppu; // pixel-snapped
-        }
-        transform.position += new Vector3(shakeOffset.x, shakeOffset.y, 0f);
+        if (PauseMenu.IsOpen) return; // paused: no progress, keep the current offset
+        shakeLeft = Mathf.Max(0f, shakeLeft - Time.unscaledDeltaTime);
+        float ppu = basePpu > 0 ? basePpu : 32f;
+        float a = shakeTime > 0f ? shakeAmp * shakeLeft / shakeTime : 0f;
+        float kick = shakeDir == Vector2.zero ? 0f : Juice.ShakeKick;
+        float j = a * (1f - kick);
+        Vector2 r = shakeDir * (a * kick) + new Vector2(Random.Range(-j, j), Random.Range(-j, j));
+        shakeOffset = new Vector2(Mathf.Round(r.x * ppu), Mathf.Round(r.y * ppu)) / ppu; // pixel-snapped
     }
 
     void Follow(float dt)
     {
-        float vx = (target.position.x - lastTargetX) / dt;
-        lastTargetX = target.position.x;
+        Vector2 t = target.position;
+        float vx = (t.x - lastTargetX) / dt;
+        float vy = (t.y - lastTargetY) / dt;
+        lastTargetX = t.x;
+        lastTargetY = t.y;
         if (Mathf.Abs(vx) > Juice.LookAheadFlipSpeed) facing = Mathf.Sign(vx); // only a real move flips the lead (no jitter on stops / turns)
         float lead = Mathf.Abs(vx) > Juice.DashSpeedThreshold ? Juice.LookAheadDash : Juice.LookAhead;
-        lookAhead = Mathf.SmoothDamp(lookAhead, facing * lead, ref lookAheadVelocity, Juice.LookAheadSmooth);
+        lookAhead = Mathf.SmoothDamp(lookAhead, facing * lead, ref lookAheadVelocity, Juice.LookAheadSmooth, Mathf.Infinity, dt);
 
-        Vector2 pos = transform.position;
-        Vector2 focus = (Vector2)target.position + offset + new Vector2(lookAhead, 0f);
+        // Vertical anchor: ground height while airborne (hops stay inside it), the target itself once it rises past the hold or drops below.
+        bool grounded = player == null || player.Grounded;
+        float fy = t.y;
+        if (grounded) groundY = t.y;
+        else if (t.y >= groundY) fy = Mathf.Max(groundY, t.y - Juice.CamJumpHold);
+        bool fastFall = !grounded && vy < -Juice.CamFallLeadSpeed;
+        fallLead = Mathf.SmoothDamp(fallLead, fastFall ? -Juice.CamFallLead : 0f, ref fallLeadVelocity, Juice.LookAheadSmooth, Mathf.Infinity, dt);
+        bool landed = grounded && !wasGrounded;
+        wasGrounded = grounded;
+        if (landed && velocity.y < 0f) velocity.y *= 0.5f; // touch-down: bleed the fall speed so the catch-up eases instead of overshooting
+
+        Vector2 pos = followPos;
+        Vector2 focus = new Vector2(t.x + offset.x + lookAhead, fy + offset.y + fallLead);
 
         // Dead-zone: the desired point only moves once the focus leaves the box.
         Vector2 desired = pos;
@@ -148,12 +186,13 @@ public class CameraFollow2D : MonoBehaviour
         float ey = focus.y - pos.y;
         if (Mathf.Abs(ey) > deadZone.y) desired.y += ey - Mathf.Sign(ey) * deadZone.y;
 
-        Vector2 next = Vector2.SmoothDamp(pos, desired, ref velocity, smoothTime, Mathf.Infinity, dt);
+        Vector2 next;
+        next.x = Mathf.SmoothDamp(pos.x, desired.x, ref velocity.x, smoothTime, Mathf.Infinity, dt);
+        next.y = Mathf.SmoothDamp(pos.y, desired.y, ref velocity.y, grounded ? Juice.CamYSmoothLand : Juice.CamYSmoothAir, Mathf.Infinity, dt);
         Vector2 clamped = Clamp(next);
         if (clamped.x != next.x) velocity.x = 0f; // don't build up speed against a level edge
         if (clamped.y != next.y) velocity.y = 0f;
-        next = clamped;
-        transform.position = new Vector3(next.x, next.y, transform.position.z);
+        followPos = clamped;
     }
 
     Vector2 Clamp(Vector2 p)

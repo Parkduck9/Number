@@ -51,6 +51,10 @@ public static class Juice
     public const float LookAheadSmooth = 0.3f;                // s
     public const float DashSpeedThreshold = 14f;              // units/s (walk ~8, dash 24)
     public const float LookAheadFlipSpeed = 1.5f;             // units/s: slower than this never flips the lead (no jitter on stops / turns)
+    // Vertical follow (CameraFollow2D): airborne, the camera holds the last ground height, so hops don't bob the view.
+    public const float CamJumpHold = 2.5f;                    // units the player can rise above the last ground before the view rises too
+    public const float CamFallLead = 1.25f, CamFallLeadSpeed = 9f; // falling faster than this (units/s): the view leads down this far
+    public const float CamYSmoothAir = 0.22f, CamYSmoothLand = 0.14f; // s: vertical smoothing in the air / landing catch-up
     // Death -> retry: the Dead pose stays this long (real time) before the scene reloads. Hurt 0.25 s + this + load = control back.
     public const float DeathRespawnDelay = 0.55f;
 
