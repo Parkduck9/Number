@@ -359,6 +359,7 @@ public static class StageBuildKit
     {
         LightingSetup.BuildInScene(UnityEngine.Object.FindFirstObjectByType<Camera>(), day);
         AssignSortingLayers();
+        LightingSetup.DecorateEmissives(); // emissive parts Unlit + spill lights at street props (2026-11-10 lighting pass)
     }
 
     // Background images -> Background; player / enemies / NPCs (and their number labels) -> Characters; everything else -> World.

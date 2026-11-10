@@ -891,7 +891,7 @@ MonoBehaviour:
   sprite: {fileID: 192927254}
   signLight: {fileID: 1547287078}
   flicker: 0
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &192927254
 SpriteRenderer:
   serializedVersion: 2
@@ -1000,7 +1000,7 @@ MonoBehaviour:
   sprite: {fileID: 195380816}
   signLight: {fileID: 835108909}
   flicker: 0
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &195380816
 SpriteRenderer:
   serializedVersion: 2
@@ -3013,9 +3013,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.8784314, g: 0.3764706, b: 0.2901961, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -3039,7 +3039,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 3
+  m_PointLightOuterRadius: 4.5
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -3378,9 +3378,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.8509804, g: 0.6509804, b: 0.2901961, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -3404,7 +3404,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 4
+  m_PointLightOuterRadius: 6
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -4441,7 +4441,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4465,7 +4465,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -4741,7 +4741,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4765,7 +4765,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -6166,7 +6166,7 @@ MonoBehaviour:
   m_BlendStyleIndex: 0
   m_FalloffIntensity: 0.5
   m_Color: {r: 0.7058824, g: 0.7372549, b: 0.9019608, a: 1}
-  m_Intensity: 0.7
+  m_Intensity: 0.6
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571
@@ -7892,7 +7892,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7916,7 +7916,7 @@ SpriteRenderer:
   m_SortingOrder: -108
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3978516205632924776, guid: 0ca1178665c389b43bf9aec3b2847fc4, type: 3}
-  m_Color: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  m_Color: {r: 0.80999994, g: 0.80999994, b: 0.80999994, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -8154,9 +8154,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.8509804, g: 0.6509804, b: 0.2901961, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -8180,7 +8180,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 4
+  m_PointLightOuterRadius: 6
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -9996,9 +9996,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.22745098, g: 0.65882355, b: 0.58431375, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -10022,7 +10022,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 3
+  m_PointLightOuterRadius: 4.5
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -11524,9 +11524,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.8509804, g: 0.6509804, b: 0.2901961, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -11550,7 +11550,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 4
+  m_PointLightOuterRadius: 6
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -12226,7 +12226,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -12250,7 +12250,7 @@ SpriteRenderer:
   m_SortingOrder: -108
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3978516205632924776, guid: 0ca1178665c389b43bf9aec3b2847fc4, type: 3}
-  m_Color: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  m_Color: {r: 0.80999994, g: 0.80999994, b: 0.80999994, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -13290,9 +13290,9 @@ MonoBehaviour:
   worldLight: {fileID: 660173058}
   characterLight: {fileID: 1837212429}
   volume: {fileID: 502789640}
-  profile: {fileID: 11400000, guid: 1eba9c06f7ccfcb4d88fc214698d46ab, type: 2}
+  profile: {fileID: 11400000, guid: 9505af4740fdbec45a6037e28ff85cb0, type: 2}
   dayProfile: {fileID: 11400000, guid: ef547b9057dd70c4f84d3d58061b3329, type: 2}
-  nightProfile: {fileID: 11400000, guid: 1eba9c06f7ccfcb4d88fc214698d46ab, type: 2}
+  nightProfile: {fileID: 11400000, guid: 9505af4740fdbec45a6037e28ff85cb0, type: 2}
   debugToggleKey: 0
 --- !u!1 &1346938839
 GameObject:
@@ -14493,7 +14493,7 @@ MonoBehaviour:
   sprite: {fileID: 1454329315}
   signLight: {fileID: 405853765}
   flicker: 0
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &1454329315
 SpriteRenderer:
   serializedVersion: 2
@@ -14896,7 +14896,7 @@ MonoBehaviour:
   sprite: {fileID: 1472827719}
   signLight: {fileID: 1026944024}
   flicker: 0
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &1472827719
 SpriteRenderer:
   serializedVersion: 2
@@ -15654,9 +15654,9 @@ MonoBehaviour:
   m_ComponentVersion: 3
   m_LightType: 3
   m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.6
+  m_FalloffIntensity: 0.5
   m_Color: {r: 0.8784314, g: 0.3764706, b: 0.2901961, a: 1}
-  m_Intensity: 0.38
+  m_Intensity: 0.76
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: ad549f24dc797571da4fe73b
@@ -15680,7 +15680,7 @@ MonoBehaviour:
   m_PointLightInnerAngle: 360
   m_PointLightOuterAngle: 360
   m_PointLightInnerRadius: 0.5
-  m_PointLightOuterRadius: 3
+  m_PointLightOuterRadius: 4.5
   m_ShapeLightParametricSides: 5
   m_ShapeLightParametricAngleOffset: 0
   m_ShapeLightParametricRadius: 1
@@ -15751,7 +15751,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -15894,7 +15894,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4283093759
   m_fontColor: {r: 1, g: 0.8235294, b: 0.2901961, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -15907,7 +15907,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -16458,7 +16458,7 @@ MonoBehaviour:
   sprite: {fileID: 1597027354}
   signLight: {fileID: 1156079233}
   flicker: 0.2
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &1597027354
 SpriteRenderer:
   serializedVersion: 2
@@ -17400,7 +17400,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -17424,7 +17424,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -18045,7 +18045,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4283093759
   m_fontColor: {r: 1, g: 0.8235294, b: 0.2901961, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -18058,7 +18058,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -18237,7 +18237,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -18261,7 +18261,7 @@ SpriteRenderer:
   m_SortingOrder: -108
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3978516205632924776, guid: 0ca1178665c389b43bf9aec3b2847fc4, type: 3}
-  m_Color: {r: 0.9, g: 0.9, b: 0.9, a: 1}
+  m_Color: {r: 0.80999994, g: 0.80999994, b: 0.80999994, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -18747,7 +18747,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -18771,7 +18771,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -19482,7 +19482,7 @@ MonoBehaviour:
   m_BlendStyleIndex: 0
   m_FalloffIntensity: 0.5
   m_Color: {r: 0.7058824, g: 0.7372549, b: 0.9019608, a: 1}
-  m_Intensity: 0.9
+  m_Intensity: 0.90000004
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
   m_ApplyToSortingLayers: da4fe73b
@@ -20356,7 +20356,7 @@ MonoBehaviour:
   sprite: {fileID: 1868998532}
   signLight: {fileID: 450635145}
   flicker: 0.2
-  lightIntensityOn: 0.4
+  lightIntensityOn: 0.8
 --- !u!212 &1868998532
 SpriteRenderer:
   serializedVersion: 2
@@ -20584,7 +20584,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -20608,7 +20608,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -23108,7 +23108,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -23132,7 +23132,7 @@ SpriteRenderer:
   m_SortingOrder: -125
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3556317757682707700, guid: 65f6e9faf0aa7ef4099e488863b7b903, type: 3}
-  m_Color: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_Color: {r: 0.63, g: 0.63, b: 0.63, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

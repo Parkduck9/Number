@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Night
   m_EditorClassIdentifier: Assembly-CSharp::LightingProfile
   worldLightColor: {r: 0.7058824, g: 0.7372549, b: 0.9019608, a: 1}
-  worldLightIntensity: 0.7
-  characterLightIntensity: 0.2
+  worldLightIntensity: 0.4
+  characterLightIntensity: 0.35
   neonIntensity: 0.95
   postFxWeight: 1
