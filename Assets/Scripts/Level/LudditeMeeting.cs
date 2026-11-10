@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-// STG-03: walk up to the Luddite, talk (blocking), receive the lucky dice (DECISIONS 18), the exit door opens. Once only.
+// STG-03: walk up to the Luddite, talk (blocking), the exit door opens. The lucky dice now come at the STG-02 start (Stg02DiceGift). Once only.
 [RequireComponent(typeof(BoxCollider2D))]
 public class LudditeMeeting : MonoBehaviour
 {
@@ -25,8 +25,11 @@ public class LudditeMeeting : MonoBehaviour
     {
         yield return null; // let the talk box lock input
         while (GameFlow.InputLocked) yield return null;
-        LuckyDice.SetUnlocked(true);
-        ControlHints.Show("LuckyDice"); // E icon + what it does, a few playable seconds
+        if (!LuckyDice.Unlocked)
+        {
+            LuckyDice.SetUnlocked(true); // safety net when STG-03 is entered directly (debug / skipped STG-02)
+            ControlHints.Show("LuckyDice");
+        }
         if (exit != null) exit.SetActive(true);
     }
 }

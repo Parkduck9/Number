@@ -57,7 +57,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 | Dodge + counter (invulnerable dash behind the nearest enemy within ~4 m, then turn and strike it; with no enemy near, a fixed-distance dash that ends facing back; 3.5 s cooldown) | Shift |
 | Interact / talk / hack a broadcast board | E (when near) |
 | Issen (flash strike): flash behind the enemy you aim at; human enemies drop in one hit, androids and strong enemies are only passed; 5 s cooldown | Right mouse |
-| Lucky dice (unlocked at the Luddite hideout, stage 3): 3 parries / counters = 1 roll; the face (1-6) is the spell you cast | E |
+| Lucky dice (given by the Luddite helper at the start of stage 2): 3 parries / counters = 1 roll; the face (1-6) is the spell you cast | E |
 | Pause / language | Esc or P |
 
 - Gamepad is not supported.

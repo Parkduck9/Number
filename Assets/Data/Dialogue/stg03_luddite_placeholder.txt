@@ -1,8 +1,8 @@
 # DRAFT (Claude 2026-11-10, the user may rewrite). Keep the format. File name kept: scenes and Stg03Builder reference it.
-# Speaker "helper" = the Luddite helper NPC (old hero outfit). This talk unlocks the lucky dice (LudditeMeeting, DECISIONS 18).
+# Speaker "helper" = the Luddite helper NPC (old hero outfit). The lucky dice are given earlier now (STG-02, Stg02DiceGift); this talk only opens the exit door.
 @mode talk
 helper | 살아 있었군. 방송을 듣고도 움직이는 사람은 드문데. | You're alive. Few people still move after the broadcast.
 yudo | 난 숫자를 믿지 않아요. 운은 읽는 거지, 사는 게 아니니까. | I don't trust their numbers. Luck is read, not bought.
-helper | 그럼 이걸 써. 회사 숫자 말고, 네가 직접 굴리는 숫자야. | Then take these. Not the company's number: one you roll yourself.
-helper | 패링이나 반격을 세 번 성공하면 주사위가 차. E로 굴려. | Three parries or counters charge the dice. Press E to roll.
-helper | 나온 눈이 곧 네 도술이야. 높을수록 운이 좋지. | The face you roll is the spell you cast. The higher, the luckier.
+helper | 그 주사위는 잘 쓰고 있나? 네가 직접 굴리는 숫자니까. | Are the dice serving you well? It's a number you roll yourself.
+helper | 이 문 너머가 공장이야. 방송 장치도 거기서 돌아가고 있어. | Past this door is the factory. The broadcast device runs from there.
+helper | 가 봐. 멈출 수 있는 건 네 숫자뿐이야. | Go. Only your number can stop it.

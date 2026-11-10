@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 // Lucky dice HUD (DECISIONS 18), bottom-left in the old shockwave icon slot: 24 px die at 2x (48 reference px) + 3 charge pips (8 px at 2x).
 // dice_off while uncharged / busy, dice_face_6 lit when a roll is ready (one talisman-yellow pulse when it becomes ready).
-// Hidden until unlocked (STG-03), like the shockwave HUD was.
+// Hidden until unlocked (STG-02 gift), like the shockwave HUD was.
 public class LuckyDiceHud : MonoBehaviour
 {
     const float Scale = 2f;
