@@ -3,7 +3,7 @@ using UnityEngine;
 
 // Test enemy (brainwashed citizen). See docs/design/PROTOTYPE_ARCH.md sections 3-4.
 [RequireComponent(typeof(Rigidbody2D), typeof(EnemyNumber))]
-public class TestEnemy : MonoBehaviour
+public class TestEnemy : MonoBehaviour, IDuelFoe
 {
     public enum State { Approach, Windup, Strike, Recover, Turn, Staggered, Open, Stunned, Charge, Frozen, Special, Overload, RushWindup } // new states go last (BugSwarmVisual switches on them)
 
@@ -81,6 +81,7 @@ public class TestEnemy : MonoBehaviour
     public Collider2D BodyCollider { get; private set; }
     public bool InDuel { get; set; } // EliteDuel drives it (AI, hold and visuals skipped here; it poses through DuelPose)
     public SpriteRenderer Visual => visual;
+    public bool DuelReady => state == State.Approach; // EliteDuel: anything else (dice freeze / hit) ends the duel
     public int Facing => facing;
     // player lunge stops in front instead of passing through (frontal approach to a guarding Android only)
     public bool BlocksHits => kind == Kind.Android && state != State.Overload && !(player != null && AndroidExposedTo(player.transform.position));

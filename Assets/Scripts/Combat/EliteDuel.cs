@@ -8,6 +8,19 @@ using UnityEngine;
 // counter at S_k + gap/2 that the elite parries (second clang, presentation only). Clang pitch +1 semitone per exchange.
 // All N parried: finisher (blink through, shatter, hit-stop, shake), a kill. Any miss: a normal hit, duel over, the elite back to its AI.
 // Scene object built on demand. Scaled time (a hit-stop freezes it); the bars and the camera ease on real time.
+// The foe is an IDuelFoe: the elite (TestEnemy) or the final boss's stuck blade arm (BossBladeFoe, boss-v2).
+public interface IDuelFoe
+{
+    Transform transform { get; }       // body centre (feet + 1, like TestEnemy)
+    bool isActiveAndEnabled { get; }
+    bool InDuel { get; set; }
+    bool DuelReady { get; }            // false mid-duel = something else took it (dice freeze, ...): the duel ends
+    SpriteRenderer Visual { get; }     // nudged / shattered; null = none
+    void DuelPose(int frame, bool flash);
+    void EndDuel();                    // the player missed
+    void DuelFinish();                 // all N parried
+}
+
 public class EliteDuel : MonoBehaviour
 {
     const float StartRange = 2.5f, StartDy = 1f;        // (T) u, centre to centre
@@ -32,7 +45,7 @@ public class EliteDuel : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { inst = null; mat = null; } // Domain Reload is off
 
-    TestEnemy elite;
+    IDuelFoe elite;
     PlayerController player;
     PlayerInputReader input;
     ParryRing ring;
@@ -44,11 +57,15 @@ public class EliteDuel : MonoBehaviour
     bool struck, parried, ownHeld, ownLock;
 
     float StrikeAt(int i) => FirstHit + i * gap;
+    bool HasFoe => elite is Object o && o != null; // Unity null check (an interface reference skips it)
 
     // TestEnemy (elite, Approach, in range): true = the duel started.
-    public static bool TryBegin(TestEnemy e, PlayerController p)
+    public static bool TryBegin(TestEnemy e, PlayerController p) => TryBegin(e, e.Number.Value, p);
+
+    // n = exchanges (the foe's number, 3..9).
+    public static bool TryBegin(IDuelFoe e, int n, PlayerController p)
     {
-        if ((inst != null && inst.elite != null) || p == null || GameFlow.InputLocked || GameFlow.EnemiesHeld || PauseMenu.IsOpen) return false;
+        if ((inst != null && inst.HasFoe) || p == null || GameFlow.InputLocked || GameFlow.EnemiesHeld || PauseMenu.IsOpen) return false;
         Vector2 d = p.transform.position - e.transform.position;
         if (Mathf.Abs(d.x) > StartRange || Mathf.Abs(d.y) > StartDy || !p.Grounded) return false;
         PlayerController.State s = p.CurrentState;
@@ -56,18 +73,18 @@ public class EliteDuel : MonoBehaviour
         var h = p.GetComponent<PlayerHealth>();
         if (h == null || h.IsDead || h.Invulnerable) return false;
         if (inst == null) inst = new GameObject("EliteDuel").AddComponent<EliteDuel>();
-        inst.Begin(e, p);
+        inst.Begin(e, n, p);
         return true;
     }
 
-    void Begin(TestEnemy e, PlayerController p)
+    void Begin(IDuelFoe e, int number, PlayerController p)
     {
         elite = e;
         player = p;
         input = p.GetComponent<PlayerInputReader>();
-        ring = ParryRing.For(e.gameObject);
+        ring = ParryRing.For(e.transform.gameObject);
         if (bars == null) bars = DuelLetterbox.Create(transform);
-        n = Mathf.Clamp(e.Number.Value, 3, 9);
+        n = Mathf.Clamp(number, 3, 9);
         gap = Gaps[n - 3];
         t = ringFrom = 0f;
         k = 0;
@@ -88,7 +105,7 @@ public class EliteDuel : MonoBehaviour
 
     void Update()
     {
-        if (elite == null) return;
+        if (!HasFoe) return;
         if (player == null || GameFlow.IsPlayerDead(player) || !elite.isActiveAndEnabled) { Release(); return; } // death / despawn: end cleanly
         t += Time.deltaTime;
         if (finishedAt >= 0f)
@@ -97,7 +114,7 @@ public class EliteDuel : MonoBehaviour
             if (t >= finishedAt + FinishHold) Release();
             return;
         }
-        if (elite.Current != TestEnemy.State.Approach) { Release(); return; } // a dice skill froze / struck it mid-duel (Fable review)
+        if (!elite.DuelReady) { Release(); return; } // a dice skill froze / struck it mid-duel (Fable review)
         if (k < n)
         {
             float s = StrikeAt(k);
@@ -160,7 +177,7 @@ public class EliteDuel : MonoBehaviour
 
     void Miss()
     {
-        TestEnemy e = elite;
+        IDuelFoe e = elite;
         Release();
         e.EndDuel();
         player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = e.transform.position, Unparryable = true }); // the parry already failed here
@@ -172,7 +189,7 @@ public class EliteDuel : MonoBehaviour
         Vector2 ep = elite.transform.position;
         int dir = -face; // the hero's swing: toward the elite
         Vector2 blow = new Vector2(dir, 0f);
-        player.TryBlinkBehind(elite); // the hero dashes through and ends behind it, facing back
+        if (elite is TestEnemy te) player.TryBlinkBehind(te); // the hero dashes through and ends behind it, facing back
         ParryFx.Slash(ep, null, dir);
         ShatterFx.Play(elite.Visual, blow, ep + new Vector2(face * 0.95f, 1.05f), DigitRed);
         SpriteFx.Play("kill-burst", ep, dir < 0, 102);
@@ -193,7 +210,7 @@ public class EliteDuel : MonoBehaviour
         if (bars != null) bars.Show(false);
         for (int i = 0; i < pipRim.Length; i++) if (pipRim[i] != null) pipRim[i].enabled = pipCore[i].enabled = false;
         if (ring != null) ring.Hide();
-        if (elite != null) elite.InDuel = false;
+        if (HasFoe) elite.InDuel = false;
         elite = null;
     }
 

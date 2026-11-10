@@ -126,7 +126,10 @@ public class PlayerController : MonoBehaviour
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
     public static int ParryTries, ParryCount, ParryFailHits;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetParryStats() => ParryTries = ParryCount = ParryFailHits = 0; // Domain Reload is off
+    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; } // Domain Reload is off
+
+    // In-place LMB swing landed its hit box (centre, size): BossFight hits boss parts / machine props with it (they are not TestEnemies).
+    public static event System.Action<Vector2, Vector2> Swung;
 
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
@@ -926,6 +929,7 @@ public class PlayerController : MonoBehaviour
         int n = Physics2D.OverlapBox(AttackCenter(), attackSize, 0f, enemyFilter, enemyHits);
         for (int i = 0; i < n; i++)
             HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], AttackCenter(), false);
+        Swung?.Invoke(AttackCenter(), attackSize);
     }
 
     // One blow (in-place swing or lunge sweep). false = the enemy blocked it (Android not overloaded).

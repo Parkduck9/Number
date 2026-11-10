@@ -21,6 +21,8 @@ public class EnemyProjectile : MonoBehaviour
     public static readonly System.Collections.Generic.List<EnemyProjectile> Active = new System.Collections.Generic.List<EnemyProjectile>();
     public Vector2 Velocity => velocity;
     public bool Parryable => !info.Unparryable && !passedPlayer;
+    public bool Reflected { get; private set; }        // parried back (BossFight: a reflected shot that reaches the chest hatch hurts it)
+    [System.NonSerialized] public float ReflectLife = Juice.ReflectLife; // s a parried shot keeps flying (the boss sets it longer)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Active.Clear(); // Domain Reload is off
@@ -33,7 +35,7 @@ public class EnemyProjectile : MonoBehaviour
         Spawn(position, new Vector2(dir * speed, 0f), playerMask, groundMask, info, color, frames);
     }
 
-    public static void Spawn(Vector2 position, Vector2 velocity, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color, Sprite[] frames = null)
+    public static EnemyProjectile Spawn(Vector2 position, Vector2 velocity, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color, Sprite[] frames = null)
     {
         GameObject go = new GameObject("EnemyProjectile");
         go.transform.position = position;
@@ -56,6 +58,7 @@ public class EnemyProjectile : MonoBehaviour
         p.groundMask = groundMask;
         p.info = info;
         p.dieAt = Time.time + Lifetime;
+        return p;
     }
 
     void Update()
@@ -94,7 +97,8 @@ public class EnemyProjectile : MonoBehaviour
     {
         velocity = -velocity * Juice.ReflectSpeedMul;
         passedPlayer = true;
-        dieAt = Time.time + Juice.ReflectLife;
+        Reflected = true;
+        dieAt = Time.time + ReflectLife;
         if (frames != null)
         {
             AlignToVelocity(velocity);
