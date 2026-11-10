@@ -1,0 +1,33 @@
+{
+  "strip": [
+    512,
+    64
+  ],
+  "cells": [
+    64,
+    64
+  ],
+  "frames": 8,
+  "fps": 20,
+  "delay_ms": 50,
+  "palette": 16,
+  "alpha": [
+    0,
+    255
+  ],
+  "body_screen_bob": [
+    0,
+    2,
+    0,
+    -3
+  ],
+  "flight_bottoms": [
+    54,
+    54
+  ],
+  "source_sha256": {
+    "hero_run_6f.png": "d25135d2630b4abeca4c55c8ab47751b03ce041280c6979f202c892b01e7d5e4",
+    "hero_idle_4f.png": "f3f8cef0bc0a67eb09b32f040709f1438c4541c2a93c1abdf064ba1b0541c0c7",
+    "hero_attack_5f.png": "f02ffe7857935b53df2a5fdc31f6b9559c612e9900f8e0291038bd43d1232ec4"
+  }
+}
