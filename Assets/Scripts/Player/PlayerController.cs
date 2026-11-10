@@ -5,7 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(PlayerInputReader), typeof(PlayerHealth))]
 public class PlayerController : MonoBehaviour
 {
-    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Grapple } // Grapple: RMB talisman throw + pull (DECISIONS 16, 22)
+    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Issen } // Issen: RMB flash strike follow-through (DECISIONS 26)
 
     [Header("Masks")]
     [SerializeField] LayerMask groundMask;
@@ -65,6 +65,10 @@ public class PlayerController : MonoBehaviour
 
     static readonly Color AfterimageColor = new Color(0.298f, 0.909f, 0.847f, 0.6f); // #4CE8D8
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
+    // DECISIONS 26 hit vs parry readability (T)
+    static readonly Color HurtRed = new Color(1f, 0.15f, 0.15f);
+    const float HurtBlinkHz = 30f;               // red flash ticks per second while in Hurt
+    const float HurtPitch = 0.8f, ParryPitch = 1.3f;
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float hitStopEndedAt = -10f; // real time the last hit-stop ended (DashRules.HitStopGap)
     float parryFlashUntil;
@@ -84,7 +88,7 @@ public class PlayerController : MonoBehaviour
     float lastGroundedAt = -999f;
     float jumpBufferedUntil = -999f;
     float attackBufferedUntil = -999f;
-    float grappleBufferedUntil = -999f; // RMB pressed during another action: fires when it ends (like the LMB buffer)
+    float issenBufferedUntil = -999f;   // RMB pressed during another action: fires when it ends (like the LMB buffer)
     float dashCooldownUntil;
     float nextAfterimageAt;
     float nextRunDustAt, nextSpeedLinesAt;
@@ -105,16 +109,9 @@ public class PlayerController : MonoBehaviour
     Collider2D dashTargetCol;
     Vector2 dashVelocity;               // Shift dash velocity (horizontal, plus a small vertical step onto the target's ground level)
     bool pendingDash; // pressed during a hit-stop: replayed on the frame the hit-stop ends (jump/attack use their buffers)
-    // DECISIONS 16 RMB grapple rope (DashRules.Grapple*)
-    GrappleRope rope;
-    Vector2 grappleAnchor;
-    bool grappleCeiling;      // anchor on a ceiling (hit normal down): no upward pop into it
-    bool grappleAttached;     // the rope reached the anchor (after GrappleExtendTime): pulling
-    bool grappleUsed;         // spent this airtime; refilled on landing
-    float grappleReadyAt;     // miss cooldown
-    float grappleCarryUntil;  // after release: horizontal momentum eases into air control
-    bool pendingGrapple;      // pressed during a hit-stop
-    readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
+    // DECISIONS 26 RMB issen (DashRules.Issen*)
+    float issenReadyAt;       // cooldown end (Time.time)
+    bool pendingIssen;        // pressed during a hit-stop
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
     int swingDamaged;                   // blows that did damage since the last reset (CounterLanded / StrikeEnemy)
 
@@ -138,11 +135,12 @@ public class PlayerController : MonoBehaviour
     float parryActiveFor; // parryActiveTime, or longer for an LMB parry so it covers the threat it was chosen for (DashRules.ParryCoverMargin)
     float ParryLength => Mathf.Max(parryDuration, parryActiveFor); // the Parry state never ends while its active window is still open
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
+    public float IssenCooldownRemaining => Mathf.Max(0f, issenReadyAt - Time.time);
     public bool LungingDown => lunging && lungeDir.y < -0.2f; // TestEnemy Android guard: a downward lunge counts as "from above"
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
     bool DashPressed => input.DashPressed || pendingDash;
-    public Vector2 HandPosition => (Vector2)transform.position + new Vector2(Facing * 0.35f, 0.25f); // GrappleRope start
+    public Vector2 HandPosition => (Vector2)transform.position + new Vector2(Facing * 0.35f, 0.25f); // dice skill FX start
 
     void Awake()
     {
@@ -165,11 +163,10 @@ public class PlayerController : MonoBehaviour
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<LuckyDice>() == null) gameObject.AddComponent<LuckyDice>(); // DECISIONS 18 (Space); players are built by scripts, so add at runtime
         MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like LuckyDice)
-        rope = GrappleRope.Create(this); // DECISIONS 16 / 22 (talisman throw)
         if (GetComponent<AimLine>() == null) gameObject.AddComponent<AimLine>(); // DECISIONS 22 aim line
     }
 
-    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); if (rope != null) rope.Hide(); }
+    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); }
 
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
     bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
@@ -238,8 +235,8 @@ public class PlayerController : MonoBehaviour
         }
         if (GameFlow.InputLocked) // dialogue / transition / pause: freeze player timers, no jump-cut from the zeroed input
         {
-            pendingDash = pendingGrapple = false;
-            grappleBufferedUntil = -999f;
+            pendingDash = pendingIssen = false;
+            issenBufferedUntil = -999f;
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
@@ -248,12 +245,11 @@ public class PlayerController : MonoBehaviour
             jumpBufferedUntil += dt;
             attackBufferedUntil += dt;
             lastGroundedAt += dt;
-            grappleReadyAt += dt;
-            grappleCarryUntil += dt;
+            issenReadyAt += dt;
             health.ShiftInvulnerability(dt);
             if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
             EndLunge(); // same for a lunge (gravity back, velocity zeroed)
-            if (state == State.Grapple) { EnterState(State.Locomotion); rb.linearVelocity = Vector2.zero; } // and for the rope (no hanging in dialogue / blackout)
+            if (state == State.Issen) EnterState(State.Locomotion); // and for the issen pose (no hanging in dialogue / blackout)
             UpdateVisual(Time.time);
             return;
         }
@@ -271,13 +267,12 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < hitCount && !grounded; i++) // a platform a down-lunge is still passing through is not ground
             grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f) && !passedPlatforms.Contains(groundHits[i]);
         if (grounded && rb.linearVelocity.y <= 0.1f) lastGroundedAt = now;
-        if (grounded && rb.linearVelocity.y <= 0.1f && state != State.Grapple) grappleUsed = false; // one rope per airtime (a rope fired from the ground is still this airtime's)
 
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
         if (input.AttackPressed && state != State.Locomotion && state != State.Hurt && state != State.Dead)
             attackBufferedUntil = Mathf.Max(now, StateEndsAt()) + attackBuffer; // must outlive the current swing/parry/dash
-        if (input.GrapplePressed && state != State.Locomotion && state != State.Grapple && state != State.Hurt && state != State.Dead)
-            grappleBufferedUntil = Mathf.Max(now, StateEndsAt()) + attackBuffer;
+        if (input.IssenPressed && state != State.Locomotion && state != State.Issen && state != State.Hurt && state != State.Dead)
+            issenBufferedUntil = Mathf.Max(now, StateEndsAt()) + attackBuffer;
 
         switch (state)
         {
@@ -305,10 +300,12 @@ public class PlayerController : MonoBehaviour
             case State.Hurt:
                 if (elapsed >= hurtDuration) EnterState(health.IsDead ? State.Dead : State.Locomotion);
                 break;
-            case State.Grapple: UpdateGrapple(now, elapsed); break;
+            case State.Issen:
+                if (elapsed >= DashRules.IssenPoseTime) EnterState(State.Locomotion);
+                break;
         }
 
-        pendingDash = pendingGrapple = false; // replayed (or ignored by the current state, like a live press) this frame
+        pendingDash = pendingIssen = false; // replayed (or ignored by the current state, like a live press) this frame
         if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
         UpdateSpeedFx(now);
         UpdateVisual(now);
@@ -320,9 +317,9 @@ public class PlayerController : MonoBehaviour
         if (input.JumpPressed) jumpBufferedUntil = Time.time + jumpBuffer;
         if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
         pendingDash |= input.DashPressed;
-        pendingGrapple |= input.GrapplePressed;
-        if (input.GrapplePressed && state != State.Locomotion && state != State.Grapple && state != State.Hurt && state != State.Dead)
-            grappleBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
+        pendingIssen |= input.IssenPressed;
+        if (input.IssenPressed && state != State.Locomotion && state != State.Issen && state != State.Hurt && state != State.Dead)
+            issenBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
     }
 
     // When the current Attack/Parry/Dash ends by itself (now for any other state).
@@ -333,6 +330,7 @@ public class PlayerController : MonoBehaviour
             case State.Attack: return stateEnteredAt + attackDuration;
             case State.Parry: return stateEnteredAt + ParryLength;
             case State.Dash: return stateEnteredAt + dashEndsAfter;
+            case State.Issen: return stateEnteredAt + DashRules.IssenPoseTime;
         }
         return Time.time;
     }
@@ -342,7 +340,7 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
         if (TryDash(now)) return;
-        if (TryGrapple(now)) return;
+        if (TryIssen(now)) return;
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
             // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
@@ -390,7 +388,6 @@ public class PlayerController : MonoBehaviour
     void EnterState(State next)
     {
         EndLunge();                     // any state change ends a lunge (dash cancel, hurt, death)
-        if (state == State.Grapple && rope != null) rope.Hide(); // ...and an attached rope (release, hurt, dialogue)
         state = next;
         if (next == State.Dead) MomentFx.PlayerDeath(rb.position + feetOffset);
         stateEnteredAt = Time.time;
@@ -417,7 +414,6 @@ public class PlayerController : MonoBehaviour
                 break;
             case State.Dash:
                 rb.gravityScale = 0f;
-                grappleCarryUntil = 0f; // a dash out of the rope ends like any dash
                 DashStart = rb.position;
                 dashBehindActive = TryPlanDashBehind(out Vector2 behindOffset);
                 if (dashBehindActive)
@@ -438,10 +434,9 @@ public class PlayerController : MonoBehaviour
             case State.Dead:
                 rb.linearVelocity = Vector2.zero; // FixedUpdate does not write velocity in Dead, so the corpse stays put
                 break;
-            case State.Grapple:
+            case State.Issen:
                 rb.gravityScale = 0f;
-                rb.linearVelocity = Vector2.zero; // hangs still while the rope flies out, then the pull (FixedUpdate)
-                grappleAttached = false;
+                rb.linearVelocity = Vector2.zero; // holds the follow-through still (FixedUpdate keeps it still)
                 break;
         }
     }
@@ -452,15 +447,11 @@ public class PlayerController : MonoBehaviour
         {
             case State.Locomotion:
                 float vx = input.MoveX * moveSpeed * SpeedMul;
-                if (Time.time < grappleCarryUntil && !grounded) // rope release: keep the swing, blend into air control
-                    vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, DashRules.GrappleAirAccel * Time.fixedDeltaTime);
                 if (!grounded && vx != 0f && PushingIntoWall(vx > 0f ? 1 : -1)) vx = 0f; // airborne against a wall face: no push, so gravity slides us down
                 rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
                 break;
-            case State.Grapple:
-                if (!grappleAttached) { rb.linearVelocity = Vector2.zero; break; }
-                Vector2 toAnchor = grappleAnchor - rb.position;
-                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * DashRules.GrapplePullSpeed : Vector2.zero; // full speed to the end (release keeps it)
+            case State.Issen:
+                rb.linearVelocity = Vector2.zero;
                 break;
             case State.Dash:
                 rb.linearVelocity = dashVelocity;
@@ -708,93 +699,95 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
     }
 
-    // DECISIONS 16 / 22: RMB throws a talisman at the mouse. Hit (ground / wall / ceiling / one-way platform within GrappleRange) -> Grapple
-    // state (pulled to it); miss -> the talisman flies out and burns away, short cooldown. One attached throw per airtime.
-    // Humans on the throw path die when the talisman arrives (GrappleRope -> TalismanPathKill).
-    bool TryGrapple(float now)
+    // DECISIONS 26 RMB issen: flash to just behind the aimed enemy (FindIssenTarget) in one frame, leaving a ghost streak, and cut it.
+    // Humans (citizen / sniper) die in one hit; androids, the elite and bugs take nothing (just passed). Nothing else on the path is hit.
+    // On cooldown, or no target / no free spot: nothing (a faint swish when it was off cooldown). Then the Issen pose (DashRules.IssenPoseTime).
+    bool TryIssen(float now)
     {
-        if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt || grappleUsed) return false;
-        grappleBufferedUntil = -999f;
-        Vector2 hand = HandPosition;
-        Vector2 aim = MouseCrosshair.MouseWorld(out Vector2 mouse) ? mouse - hand : new Vector2(Facing, 0f);
-        aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);
-        int face = Mathf.Abs(aim.x) > 0.01f ? (aim.x > 0f ? 1 : -1) : Facing; // applied on a hit only (Facing is the parry front)
-        hand = (Vector2)transform.position + new Vector2(face * 0.35f, 0.25f);
-        RaycastHit2D best = default;
-        int n = Physics2D.Raycast(hand, aim, groundFilter, grappleHits, DashRules.GrappleRange); // groundFilter: groundMask, set every Update
-        for (int i = 0; i < n; i++) // skip a collider the hand starts inside (rising through a one-way platform)
-            if (grappleHits[i].distance > 0.01f && (best.collider == null || grappleHits[i].distance < best.distance)) best = grappleHits[i];
-        if (best.collider == null)
+        if (!(input.IssenPressed || pendingIssen || now <= issenBufferedUntil)) return false;
+        issenBufferedUntil = -999f;
+        if (now < issenReadyAt) return false;
+        Collider2D col = null;
+        TestEnemy target = MouseCrosshair.MouseWorld(out Vector2 mouse) ? FindIssenTarget(mouse, out col) : null;
+        if (target == null || !PlanIssen(target, col, out Vector2 spot))
         {
-            rope.Shoot(hand, hand + aim * DashRules.GrappleRange, false);
-            grappleReadyAt = now + DashRules.GrappleMissCooldown;
-            Sfx.Play(SfxId.Swing, 0.5f);
-            return false; // a miss does not interrupt movement
+            Sfx.Play(SfxId.Swing, 0.3f); // fail cue
+            return false;
         }
-        Facing = face;
-        grappleAnchor = best.point;
-        grappleCeiling = best.normal.y < -0.7f;
-        // A wall just below a ledge top: anchor on the corner instead, so the pull ends level with the top and the pop lands on it.
-        if (Mathf.Abs(best.normal.x) > 0.7f)
+        issenReadyAt = now + DashRules.IssenCooldown;
+        Vector2 from = rb.position, path = spot - from;
+        int travel = Mathf.Abs(path.x) > 0.01f ? (path.x > 0f ? 1 : -1) : Facing;
+        PlayDashBurst(travel); // at the heel where we left
+        EnterState(State.Issen); // ends a lunge / dash / parry; gravity off, still
+        if (visual != null) // ghost streak: afterimages along the path, the ones near the start fade first
         {
-            Vector2 probe = best.point - best.normal * 0.1f + Vector2.up * DashRules.GrappleLedgeSnap;
-            RaycastHit2D top = Physics2D.Raycast(probe, Vector2.down, DashRules.GrappleLedgeSnap, groundMask);
-            if (top.collider != null && top.distance > 0.01f && top.normal.y > 0.7f) grappleAnchor = new Vector2(best.point.x, top.point.y + 0.1f);
+            Transform v = visual.transform;
+            Vector3 keep = v.position;
+            visual.flipX = travel < 0;
+            for (int i = 0; i < DashRules.IssenGhosts; i++)
+            {
+                float u = i / (float)DashRules.IssenGhosts;
+                v.position = keep + (Vector3)(path * u);
+                SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife * (0.5f + u));
+            }
+            v.position = keep;
         }
-        grappleUsed = true;
-        EnterState(State.Grapple);
-        rope.Shoot(hand, grappleAnchor, true);
+        rb.position = spot;
+        transform.position = spot; // same-frame queries (HitInfo.SourcePosition) see the new spot
+        float dx = target.transform.position.x - spot.x;
+        Facing = Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : -travel; // ends facing the enemy
         Sfx.Play(SfxId.Dash);
+        ParryFx.Slash(target.transform.position, null, travel);
+        bool killed = target.IsHuman && StrikeEnemy(target, col, from, true);
+        if (!killed) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
+        StartHitStop(DashRules.IssenHitStop); // only extends a kill's longer stop
+        Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, path);
         return true;
     }
 
-    void UpdateGrapple(float now, float elapsed)
+    // The crosshair's lunge lock (FindLungeTarget: what the brackets show) if any; else the enemy collider nearest the mouse within
+    // IssenMouseRadius whose centre is within IssenRange of the player with a clear line. col = its body collider. null = none.
+    public TestEnemy FindIssenTarget(Vector2 mouse, out Collider2D col)
     {
-        // Jump = early release + a normal jump. LMB / Shift = release into that action (UpdateLocomotion runs it this frame).
-        if (input.JumpPressed && grappleAttached) // a live press while pulling (not during the extend: no free air jump)
+        Vector2 pos = rb.position, aim = mouse - pos;
+        col = null;
+        TestEnemy best = aim.sqrMagnitude > 0.0001f ? FindLungeTarget(aim.normalized, out col) : null;
+        if (best != null) return best;
+        float bestD = float.MaxValue;
+        int n = Physics2D.OverlapCircle(mouse, DashRules.IssenMouseRadius, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
         {
-            ReleaseGrapple(false);
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Max(rb.linearVelocity.y, jumpSpeed));
-            jumpBufferedUntil = -999f;
-            jumpCut = false;
-            return;
+            TestEnemy e = enemyHits[i].GetComponentInParent<TestEnemy>();
+            if (e == null || e.IsDown || (e.BodyCollider != null && enemyHits[i] != e.BodyCollider)) continue;
+            float d = Vector2.Distance(enemyHits[i].ClosestPoint(mouse), mouse);
+            if (d >= bestD || Vector2.Distance(e.transform.position, pos) > DashRules.IssenRange || !ReachLine(pos, e.transform.position)) continue;
+            bestD = d;
+            best = e;
+            col = enemyHits[i];
         }
-        if (input.AttackPressed || now <= attackBufferedUntil || (DashPressed && now >= dashCooldownUntil))
-        {
-            ReleaseGrapple(false);
-            UpdateLocomotion(now);
-            return;
-        }
-        if (!grappleAttached)
-        {
-            if (elapsed < DashRules.GrappleExtendTime) return;
-            grappleAttached = true; // rope reached the anchor: spark there, start pulling
-            PlayHitSpark(grappleAnchor, Mathf.Sign(grappleAnchor.x - rb.position.x));
-            Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
-            return;
-        }
-        SpawnAfterimage(now);
-        Vector2 toAnchor = grappleAnchor - rb.position;
-        float dist = toAnchor.magnitude;
-        float pulled = elapsed - DashRules.GrappleExtendTime;
-        float wanted = DashRules.GrapplePullSpeed;
-        bool blocked = pulled > 2f * Time.fixedDeltaTime && dist > 0.001f &&
-            Vector2.Dot(rb.linearVelocity, toAnchor / dist) < 0.25f * wanted; // stuck on a corner / ceiling: let go
-        if (dist <= DashRules.GrappleReleaseDist + DashRules.GrapplePullSpeed * Time.fixedDeltaTime || blocked || pulled >= DashRules.GrappleMaxPull)
-            ReleaseGrapple(!(blocked && grappleCeiling)); // stuck under a ceiling: no pop into it
+        return best;
     }
 
-    // Back to Locomotion keeping the pull velocity. pop: anchor above -> at least GrapplePopFrac of a jump upward (slingshot onto the ledge).
-    void ReleaseGrapple(bool pop)
+    // Landing spot just behind the target (far side from the player), on its feet level; if that is in a wall or walled off from the
+    // target, the near side (stop short in front of it). false = both blocked (cancel).
+    bool PlanIssen(TestEnemy target, Collider2D col, out Vector2 spot)
     {
-        Vector2 v = grappleAttached ? rb.linearVelocity : Vector2.zero;
-        bool above = grappleAnchor.y > rb.position.y + 0.1f;
-        EnterState(State.Locomotion);
-        if (pop && above) v.y = Mathf.Max(v.y, DashRules.GrapplePopFrac * jumpSpeed);
-        rb.linearVelocity = v;
-        jumpCut = true; // the pop is not a held jump: releasing W must not halve it
-        grappleCarryUntil = Time.time + DashRules.GrappleCarryTime;
-        grappleReadyAt = Time.time + DashRules.GrappleCooldown; // ground ropes refill at once: no spammed wall zip
+        spot = default;
+        if (target.BodyCollider != null) col = target.BodyCollider;
+        if (col == null) return false;
+        const float halfW = 0.45f, halfH = 1f; // player box 0.9 x 2 (same as PlanBehind)
+        Vector2 at = target.transform.position;
+        float dx = at.x - rb.position.x;
+        int first = Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : Facing;
+        for (int k = 0; k < 2; k++)
+        {
+            int side = k == 0 ? first : -first;
+            Vector2 s = new Vector2(at.x + side * (col.bounds.extents.x + halfW + dashBehindClearance), col.bounds.min.y - feetOffset.y + 0.02f);
+            if (BlinkSpotBlocked(s, new Vector2(halfW * 2f - 0.1f, halfH * 2f - 0.2f)) || !ClearLine(at, s)) continue;
+            spot = s;
+            return true;
+        }
+        return false;
     }
 
     void SpawnAfterimage(float now)
@@ -997,24 +990,6 @@ public class PlayerController : MonoBehaviour
         return swingDamaged > 0;
     }
 
-    // DECISIONS 22: the thrown talisman kills, in one blow, every human (citizen melee / ranged, sniper) whose body collider crosses the
-    // path hand -> end point (TalismanPathWidth thick). Androids, bugs, the elite and boss-wave enemies are untouched. Called by
-    // GrappleRope when the talisman reaches its end point (hit or miss).
-    public void TalismanPathKill(Vector2 from, Vector2 to)
-    {
-        Vector2 d = to - from;
-        float len = d.magnitude;
-        if (state == State.Dead || len < 0.01f) return;
-        int n = Physics2D.OverlapBox((from + to) * 0.5f, new Vector2(len, DashRules.TalismanPathWidth), Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, enemyFilter, enemyHits);
-        for (int i = 0; i < n; i++)
-        {
-            TestEnemy e = enemyHits[i].GetComponentInParent<TestEnemy>();
-            if (e == null || !e.IsHuman || e.IsBossWave || e.IsDown || enemyHits[i] != e.BodyCollider) continue;
-            if (state == State.Attack) HitEnemy(e, enemyHits[i], from, false, true); // share the live swing's hit set / hit-stop cap
-            else StrikeEnemy(e, enemyHits[i], from, true);
-        }
-    }
-
     // DECISIONS 18 skill 1 / 6: teleport to a free spot just behind e (the far side from the player, else the near side), on its
     // feet level, facing it. Cancels dash / lunge / rope. false = dead player, no enemy collider, or both spots blocked by walls.
     public bool TryBlinkBehind(TestEnemy e)
@@ -1035,7 +1010,6 @@ public class PlayerController : MonoBehaviour
             dashTarget = null;
             dashTargetCol = null;
             dashBehindActive = false;
-            grappleCarryUntil = 0f;
             rb.linearVelocity = Vector2.zero;
             rb.position = spot;
             transform.position = spot; // same-frame queries (AttackCenter, HitInfo.SourcePosition) see the new spot
@@ -1067,7 +1041,7 @@ public class PlayerController : MonoBehaviour
     public HitResult ReceiveEnemyHit(HitInfo info)
     {
         if (state == State.Dead) return HitResult.Dodged;
-        if (state == State.Dash) return HitResult.Dodged;
+        if (state == State.Dash || state == State.Issen) return HitResult.Dodged;
         if (health.Invulnerable) return HitResult.Dodged;
 
         float dx = info.SourcePosition.x - transform.position.x;
@@ -1086,7 +1060,8 @@ public class PlayerController : MonoBehaviour
             Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.45f, ParryRing.Offset(info.Height)); // where the ring merges (TestEnemy.ParryContact)
             SpriteFx.Play("parry_talisman", contact, Facing < 0, 102); // pivot = contact point; art takes a blow from the right
             ShowParryPose(info.Height, ParryPoseTime, false);
-            Sfx.Play(SfxId.Parry);
+            Sfx.Play(SfxId.Parry, 1f, ParryPitch); // DECISIONS 26: high clang (hurt is low)
+            ScreenFlash.Parry();
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
@@ -1094,7 +1069,8 @@ public class PlayerController : MonoBehaviour
 
         if (state == State.Parry) ParryFailHits++;
         health.TakeDamage(info.Damage);
-        Sfx.Play(SfxId.Hurt);
+        Sfx.Play(SfxId.Hurt, 1f, HurtPitch); // DECISIONS 26: duller, lower than the parry clang
+        ScreenFlash.Hurt();
         EnterState(State.Hurt);
         Juice.Shake(Juice.ShakeHurtAmp, Juice.ShakeHurtTime);
         float away = Mathf.Approximately(dx, 0f) ? -Facing : (dx > 0f ? -1f : 1f); // dx==0: knock back behind the player
@@ -1112,13 +1088,15 @@ public class PlayerController : MonoBehaviour
                 : now < parryPoseUntil && (parryPoseForced || state == State.Locomotion) ? DraftSprites.Pick(parryPose, now - parryPoseAt < ParryPoseKey ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero)
                 : DraftFrame(now);
         Color c = draftSprite ? Color.white : BaseColor;
-        if (state == State.Dash || lunging) c = Color.white;
+        bool hurtBlink = state == State.Hurt && Mathf.FloorToInt(now * HurtBlinkHz) % 2 == 0; // DECISIONS 26: solid red on alternate ticks
+        if (state == State.Dash || lunging || state == State.Issen) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
         else if (state == State.Dead) c = Color.clear; // the player-glitch-death FX takes the body away (MomentFx)
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.HurtInvulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
-        SpriteFlash.Apply(visual, c, now < parryFlashUntil || now < duelFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
+        if (hurtBlink) SpriteFlash.Apply(visual, c, true, HurtRed, HurtRed);
+        else SpriteFlash.Apply(visual, c, now < parryFlashUntil || now < duelFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
     }
 
     // DraftSprites: one hero frame per state (walk strip is the fallback when another strip is missing). Art faces right; flipX handles left.
@@ -1131,7 +1109,7 @@ public class PlayerController : MonoBehaviour
             case State.Attack: return DraftSprites.Pick(DraftSprites.HeroAttack, t, DraftSprites.Hero);
             case State.Parry: return DraftSprites.Pick(DraftSprites.HeroParry, ParryActive ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero);
             case State.Dash: return DraftSprites.Pick(DraftSprites.HeroDash, t, DraftSprites.Hero);
-            case State.Grapple: return DraftSprites.HeroGrapple != null ? DraftSprites.HeroGrapple[0] : DraftSprites.Pick(DraftSprites.HeroJump, 0, DraftSprites.Hero);
+            case State.Issen: return DraftSprites.Pick(DraftSprites.HeroAttack, 4, DraftSprites.Hero); // follow-through key
             case State.Hurt:
             case State.Dead: return DraftSprites.Pick(DraftSprites.HeroHurt, 0, DraftSprites.Hero);
         }

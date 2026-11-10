@@ -110,11 +110,21 @@ public class LuckyDice : MonoBehaviour
         Unlocked && Charges >= ChargesPerRoll && !Busy && !BossActive && !GameFlow.InputLocked &&
         !GameFlow.IsPlayerDead(Player) && Player.CurrentState != PlayerController.State.Hurt;
 
-    IEnumerator Roll()
+    // Test hook (Sandbox scene): charges the dice and rolls `face` (1..6) right now through the normal Roll path. False if a roll is not allowed.
+    public bool ForceRoll(int face)
+    {
+        if (face < 1 || face > 6) return false;
+        Charges = ChargesPerRoll;
+        if (!CanRoll()) return false;
+        StartCoroutine(Roll(face));
+        return true;
+    }
+
+    IEnumerator Roll(int forcedFace = 0)
     {
         rolling = true;
         Charges = 0;
-        int face = UnityEngine.Random.Range(1, 7);
+        int face = forcedFace != 0 ? forcedFace : UnityEngine.Random.Range(1, 7);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (debugFace != 0) { face = debugFace; debugFace = 0; }
 #endif

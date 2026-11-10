@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// DECISIONS 22 aim line: a faint dotted pixel line from the throwing hand toward the mouse so the player sees where the RMB talisman
-// (and the lunge) points. 2 px on / 2 px off, 1 px wide, pale #FFF1D6 at low alpha, stops at the throw range (GrappleRange) or a few
+// DECISIONS 22 aim line: a faint dotted pixel line from the throwing hand toward the mouse so the player sees where the RMB issen
+// (and the lunge) points. 2 px on / 2 px off, 1 px wide, pale #FFF1D6 at low alpha, stops at the issen range (IssenRange) or a few
 // px short of the mouse crosshair (MouseCrosshair draws the cursor itself). Hidden while input is locked (dialogue, elite duel, dice),
 // paused or dead. Pooled 1 px dots on the 1/32 u pixel grid, unlit (Sprites/Default) on the FX layer. Added by PlayerController.Awake.
 [DefaultExecutionOrder(1000)] // after the camera follow, like MouseCrosshair
@@ -12,7 +12,7 @@ public class AimLine : MonoBehaviour
     static readonly Color Dot = new Color(1f, 0.945f, 0.839f, 0.25f); // #FFF1D6
     const int On = 2, Period = 4;     // (T) 2 px on, 2 px off
     const int CursorGap = 6;          // (T) px: stop short of the mouse (crosshair half-size)
-    const int MaxDots = (int)(DashRules.GrappleRange * Ppu) / Period * On + On;
+    const int MaxDots = (int)(DashRules.IssenRange * Ppu) / Period * On + On;
 
     static Material mat;
 
@@ -45,14 +45,14 @@ public class AimLine : MonoBehaviour
 
     void Draw(Vector2 mouse)
     {
-        // Same hand as TryGrapple: the side the mouse is on.
+        // Hand on the side the mouse is on.
         float dxm = mouse.x - player.transform.position.x;
         int face = Mathf.Abs(dxm) > 0.01f ? (dxm > 0f ? 1 : -1) : player.Facing;
         Vector2 hand = (Vector2)player.transform.position + new Vector2(face * 0.35f, 0.25f);
         Vector2 d = mouse - hand;
         float len = d.magnitude;
         if (len < 0.01f) return;
-        Vector2 end = hand + d * (Mathf.Min(len - CursorGap / Ppu, DashRules.GrappleRange) / len);
+        Vector2 end = hand + d * (Mathf.Min(len - CursorGap / Ppu, DashRules.IssenRange) / len);
 
         // Walk the pixel grid along the major axis (Chebyshev steps), dash pattern counted from the hand so it doesn't crawl.
         int x0 = Mathf.FloorToInt(hand.x * Ppu), y0 = Mathf.FloorToInt(hand.y * Ppu);

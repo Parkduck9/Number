@@ -65,7 +65,7 @@ public class Stg01Tutorial : MonoBehaviour
                     0 => jumped && Mathf.Abs(player.transform.position.x - startX) >= MoveDistance,
                     1 => player.CurrentState == PlayerController.State.Attack,
                     2 => PlayerController.ParryCount > parries,
-                    3 => player.CurrentState == PlayerController.State.Grapple,
+                    3 => player.CurrentState == PlayerController.State.Issen,
                     _ => false,
                 };
                 if (ok) break;

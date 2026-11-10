@@ -77,7 +77,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public static readonly List<TestEnemy> All = new List<TestEnemy>();
     public bool IsDown => state == State.Stunned || !isActiveAndEnabled;
     public bool IsBossWave { get; set; } // set by BossFight: dice skills skip it
-    public bool IsHuman => kind == Kind.Citizen || kind == Kind.Sniper; // DECISIONS 22: the RMB talisman path kills these (not bugs / androids / elite)
+    public bool IsHuman => kind == Kind.Citizen || kind == Kind.Sniper; // DECISIONS 26: the RMB issen kills these in one hit (not bugs / androids / elite)
     public Collider2D BodyCollider { get; private set; }
     public bool InDuel { get; set; } // EliteDuel drives it (AI, hold and visuals skipped here; it poses through DuelPose)
     public SpriteRenderer Visual => visual;

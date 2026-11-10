@@ -41,7 +41,6 @@ public static class MomentFx
         wasGrounded = grounded;
     }
 
-    public static void GrappleHit(Vector2 hookPoint) => Play("grapple-hit", hookPoint);
     public static void SpawnerBreak(Vector2 center) => Play("spawner-break", center);
     public static GameObject EnemyWarpIn(Vector2 feet) => Play("enemy-warp-in", feet); // null = sheet missing (caller may fall back)
 

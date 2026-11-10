@@ -16,8 +16,8 @@ helper | 좌클릭으로 베어. 마우스 쪽으로 돌진해. | Left click to 
 helper | 적이 칠 때 두 고리가 겹치면 좌클릭. | When the two rings meet, left click to parry. | 7
 
 #step 4
-#prompt Right click: throw talisman | 우클릭: 부적 던지기
-helper | 우클릭은 부적. 던지면 그 자리로 날아가. | Right click throws a talisman. You fly to where it lands. | 6
+#prompt Right click an enemy: flash strike | 적에게 우클릭: 일섬
+helper | 적을 겨누고 우클릭. 번개처럼 뒤로 지나가며 벤다. 5초에 한 번이야. | Aim at an enemy and right click. You flash past and cut it down. Once every 5 seconds. | 7
 
 #step 5
 #prompt Shift: dodge + counter | Shift: 회피 + 반격
