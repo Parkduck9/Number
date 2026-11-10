@@ -1,0 +1,255 @@
+{
+    "version":  1,
+    "experiment":  true,
+    "game_usage":  false,
+    "view":  "right-facing orthographic side",
+    "coordinate_system":  "Pixels, origin at top-left; +x right, +y down. Pivots and offsets include transparent padding.",
+    "transform":  "At zero rotation: part_top_left = parent_top_left + offset - pivot. Root offset is its world pivot. For rotation, inherit parent\u0027s rotation and rotate (offset - parent.pivot) around parent\u0027s world pivot; angles clockwise.",
+    "draw_order":  "Ascending, back to front.",
+    "far_tint_multiplier":  0.88,
+    "parts":  [
+                  {
+                      "name":  "upper_arm_far",
+                      "file":  "upper_arm_far.png",
+                      "size":  [
+                                   46,
+                                   112
+                               ],
+                      "pivot":  [
+                                    23,
+                                    22
+                                ],
+                      "parent":  "torso",
+                      "offset":  [
+                                     49,
+                                     43
+                                 ],
+                      "draw_order":  0,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "forearm_far",
+                      "file":  "forearm_far.png",
+                      "size":  [
+                                   38,
+                                   132
+                               ],
+                      "pivot":  [
+                                    19,
+                                    18
+                                ],
+                      "parent":  "upper_arm_far",
+                      "offset":  [
+                                     23,
+                                     94
+                                 ],
+                      "draw_order":  1,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "thigh_far",
+                      "file":  "thigh_far.png",
+                      "size":  [
+                                   57,
+                                   142
+                               ],
+                      "pivot":  [
+                                    28,
+                                    26
+                                ],
+                      "parent":  "pelvis",
+                      "offset":  [
+                                     56,
+                                     49
+                                 ],
+                      "draw_order":  2,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "shin_far",
+                      "file":  "shin_far.png",
+                      "size":  [
+                                   64,
+                                   154
+                               ],
+                      "pivot":  [
+                                    19,
+                                    19
+                                ],
+                      "parent":  "thigh_far",
+                      "offset":  [
+                                     28,
+                                     122
+                                 ],
+                      "draw_order":  3,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "pelvis",
+                      "file":  "pelvis.png",
+                      "size":  [
+                                   76,
+                                   65
+                               ],
+                      "pivot":  [
+                                    38,
+                                    18
+                                ],
+                      "parent":  null,
+                      "offset":  [
+                                     183,
+                                     257
+                                 ],
+                      "draw_order":  4,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "torso",
+                      "file":  "torso.png",
+                      "size":  [
+                                   84,
+                                   158
+                               ],
+                      "pivot":  [
+                                    42,
+                                    154
+                                ],
+                      "parent":  "pelvis",
+                      "offset":  [
+                                     38,
+                                     9
+                                 ],
+                      "draw_order":  5,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "head",
+                      "file":  "head.png",
+                      "size":  [
+                                   94,
+                                   110
+                               ],
+                      "pivot":  [
+                                    44,
+                                    96
+                                ],
+                      "parent":  "torso",
+                      "offset":  [
+                                     46,
+                                     8
+                                 ],
+                      "draw_order":  6,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "thigh_near",
+                      "file":  "thigh_near.png",
+                      "size":  [
+                                   57,
+                                   142
+                               ],
+                      "pivot":  [
+                                    28,
+                                    26
+                                ],
+                      "parent":  "pelvis",
+                      "offset":  [
+                                     34,
+                                     49
+                                 ],
+                      "draw_order":  7,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "shin_near",
+                      "file":  "shin_near.png",
+                      "size":  [
+                                   64,
+                                   154
+                               ],
+                      "pivot":  [
+                                    19,
+                                    19
+                                ],
+                      "parent":  "thigh_near",
+                      "offset":  [
+                                     28,
+                                     122
+                                 ],
+                      "draw_order":  8,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "upper_arm_near",
+                      "file":  "upper_arm_near.png",
+                      "size":  [
+                                   46,
+                                   112
+                               ],
+                      "pivot":  [
+                                    23,
+                                    22
+                                ],
+                      "parent":  "torso",
+                      "offset":  [
+                                     35,
+                                     43
+                                 ],
+                      "draw_order":  9,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "forearm_near",
+                      "file":  "forearm_near.png",
+                      "size":  [
+                                   38,
+                                   124
+                               ],
+                      "pivot":  [
+                                    19,
+                                    18
+                                ],
+                      "parent":  "upper_arm_near",
+                      "offset":  [
+                                     23,
+                                     94
+                                 ],
+                      "draw_order":  10,
+                      "rotation_deg":  0
+                  },
+                  {
+                      "name":  "blade",
+                      "file":  "blade.png",
+                      "size":  [
+                                   109,
+                                   20
+                               ],
+                      "pivot":  [
+                                    18,
+                                    10
+                                ],
+                      "parent":  "forearm_near",
+                      "offset":  [
+                                     25,
+                                     109
+                                 ],
+                      "draw_order":  11,
+                      "rotation_deg":  0,
+                      "occlusion":  {
+                                        "part":  "forearm_near",
+                                        "rect":  [
+                                                     0,
+                                                     97,
+                                                     38,
+                                                     27
+                                                 ],
+                                        "skin_colors":  [
+                                                            "#daaa8d",
+                                                            "#956f65"
+                                                        ],
+                                        "color_tolerance":  30,
+                                        "rule":  "Clip blade pixels behind parent hand skin in this rectangle; preserve the open grip slot. This keeps the full blade PNG reusable."
+                                    }
+                  }
+              ]
+}

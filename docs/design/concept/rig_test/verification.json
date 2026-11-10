@@ -1,0 +1,214 @@
+{
+    "part_count":  12,
+    "assembled_visible_height_px":  508,
+    "alpha_counts_order":  [
+                               "transparent",
+                               "opaque",
+                               "antialiased"
+                           ],
+    "far_geometry_and_tint":  "PASS",
+    "limb_joint_disks":  [
+                             {
+                                 "part":  "upper_arm_far",
+                                 "parent":  "torso",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "forearm_far",
+                                 "parent":  "upper_arm_far",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "thigh_far",
+                                 "parent":  "pelvis",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "shin_far",
+                                 "parent":  "thigh_far",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "thigh_near",
+                                 "parent":  "pelvis",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "shin_near",
+                                 "parent":  "thigh_near",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "upper_arm_near",
+                                 "parent":  "torso",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             },
+                             {
+                                 "part":  "forearm_near",
+                                 "parent":  "upper_arm_near",
+                                 "opaque_overlap_radius_px":  7,
+                                 "minimum_alpha":  255,
+                                 "pass":  true
+                             }
+                         ],
+    "parts":  [
+                  {
+                      "name":  "upper_arm_far",
+                      "size":  [
+                                   46,
+                                   112
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1190,
+                                                 3630,
+                                                 332
+                                             ]
+                  },
+                  {
+                      "name":  "forearm_far",
+                      "size":  [
+                                   38,
+                                   132
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1577,
+                                                 3038,
+                                                 401
+                                             ]
+                  },
+                  {
+                      "name":  "thigh_far",
+                      "size":  [
+                                   57,
+                                   142
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 2351,
+                                                 5320,
+                                                 423
+                                             ]
+                  },
+                  {
+                      "name":  "shin_far",
+                      "size":  [
+                                   64,
+                                   154
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 5121,
+                                                 4237,
+                                                 498
+                                             ]
+                  },
+                  {
+                      "name":  "pelvis",
+                      "size":  [
+                                   76,
+                                   65
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1054,
+                                                 3617,
+                                                 269
+                                             ]
+                  },
+                  {
+                      "name":  "torso",
+                      "size":  [
+                                   84,
+                                   158
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 3873,
+                                                 8873,
+                                                 526
+                                             ]
+                  },
+                  {
+                      "name":  "head",
+                      "size":  [
+                                   94,
+                                   110
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 4076,
+                                                 5736,
+                                                 528
+                                             ]
+                  },
+                  {
+                      "name":  "thigh_near",
+                      "size":  [
+                                   57,
+                                   142
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 2351,
+                                                 5320,
+                                                 423
+                                             ]
+                  },
+                  {
+                      "name":  "shin_near",
+                      "size":  [
+                                   64,
+                                   154
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 5121,
+                                                 4237,
+                                                 498
+                                             ]
+                  },
+                  {
+                      "name":  "upper_arm_near",
+                      "size":  [
+                                   46,
+                                   112
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1190,
+                                                 3630,
+                                                 332
+                                             ]
+                  },
+                  {
+                      "name":  "forearm_near",
+                      "size":  [
+                                   38,
+                                   124
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1398,
+                                                 2927,
+                                                 387
+                                             ]
+                  },
+                  {
+                      "name":  "blade",
+                      "size":  [
+                                   109,
+                                   20
+                               ],
+                      "alpha_pixel_counts":  [
+                                                 1115,
+                                                 704,
+                                                 361
+                                             ]
+                  }
+              ]
+}
