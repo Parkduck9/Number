@@ -30,7 +30,7 @@ public static class Juice
     public const float ParryPopupRise = 24f;   // reference px over its life
     public static readonly UnityEngine.Color ParryPopupColor = new UnityEngine.Color(1f, 0.824f, 0.29f); // broadcast gold #FFD24A
     // Parried shots fly back (harmless, then vanish) instead of disappearing.
-    public const float ReflectSpeedMul = 1.3f, ReflectLife = 0.35f;
+    public const float ReflectLife = 0.6f; // a parried shot drops away for this long (EnemyProjectile: weakened, falls)
 
     // Android overload (gimmick A): after a parried last strike / dodged 7th strike, the next hit kills it.
     public const float OverloadSeconds = 1.5f;        // (T) how long the window stays open

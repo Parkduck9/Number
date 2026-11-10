@@ -5,6 +5,8 @@ using UnityEngine;
 public class EnemyProjectile : MonoBehaviour
 {
     const float Lifetime = 3f;
+    const float ReflectGravity = 18f;   // u/s^2: a parried shot has lost its power and drops (user 11-10)
+    const float ReflectSpeedLoss = 0.45f; // fraction of its speed it keeps on the way back
 
     Vector2 velocity;
     Vector2 size = new Vector2(0.5f, 0.5f);
@@ -23,6 +25,7 @@ public class EnemyProjectile : MonoBehaviour
     public bool Parryable => !info.Unparryable && !passedPlayer;
     public bool Reflected { get; private set; }        // parried back (BossFight: a reflected shot that reaches the chest hatch hurts it)
     [System.NonSerialized] public float ReflectLife = Juice.ReflectLife; // s a parried shot keeps flying (the boss sets it longer)
+    [System.NonSerialized] public Vector2? ReflectTarget;                 // boss hatch: the weakened shot lobs back into it instead of just dropping
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Active.Clear(); // Domain Reload is off
@@ -67,6 +70,11 @@ public class EnemyProjectile : MonoBehaviour
         if (Time.time >= dieAt) { Destroy(gameObject); return; }
         if (frames != null) Rend.sprite = frames[Mathf.FloorToInt(Time.time * FrameFps) % frames.Length];
         Vector2 prev = transform.position;
+        if (Reflected)
+        {
+            velocity.y -= ReflectGravity * Time.deltaTime; // falls as it goes back
+            if (frames != null) AlignToVelocity(velocity);
+        }
         transform.position += (Vector3)(velocity * Time.deltaTime);
         Vector2 pos = transform.position;
         // Sweep from the old to the new position (a long frame must not tunnel through ground or the player).
@@ -92,10 +100,23 @@ public class EnemyProjectile : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // Parried: fly back the way it came, white, harmless (never tests the player again), and vanish soon.
+    // Parried: weakened, it pops back and falls (or lobs into ReflectTarget), white, harmless (never tests the player again), and vanishes soon.
     void Reflect()
     {
-        velocity = -velocity * Juice.ReflectSpeedMul;
+        Vector2 pos = transform.position;
+        float speed = Mathf.Max(velocity.magnitude * ReflectSpeedLoss, 4f);
+        if (ReflectTarget.HasValue)
+        {
+            // weakened lob that lands in the target: flight time from the reduced speed, gravity compensated on y
+            Vector2 d = ReflectTarget.Value - pos;
+            float t = Mathf.Clamp(d.magnitude / speed, 0.35f, 1.5f); // cap: from far away it must still land in time and stay on screen
+            velocity = new Vector2(d.x / t, d.y / t + 0.5f * ReflectGravity * t);
+        }
+        else
+        {
+            velocity = -velocity.normalized * speed + Vector2.up * 3f; // a small pop up, then it drops
+            if (velocity.y < 0f) velocity.y = Mathf.Abs(velocity.y) * 0.3f; // a shot fired up at us must not vanish into the floor at once
+        }
         passedPlayer = true;
         Reflected = true;
         dieAt = Time.time + ReflectLife;

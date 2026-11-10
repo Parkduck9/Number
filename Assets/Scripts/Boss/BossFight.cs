@@ -435,7 +435,8 @@ public class BossFight : MonoBehaviour
             if (side && BladeStuck) break; // the overlap barrage stops once the blade sticks (duel next)
             Vector2 d = (Vector2)player.transform.position - HatchAt;
             EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, d.normalized * ShotSpeed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot);
-            p.ReflectLife = ShotReflectLife; // reflected = exact reverse of its path = back into the hatch
+            p.ReflectLife = ShotReflectLife;
+            p.ReflectTarget = HatchAt; // reflected = a weakened lob that drops back into the hatch
             Sfx.Play(SfxId.EnemyTell, 0.5f, 1.5f);
             yield return Wait(every);
         }
