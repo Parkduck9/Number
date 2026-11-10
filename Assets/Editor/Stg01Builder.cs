@@ -106,14 +106,15 @@ public static class Stg01Builder
         new Foe("E-B7",  B, 65f, 13.0f, 0, 0.3f,  8f, cap: 4),
         new Foe("E-B8",  B, 68f, 13.0f, 0, 0.3f,  8f, cap: 4),
         new Foe("E-B9",  B, 74f, 13.0f, 1, 0f,    12f, ranged: true),
+        new Foe("ELITE-B1", B, 24f, 1.0f, 0, 0.3f, 8f, cap: 4, elite: true, minNumber: 3), // DECISIONS 22: first elite, 3~4, on the SEG-B street under AW-B3 (not in the spawner list)
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only that segment's enemies.
     static readonly Pt Spawner = new Pt("SPAWNER-B", B, 66.5f, 13.0f); // between E-B7 and E-B8, outside the goal trigger
     static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 60f, 62.5f, 23.25f, 26f); // top walkway, left end
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 70f, 75f, 13.0f, 17f);
-    static readonly Box HintA = new Box("TR-A-HINT", A, Kind.Solid, 7f, 8f, 2.25f, 5f);     // radio hint before E-A1 wakes
-    const string HintLines = "Assets/Data/Dialogue/stg01_hint_combat.txt";
+    const string TutorialLines = "Assets/Data/Dialogue/stg01_tutorial.txt"; // replaces the old radio hint trigger (DECISIONS 22)
+    const float HelperX = 3.5f; // tutorial guide, left of the start (P-START x 6), faces the player
 
     // DECISIONS 5-B: SEG-B has one broadcast board "3" (SEG-A none); its zone is the whole segment.
     static readonly Vector2 BoardPos = new Vector2(6f, 3.5f); // near the arrival point so it reads at once
@@ -141,7 +142,7 @@ public static class Stg01Builder
         var enemies = Foes.Select(f => (f, go: BuildEnemy(roots[f.seg], f))).ToList();
         foreach (var c in Checkpoints) BuildCheckpoint(roots[c.seg], c);
         BuildSpawner(roots[Spawner.seg], Spawner.id, new Vector2(Spawner.x, Spawner.y),
-            enemies.Where(e => e.f.seg == Spawner.seg).Select(e => e.go).ToList());
+            enemies.Where(e => e.f.seg == Spawner.seg && !e.f.elite).Select(e => e.go).ToList());
 
         var arrival = new GameObject("P-B (arrival)").transform;
         arrival.SetParent(roots[Arrival.seg], false);
@@ -153,18 +154,40 @@ public static class Stg01Builder
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(false); // HUD only: the hack device is obtained in STG-03 (01-fixes #5)
         BuildBoard(roots[B], "BOARD-B", BoardPos, 3, new Vector2(SegX[B], SegX[B] + W));
-        BuildDialoguePlayer(); // radio hint needs DialoguePlayer.Instance
-        BuildHint(roots[HintA.seg]);
+        BuildDialoguePlayer(); // the tutorial's radio lines need DialoguePlayer.Instance
+        BuildTutorial(roots[A]);
         BuildLighting(false); // night (no lamps yet)
         SaveScene(scene, Tag, ScenePath);
     }
 
-    static void BuildHint(Transform root)
+    // Helper NPC + tutorial controller (Stg01Tutorial). Idempotent: replaces an earlier copy.
+    static void BuildTutorial(Transform rootA)
     {
-        var go = BuildTrigger(root, HintA);
-        var lines = AssetDatabase.LoadAssetAtPath<TextAsset>(HintLines);
-        if (lines == null) { Todo.Add("hint line file missing: " + HintLines); return; }
-        SetObj(go.AddComponent<DialogueTrigger>(), "lines", lines);
+        foreach (var n in new[] { "LUDDITE-HELPER", "TUTORIAL" })
+        {
+            var old = rootA.Find(n);
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+        }
+        BuildHelper(rootA, "LUDDITE-HELPER", HelperX, GroundA);
+        var go = new GameObject("TUTORIAL");
+        go.transform.SetParent(rootA, false);
+        var lines = AssetDatabase.LoadAssetAtPath<TextAsset>(TutorialLines);
+        if (lines == null) { Todo.Add("tutorial line file missing: " + TutorialLines); return; }
+        SetObj(go.AddComponent<Stg01Tutorial>(), "lines", lines);
+    }
+
+    // Saved scene only: removes the old radio-hint trigger, adds the tutorial + helper and the elite (no full rebuild).
+    [MenuItem("NUMBER/STG-01: place tutorial + elite only")]
+    public static void PlaceTutorialAndElite()
+    {
+        if (!Begin(Tag, ScenePath)) return;
+        var scene = OpenAndPlaceElites(Tag, ScenePath, new[] { "SEG-A", "SEG-B" }, Foes);
+        var rootA = GameObject.Find("SEG-A").transform;
+        var hint = rootA.Find("TR-A-HINT");
+        if (hint != null) Object.DestroyImmediate(hint.gameObject);
+        BuildTutorial(rootA);
+        AssignSortingLayers();
+        SaveScene(scene, Tag, ScenePath);
     }
 
     // Scene-view aid: always show Ground-layer colliders (green = solid, cyan = one-way) so the layout can be checked over the backgrounds.

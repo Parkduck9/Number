@@ -1,8 +1,8 @@
 # PLACEHOLDER — the user writes the real dialogue. Keep the format.
-# "luddite" is not in Speakers.asset: DialoguePlayer shows the id in gray. Fine for now.
+# Speaker "helper" = the Luddite helper NPC (Speakers.asset, no portrait yet: colored block).
 @mode talk
-luddite | [임시] 살아 있었군. 방송을 듣고도 움직이는 사람은 드문데. | [PLACEHOLDER] You're alive. Few people still move after the broadcast.
+helper | [임시] 살아 있었군. 방송을 듣고도 움직이는 사람은 드문데. | [PLACEHOLDER] You're alive. Few people still move after the broadcast.
 yudo | [임시] 당신들은 누구죠? | [PLACEHOLDER] Who are you people?
-luddite | [임시] 숫자에 맞서는 사람들이지. 도움이 될 거야. | [PLACEHOLDER] We are the ones who stand against the numbers. This will help.
-luddite | [임시] 충격파 장치다. 받아. | [PLACEHOLDER] Take this shockwave device.
-luddite | [임시] 스페이스: 충격파. 앞쪽 적을 모두 비틀거리게 해. | [PLACEHOLDER] Press SPACE: shockwave. Staggers everyone in front of you.
+helper | [임시] 숫자에 맞서는 사람들이지. 도움이 될 거야. | [PLACEHOLDER] We are the ones who stand against the numbers. This will help.
+helper | [임시] 충격파 장치다. 받아. | [PLACEHOLDER] Take this shockwave device.
+helper | [임시] 스페이스: 충격파. 앞쪽 적을 모두 비틀거리게 해. | [PLACEHOLDER] Press SPACE: shockwave. Staggers everyone in front of you.

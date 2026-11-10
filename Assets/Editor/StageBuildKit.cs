@@ -54,9 +54,9 @@ public static class StageBuildKit
     {
         // sniper = DECISIONS 15 sniper (TestEnemy.Kind.Sniper): ranged gold 1, stands still, 19u line-of-sight laser; place on high ledges facing a climb.
         // elite = TestEnemy.Kind.Elite: number 3~9, its attack is the clash duel (EliteDuel), 6 normal hits otherwise.
-        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug, sniper, elite;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false, bool sniper = false, bool elite = false)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; this.elite = elite; }
+        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug, sniper, elite; public int minNumber;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false, bool sniper = false, bool elite = false, int minNumber = 0)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; this.elite = elite; this.minNumber = minNumber; }
     }
 
     // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
@@ -353,10 +353,35 @@ public static class StageBuildKit
         {
             SetInt(te, "kind", 4); // TestEnemy.Kind.Elite (android art 1.25x, crimson, set at runtime)
             SetInt(te, "maxHp", 6);
-            SetInt(number, "minValue", 3);
-            SetInt(number, "maxValue", 9);
+            SetInt(number, "minValue", f.minNumber > 0 ? f.minNumber : 3); // per-stage range (DECISIONS 22): minNumber / cap, default 3..9
+            SetInt(number, "maxValue", f.cap > 0 ? f.cap : 9);
         }
         return go;
+    }
+
+    // Luddite helper NPC (DECISIONS 22): placeholder square (LudditeHelper swaps in the idle art), feet at local (x, y).
+    public static GameObject BuildHelper(Transform root, string name, float x, float y)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3(x, y + 1f, 0f);
+        AddSquare(go.transform, name + " (PLACEHOLDER)", Vector2.zero, new Vector2(1f, 2f), new Color32(0x8F, 0xBF, 0x6A, 0xFF), 2);
+        go.AddComponent<LudditeHelper>();
+        return go;
+    }
+
+    // Opens a built scene and (re)places every elite of `foes` in it, no full rebuild. Returns the open scene (caller adds more, then SaveScene).
+    public static UnityEngine.SceneManagement.Scene OpenAndPlaceElites(string tag, string scenePath, string[] segIds, Foe[] foes)
+    {
+        var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        foreach (var f in foes.Where(x => x.elite))
+        {
+            var root = GameObject.Find(segIds[f.seg]).transform;
+            var old = root.Find(f.id + " (ELITE)");
+            if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+            BuildEnemy(root, f);
+        }
+        return scene;
     }
 
     // ------------------------------------------------------------------ lighting (docs/design/LIGHTING_DESIGN.md, DECISIONS 9 Q6/Q7)
@@ -384,7 +409,7 @@ public static class StageBuildKit
 
     static bool IsCharacter(Transform t) =>
         t.GetComponentInParent<PlayerController>(true) != null || t.GetComponentInParent<TestEnemy>(true) != null ||
-        t.GetComponentInParent<OpeningCitizen>(true) != null || t.GetComponentInParent<DraftIdleAnim>(true) != null;
+        t.GetComponentInParent<OpeningCitizen>(true) != null || t.GetComponentInParent<LudditeHelper>(true) != null || t.GetComponentInParent<DraftIdleAnim>(true) != null;
 
     public static readonly Color LampWarm = new Color32(0xD9, 0xA6, 0x4A, 0xFF);  // lantern / gold sign (desaturated, LIGHTING Q1)
     public static readonly Color LampRed = new Color32(0xE0, 0x60, 0x4A, 0xFF);   // dancheong vermilion sign

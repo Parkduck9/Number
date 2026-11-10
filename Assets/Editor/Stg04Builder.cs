@@ -90,6 +90,9 @@ public static class Stg04Builder
         new Foe("E-B9", B, 63f, 11.5f, 1, 0f,  12f, ranged: true, bug: true), // ranged bug: keeps shooting on 0 while the citizens freeze
         new Foe("E-B7", B, 66f, 11.5f, 0, 0.8f, 8f),
         new Foe("S-B1", B, 70.5f, 13.0f, 1, 0f, 19f, sniper: true),    // sniper on the gantry: frozen while the board shows 0, wakes if the player hacks it away
+        // Elites (DECISIONS 22), 5~9, on the flat floor, not in the spawner list.
+        new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 9, elite: true, minNumber: 5), // under CW-A1 (overhead one-way), 3u from CRATE-A1
+        new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 9, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only the climb + high-run group (E-B8, E-B9, E-B7, S-B1): watching the floor too would force a second descent (Fable review).
@@ -142,6 +145,16 @@ public static class Stg04Builder
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(true);
         BuildLighting(false);
+        SaveScene(scene, Tag, ScenePath);
+    }
+
+    // Adds / replaces only the elites in the saved scene (no full rebuild). Build() places them too.
+    [MenuItem("NUMBER/STG-04: place elites only")]
+    public static void PlaceElites()
+    {
+        if (!Begin(Tag, ScenePath)) return;
+        var scene = OpenAndPlaceElites(Tag, ScenePath, SegId, Foes);
+        AssignSortingLayers();
         SaveScene(scene, Tag, ScenePath);
     }
 }

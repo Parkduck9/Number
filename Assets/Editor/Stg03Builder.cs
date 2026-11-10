@@ -11,7 +11,6 @@ public static class Stg03Builder
     const string TalkPath = "Assets/Data/Dialogue/stg03_luddite_placeholder.txt";
     const float RoomWidth = 30f;
 
-    static readonly Color NpcColor = new Color32(0x8F, 0xBF, 0x6A, 0xFF);
     static readonly Color DoorColor = new Color32(0x5A, 0x4A, 0x3A, 0xFF);
 
     // Room-local coordinates (world x 0). The room is narrower than a normal segment.
@@ -24,13 +23,16 @@ public static class Stg03Builder
     static readonly Pt PlayerStart = new Pt("P-START", 0, 3f, 1f);
     static readonly Pt Checkpoint = new Pt("CP-A0", 0, 3f, 1f);
     const float LudditeX = 18f;
+    static readonly string[] SegId = { "ROOM" };
+    // DECISIONS 22: one elite before the meeting (4~7). The exit stays closed until it is broken (Goal rule: all enemies dead).
+    static readonly Foe[] Foes = { new Foe("ELITE-A1", 0, 10f, 1.0f, 0, 0.5f, 6f, cap: 7, elite: true, minNumber: 4) };
     static readonly Box Talk = new Box("TR-TALK", 0, Kind.Solid, 15f, 20f, 1f, 5f);
     static readonly Box Exit = new Box("TR-EXIT", 0, Kind.Solid, 27f, 29.5f, 1f, 5f);
 
     [MenuItem("NUMBER/Build STG-03")]
     public static void Build()
     {
-        if (!Begin(Tag, ScenePath, false)) return;
+        if (!Begin(Tag, ScenePath)) return;
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var root = new GameObject("ROOM").transform;
@@ -41,11 +43,8 @@ public static class Stg03Builder
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);
         BuildCheckpoint(root, Checkpoint);
 
-        var luddite = new GameObject("LUDDITE").transform; // DraftIdleAnim swaps the square for the draft idle art (feet at the floor)
-        luddite.SetParent(root, false);
-        luddite.localPosition = new Vector3(LudditeX, 2f, 0f);
-        AddSquare(luddite, "LUDDITE (PLACEHOLDER)", Vector2.zero, new Vector2(1f, 2f), NpcColor, 2);
-        luddite.gameObject.AddComponent<DraftIdleAnim>();
+        BuildHelper(root, "LUDDITE", LudditeX, 1f); // LudditeHelper swaps the square for the helper idle art (feet at the floor)
+        foreach (var f in Foes) BuildEnemy(root, f);
         AddSquare(root, "Door (PLACEHOLDER)", new Vector2((Exit.x1 + Exit.x2) * 0.5f, 2.5f), new Vector2(Exit.x2 - Exit.x1, 3f), DoorColor, 1);
 
         var exit = BuildTrigger(root, Exit);
@@ -63,6 +62,20 @@ public static class Stg03Builder
         BuildHud(false);
         BuildDialoguePlayer();
         BuildLighting(false);
+        SaveScene(scene, Tag, ScenePath);
+    }
+
+    // Replaces the old Luddite square with the helper NPC and adds the elite in the saved scene (no full rebuild).
+    [MenuItem("NUMBER/STG-03: place helper + elite only")]
+    public static void PlaceHelperAndElite()
+    {
+        if (!Begin(Tag, ScenePath)) return;
+        var scene = OpenAndPlaceElites(Tag, ScenePath, SegId, Foes);
+        var root = GameObject.Find("ROOM").transform;
+        var old = root.Find("LUDDITE");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        BuildHelper(root, "LUDDITE", LudditeX, 1f);
+        AssignSortingLayers();
         SaveScene(scene, Tag, ScenePath);
     }
 }

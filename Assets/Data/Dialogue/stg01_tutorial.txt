@@ -1,0 +1,24 @@
+# STG-01 tutorial, DRAFT lines (the user may rewrite them). Read by Stg01Tutorial, played as radio, one step at a time.
+# "#step N" starts a step, "#prompt English | Korean" is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds).
+# Each step waits until the player does it (or its timeout), Esc skips all. Step 5 only explains.
+@mode radio
+
+#step 1
+#prompt A / D: move   W: jump | A / D: 이동   W: 점프
+helper | 일어났군. A, D로 걷고 W로 뛰어 봐. | Up already? Walk with A and D, jump with W. | 6
+
+#step 2
+#prompt Left click: attack / lunge | 좌클릭: 공격 · 돌진
+helper | 좌클릭으로 베어. 마우스 쪽으로 돌진해. | Left click to strike. You lunge toward the mouse. | 6
+
+#step 3
+#prompt Two rings meet: left click = parry | 두 고리가 겹칠 때 좌클릭 = 패링
+helper | 적이 칠 때 두 고리가 겹치면 좌클릭. | When the two rings meet, left click to parry. | 7
+
+#step 4
+#prompt Right click: throw talisman | 우클릭: 부적 던지기
+helper | 우클릭은 부적. 던지면 그 자리로 날아가. | Right click throws a talisman. You fly to where it lands. | 6
+
+#step 5
+#prompt Space: lucky dice (3 charges = 1 roll) | 스페이스: 점괘 주사위 (3칸 = 1회)
+helper | 패링과 반격이 주사위를 채워. 셋이면 굴려. | Parries and counters fill the dice. At three charges, roll. | 7

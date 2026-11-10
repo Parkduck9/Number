@@ -98,6 +98,7 @@ public static class Stg02Builder
         new Foe("E-B8",  B, 40f, 11.5f, 0, 0.7f,  8f),
         new Foe("E-B9",  B, 37f, 11.5f, 1, 0f,    12f, ranged: true, bug: true),
         new Foe("ELITE-B1", B, 60f, 1.0f, 0, 0.7f, 8f, elite: true),           // clash-duel elite on the open street under the rising rail (not respawned)
+        new Foe("ELITE-B2", B, 16f, 1.0f, 0, 0.4f, 8f, cap: 6, elite: true, minNumber: 3), // second elite (DECISIONS 22): early street under the low rail, 3~6, flat 8u each side
     };
 
     // Breakable spawner (DECISIONS 15): one per map, at the top of the last climb, watching only SEG-B enemies (doors are one way).
@@ -149,17 +150,12 @@ public static class Stg02Builder
         SaveScene(scene, Tag, ScenePath);
     }
 
-    // Adds / replaces only the elite in the saved scene (no full rebuild, keeps anything edited since). Build() places it too.
+    // Adds / replaces only the elites in the saved scene (no full rebuild, keeps anything edited since). Build() places them too.
     [MenuItem("NUMBER/STG-02: place elite only")]
     public static void PlaceElite()
     {
         if (!Begin(Tag, ScenePath)) return;
-        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        Foe f = Foes.First(x => x.elite);
-        var root = GameObject.Find(SegId[f.seg]).transform;
-        var old = root.Find(f.id + " (ELITE)");
-        if (old != null) Object.DestroyImmediate(old.gameObject);
-        BuildEnemy(root, f);
+        var scene = OpenAndPlaceElites(Tag, ScenePath, SegId, Foes);
         AssignSortingLayers();
         SaveScene(scene, Tag, ScenePath);
     }
