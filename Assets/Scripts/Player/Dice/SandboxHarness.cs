@@ -18,6 +18,7 @@ public class SandboxHarness : MonoBehaviour
     PlayerHealth health;
     LuckyDice dice;
     BroadcastHackUi hackUi;
+    int queued; // 1..6 waiting for the dice to be free
 
     void Start()
     {
@@ -39,7 +40,7 @@ public class SandboxHarness : MonoBehaviour
         if (dice == null) dice = player.GetComponent<LuckyDice>();
         if (hackUi == null) hackUi = FindFirstObjectByType<BroadcastHackUi>();
         LuckyDice.SetUnlocked(true);
-        if (health != null && !health.IsDead) health.SetInvulnerable(true);
+        if (health != null && !health.IsDead && health.Hp < health.MaxHp) health.RestoreFull(); // no death, but not invulnerable: hits still show and the elite duel can start (TryBegin refuses an invulnerable player)
 
         var kb = Keyboard.current;
         if (kb == null) return;
@@ -48,7 +49,8 @@ public class SandboxHarness : MonoBehaviour
             if (kb[FKeys[i]].wasPressedThisFrame) Teleport(stationX[i]);
         if (dice == null || DialOpen()) return; // the hack dial uses the digit keys
         for (int i = 0; i < Digits.Length; i++)
-            if (kb[Digits[i]].wasPressedThisFrame) dice.ForceRoll(i + 1);
+            if (kb[Digits[i]].wasPressedThisFrame) queued = i + 1; // latest press wins
+        if (queued != 0 && dice.ForceRoll(queued)) queued = 0; // a press during a roll / running skill fires when that ends (was dropped)
     }
 
     bool DialOpen() => hackUi != null && DialBoard != null && DialBoard.GetValue(hackUi) != null;

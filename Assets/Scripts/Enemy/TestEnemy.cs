@@ -205,7 +205,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             nextAimAt += Time.deltaTime;
             if (frozenUntil > 0f) frozenUntil += Time.deltaTime;
             if (sight != null && state != State.Windup) sight.Hide(); // knocked out / frozen while held: no laser
-            if (ring != null && (player == null || !MeleeStrikeEta(player.transform.position, out _))) ring.Hide(); // same for the parry rings (else they freeze)
+            if (ring != null) ring.Hide(); // no parry rings while held (LMB attacks then; MeleeThreatens is off); they come back on release
             ApplyVisual();
             return;
         }
@@ -698,6 +698,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     // eta = seconds until the strike lands (0 in Strike).
     public bool MeleeThreatens(Vector2 playerPos, float imminentWindow, out float eta)
     {
+        eta = 0f;
+        if (GameFlow.EnemiesHeld && !InDuel) return false; // dice / duel hold: a frozen enemy is no parry threat, LMB attacks it
         if (!MeleeStrikeEta(playerPos, out eta) || eta > imminentWindow) return false;
         if (state == State.Charge) return true;
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);

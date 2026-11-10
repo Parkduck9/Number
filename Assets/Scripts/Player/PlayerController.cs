@@ -842,7 +842,7 @@ public class PlayerController : MonoBehaviour
         eta = 0f;
         foreach (EnemyProjectile p in EnemyProjectile.Active)
         {
-            if (p == null || !p.Parryable) continue;
+            if (p == null || !p.Parryable || GameFlow.EnemiesHeld) continue; // dice hold: frozen shots are no threat, LMB attacks
             Vector2 to = pos - (Vector2)p.transform.position;
             float dist = to.magnitude;
             Vector2 v = p.Velocity;
@@ -952,6 +952,7 @@ public class PlayerController : MonoBehaviour
     {
         if (enemy == null || !enemy.gameObject.activeInHierarchy || enemy.Current == TestEnemy.State.Stunned) return true; // already down / vanishing
         if (!swingHits.Add(enemy)) return true;
+        if (DeferredHits != null && DeferredHits.Exists(h => h.Enemy == enemy)) return true; // dice face 4: one stored blow per enemy for the whole hold
         // A lunge hit comes from where the lunge began (the sweep spans from there): the Android "from above / behind" test must not
         // depend on which frame the fast-moving body happened to be sampled at (Fable review 11-09).
         var info = new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false, Pierce = pierce };

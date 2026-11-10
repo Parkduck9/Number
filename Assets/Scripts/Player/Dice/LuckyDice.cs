@@ -114,8 +114,9 @@ public class LuckyDice : MonoBehaviour
     public bool ForceRoll(int face)
     {
         if (face < 1 || face > 6) return false;
+        int before = Charges;
         Charges = ChargesPerRoll;
-        if (!CanRoll()) return false;
+        if (!CanRoll()) { Charges = before; return false; } // refused (busy...): no free charge, the HUD must not light up "ready"
         StartCoroutine(Roll(face));
         return true;
     }
