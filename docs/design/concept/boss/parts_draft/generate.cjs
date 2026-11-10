@@ -1,432 +1,222 @@
-/* Draft artwork only. Node built-ins; integer rasterization, no image service. */
-const fs = require('fs');
-const path = require('path');
-const zlib = require('zlib');
-const OUT = __dirname;
-const ROUND = Number(process.argv[2] || 6);
-const P = {
-  ink:'#080b14', night:'#0b1026', dark:'#1a1d33', mid:'#2d3050', tile:'#3f4a6e',
-  steel:'#62677d', silver:'#858a9b', edge:'#b8bec8', white:'#d6d7d0',
-  coolant:'#226076', cyan:'#42a9bd', red:'#7f1a22', tell:'#f21c2a',
-  brass:'#b8862e', yellow:'#ffd43b', warm:'#7a3a3c'
-};
-const rgba = c => !c ? [0,0,0,0] : [...(P[c]||c).replace('#','').match(/../g).map(x=>parseInt(x,16)),255];
-class Raster {
-  constructor(w,h,c) { this.w=w;this.h=h;this.d=Buffer.alloc(w*h*4);if(c)this.rect(0,0,w,h,c); }
-  px(x,y,c) { x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const a=Array.isArray(c)?c:rgba(c);for(let k=0;k<4;k++)this.d[(y*this.w+x)*4+k]=a[k]; }
-  rect(x,y,w,h,c) {const a=rgba(c);for(let j=Math.max(0,y);j<Math.min(this.h,y+h);j++)for(let i=Math.max(0,x);i<Math.min(this.w,x+w);i++)this.px(i,j,a);}
-  line(points,c,width=1) {for(let i=1;i<points.length;i++){let [x,y]=points[i-1];const [tx,ty]=points[i];let dx=Math.abs(tx-x),dy=-Math.abs(ty-y),sx=x<tx?1:-1,sy=y<ty?1:-1,err=dx+dy;for(;;){this.rect(x-Math.floor(width/2),y-Math.floor(width/2),width,width,c);if(x===tx&&y===ty)break;const e=2*err;if(e>=dy){err+=dy;x+=sx;}if(e<=dx){err+=dx;y+=sy;}}}}
-  poly(points,c,outline) {const ys=points.map(p=>p[1]);for(let y=Math.max(0,Math.min(...ys));y<=Math.min(this.h-1,Math.max(...ys));y++){let xs=[];for(let i=0;i<points.length;i++){const a=points[i],b=points[(i+1)%points.length];if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])*(b[0]-a[0])/(b[1]-a[1]));}xs.sort((a,b)=>a-b);for(let i=0;i+1<xs.length;i+=2)for(let x=Math.ceil(xs[i]);x<=Math.floor(xs[i+1]);x++)this.px(x,y,c);}if(outline)this.line([...points,points[0]],outline,2);}
-  ellipse(cx,cy,rx,ry,c) {for(let y=-ry;y<=ry;y++){const x=Math.floor(rx*Math.sqrt(1-y*y/(ry*ry)));this.rect(cx-x,cy+y,2*x+1,1,c);}}
-  blit(src,x,y,flip=false) {for(let j=0;j<src.h;j++)for(let i=0;i<src.w;i++){const o=(j*src.w+i)*4;if(src.d[o+3])this.px(x+(flip?src.w-1-i:i),y+j,[...src.d.subarray(o,o+4)]);}}
-  scale(n) {const a=new Raster(this.w*n,this.h*n);for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const o=(Math.floor(y/n)*this.w+Math.floor(x/n))*4;a.px(x,y,[...this.d.subarray(o,o+4)]);}return a;}
-  crop(x,y,w,h) {const a=new Raster(w,h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const o=((y+j)*this.w+x+i)*4;a.px(i,j,[...this.d.subarray(o,o+4)]);}return a;}
-  save(name) {fs.writeFileSync(path.join(OUT,name),encode(this));}
+/* Local concept underpainting, area sampling and integer-pixel cleanup.
+ * No package, network, paid service, image generation API or game code. */
+const fs=require('fs'),path=require('path');
+const {Raster,decode,P,rgba}=require('./raster.cjs');
+const OUT=__dirname,ROUND=Number(process.argv[2]||4);
+const source=decode(path.join(OUT,'../boss_concept_4.png'));
+const colors=Object.entries(P).map(([k,v])=>[k,rgba(v)]);
+function nearest(rgb,allowed){
+  // Preserve the source's burgundy material ramp. Pure RGB distance otherwise
+  // collapses most dark shell/cloth planes into blue shadows and loses volume.
+  if(ROUND>=3&&allowed?.includes('red')&&!allowed.includes('coolant')&&rgb[0]>=52&&rgb[0]-rgb[2]>=18&&rgb[0]-rgb[1]>=25)return rgb[0]>110&&rgb[1]>40?'warm':'red';
+  let best=1e20,key='ink';for(const [k,c]of colors){if(allowed&&!allowed.includes(k))continue;const d=(c[0]-rgb[0])**2*.9+(c[1]-rgb[1])**2*1.2+(c[2]-rgb[2])**2;if(d<best){best=d;key=k;}}return key;
 }
-const crcTable = Array.from({length:256},(_,n)=>{for(let i=0;i<8;i++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
-function crc(b){let c=0xffffffff;for(const v of b)c=crcTable[(c^v)&255]^(c>>>8);return(c^0xffffffff)>>>0;}
-function chunk(t,d){const b=Buffer.alloc(d.length+12);b.writeUInt32BE(d.length);b.write(t,4);d.copy(b,8);b.writeUInt32BE(crc(b.subarray(4,-4)),b.length-4);return b;}
-function encode(a){const head=Buffer.alloc(13);head.writeUInt32BE(a.w);head.writeUInt32BE(a.h,4);head[8]=8;head[9]=6;const raw=Buffer.alloc((a.w*4+1)*a.h);for(let y=0;y<a.h;y++)a.d.copy(raw,y*(a.w*4+1)+1,y*a.w*4,(y+1)*a.w*4);return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',head),chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))]);}
-function decode(file){const b=fs.readFileSync(file),w=b.readUInt32BE(16),h=b.readUInt32BE(20);if(b[24]!==8||b[25]!==6)throw Error('RGBA8 PNG required');let p=8,ids=[];while(p<b.length){const n=b.readUInt32BE(p),t=b.toString('ascii',p+4,p+8);if(t==='IDAT')ids.push(b.subarray(p+8,p+8+n));p+=n+12;}const raw=zlib.inflateSync(Buffer.concat(ids)),a=new Raster(w,h),stride=w*4;for(let y=0;y<h;y++){const f=raw[y*(stride+1)];for(let x=0;x<stride;x++){const o=y*stride+x,l=x>=4?a.d[o-4]:0,u=y?a.d[o-stride]:0,ul=y&&x>=4?a.d[o-stride-4]:0;let v=0;if(f===1)v=l;if(f===2)v=u;if(f===3)v=Math.floor((l+u)/2);if(f===4){const q=l+u-ul,dl=Math.abs(q-l),du=Math.abs(q-u),dul=Math.abs(q-ul);v=dl<=du&&dl<=dul?l:du<=dul?u:ul;}a.d[o]=(raw[y*(stride+1)+1+x]+v)&255;}}return a;}
-function tube(a,points,width=9,c='mid'){a.line(points,'ink',width+4);a.line(points,c,width);a.line(points.map(([x,y])=>[x-2,y-2]),'dark',Math.max(1,width-5));}
-function stud(a,x,y){a.rect(x,y,4,4,'ink');a.rect(x,y,3,2,'brass');a.px(x,y,'silver');}
-// Re-rasterize enlarged bug geometry at native resolution, never resize its bitmap.
-function drawingScale(a,s){
-  const n=v=>Math.round(v*s),pts=p=>p.map(([x,y])=>[n(x),n(y)]);
-  return new Proxy(a,{get(t,k){
-    if(k==='geometryScale')return s;
-    if(k==='px')return(x,y,c)=>t.px(n(x),n(y),c);
-    if(k==='rect')return(x,y,w,h,c)=>t.rect(n(x),n(y),n(x+w)-n(x),n(y+h)-n(y),c);
-    if(k==='poly')return(p,c,o)=>t.poly(pts(p),c,o);
-    if(k==='line')return(p,c,w=1)=>t.line(pts(p),c,n(w));
-    if(k==='ellipse')return(x,y,rx,ry,c)=>t.ellipse(n(x),n(y),n(rx),n(ry),c);
-    return typeof t[k]==='function'?t[k].bind(t):t[k];
-  }});
+function clean(a){
+  const old=Buffer.from(a.d),seen=new Set(),at=(x,y)=>(y*a.w+x)*4,key=i=>old.subarray(i,i+4).toString('hex');
+  for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){
+    const i=at(x,y);if(seen.has(i)||!old[i+3])continue;
+    const target=key(i),stack=[[x,y]],comp=[],near={};seen.add(i);
+    while(stack.length){const [u,v]=stack.pop();comp.push([u,v]);for(const [dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
+      const xx=u+dx,yy=v+dy;if(xx<0||yy<0||xx>=a.w||yy>=a.h)continue;const j=at(xx,yy);if(!old[j+3])continue;const k=key(j);
+      if(k===target){if(!seen.has(j)){seen.add(j);stack.push([xx,yy]);}}else near[k]=(near[k]||0)+1;
+    }}
+    if(comp.length<=2){const fill=Object.entries(near).sort((a,b)=>b[1]-a[1])[0];if(fill)for(const [u,v]of comp)a.px(u,v,[...Buffer.from(fill[0],'hex')]);}
+  }return a;
 }
-function clipped(a,draw,allowed){const b=new Raster(a.w,a.h);draw(a.geometryScale?drawingScale(b,a.geometryScale):b);const keep=allowed.map(c=>rgba(c).slice(0,3).join(','));for(let i=0;i<a.d.length;i+=4)if(a.d[i+3]&&b.d[i+3]&&keep.includes([...a.d.subarray(i,i+3)].join(',')))b.d.copy(a.d,i,i,i+4);}
-function refineBody(a){
-  // Dark broken equipment in the skirt, varied widths and interrupted bays.
-  rack(a,123,323,63,118);rack(a,190,337,47,111);
-  rack(a,518,330,52,118);rack(a,581,347,68,101);
-  a.poly([[126,324],[157,324],[150,339],[138,342],[144,362],[128,358]],'ink');
-  a.poly([[582,351],[614,351],[609,366],[621,376],[614,398],[589,388]],'night');
-  // Detached chassis skins, with oil trapped in seams.
-  a.poly([[245,332],[271,342],[278,369],[260,399],[239,414],[235,380]],'dark','ink');
-  a.poly([[478,341],[500,322],[517,349],[523,391],[500,409],[483,385]],'dark','ink');
-  a.line([[246,338],[266,349],[269,368]],'mid',3);
-  for(const [x,y]of[[249,356],[497,365],[328,396],[428,414]]){
-    a.poly([[x,y],[x+14,y-3],[x+22,y+9],[x+15,y+23],[x+2,y+20]],'dark','ink');
-    a.line([[x+2,y+1],[x+12,y-1]],'mid',2);
+function extract(rect,w,h,points,allowed){
+  const [sx,sy,sw,sh]=rect,mask=new Raster(source.w,source.h),a=new Raster(w,h);mask.poly(points,'white');
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    let rgb=[0,0,0],n=0;for(let j=0;j<4;j++)for(let i=0;i<4;i++){
+      const u=Math.min(source.w-1,Math.floor(sx+(x+(i+.5)/4)*sw/w)),v=Math.min(source.h-1,Math.floor(sy+(y+(j+.5)/4)*sh/h)),p=(v*source.w+u)*4;
+      if(!mask.d[p+3])continue;n++;for(let k=0;k<3;k++)rgb[k]+=source.d[p+k];
+    }if(n>=8)a.px(x,y,nearest(rgb.map(v=>v/n),allowed));
   }
-  const hoses=[[[235,239],[229,263],[231,296],[245,321],[255,350],[254,379],[246,407],[244,447]],[[522,234],[531,259],[528,292],[517,312],[505,335],[510,365],[530,387],[542,412],[543,447]],[[338,353],[330,378],[332,405],[345,422],[366,429],[393,428],[412,419],[420,395]],[[99,295],[87,322],[84,348],[93,370],[108,385],[123,390]]];
-  for(const pts of hoses)tube(a,pts,6,'mid');
-  clipped(a,b=>{
-    // Localized oil and missing corners, rather than random texture noise.
-    for(const [x,y]of[[178,76],[213,162],[573,132],[618,223],[69,276],[719,249],[346,190],[445,197],[303,340]]){
-      b.poly([[x,y],[x+13,y+3],[x+18,y+14],[x+10,y+17],[x+13,y+27],[x+6,y+40],[x+4,y+21],[x-4,y+13]],'ink');
-      b.line([[x+9,y+4],[x+8,y+12],[x+12,y+17]],'coolant',2);
-    }
-    for(const [x,y]of[[103,100],[169,63],[237,87],[504,62],[579,97],[654,135],[144,356],[533,353]]){
-      b.rect(x,y,11,2,'tile');b.rect(x+2,y+2,5,1,'mid');b.rect(x+24,y+29,7,2,'mid');
-    }
-  },['dark','mid','tile','night']);
-  // Small coolant clusters stay much dimmer than an eventual code hologram.
-  for(const [x,y]of[[117,192],[599,221],[251,374]]){a.rect(x,y,2,6,'coolant');a.rect(x,y,1,2,'cyan');}
+  clean(a);const old=Buffer.from(a.d);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(!old[(y*w+x)*4+3])continue;for(const [dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const u=x+dx,v=y+dy;if(u<0||v<0||u>=w||v>=h||!old[(v*w+u)*4+3]){a.px(x,y,'ink');break;}}}
+  return a;
 }
-function rack(a,x,y,w,h){a.poly([[x,y+5],[x+5,y],[x+w,y],[x+w,y+h],[x,y+h]],'dark','ink');a.rect(x+4,y+4,w-8,3,'mid');a.rect(x+4,y+6,3,h-10,'mid');a.rect(x+w-8,y+6,5,h-7,'night');for(let j=12;j<h-8;j+=21){a.rect(x+10,y+j,w-21,16,'ink');a.rect(x+12,y+j+1,w-25,2,'mid');a.rect(x+13,y+j+5,w-34,2,'dark');a.rect(x+13,y+j+9,w-34,2,'dark');a.rect(x+w-20,y+j+5,3,3,(j%42===12)?'coolant':'dark');a.rect(x+w-15,y+j+5,2,3,'mid');}for(let j=8;j<h;j+=36){a.rect(x+4,y+j,2,2,'tile');}}
-function roof(a,x,y,w){
-  a.poly([[x,y+4],[x+18,y+12],[x+40,y+10],[x+w-24,y],[x+w-7,y-5],[x+w,y],[x+w-12,y+14],[x+w+9,y+42],[x+w+17,y+47],[x+w-4,y+51],[x+11,y+51],[x-12,y+45],[x,y+34],[x+14,y+16]],'dark','ink');
-  a.line([[x-10,y+43],[x+22,y+45],[x+w-10,y+42],[x+w+12,y+46]],'mid',5);
-  for(let i=0;i<w-14;i+=13){const ry=y+15-Math.floor(i/26);a.poly([[x+20+i,ry],[x+28+i,ry-1],[x+18+i,y+41],[x+8+i,y+42]],'mid','ink');a.line([[x+21+i,ry+2],[x+11+i,y+38]],'tile',2);a.rect(x+8+i,y+41,8,3,'mid');}
-  a.line([[x+2,y+5],[x+20,y+12],[x+w-22,y],[x+w-7,y-5]],'tile',2);
-  a.rect(x+15,y+50,w-23,7,'ink');a.rect(x+18,y+51,w-30,2,'coolant');
-}
-function body(){const a=new Raster(768,448);
-  // Hanging conduits connect the crown to an implied machine beyond the canvas.
-  for(const [x,dx,h] of [[55,38,210],[124,-12,200],[204,14,180],[274,-32,90],[484,28,94],[552,-18,190],[640,16,180],[718,-26,230]]){
-    tube(a,[[x,0],[x+2,34],[x+dx,86],[x+dx, h]],10,'dark');
-  }
-  a.poly([[36,166],[71,114],[131,105],[166,71],[252,83],[299,116],[317,168],[451,168],[474,110],[535,74],[621,90],[660,127],[732,156],[760,234],[740,330],[686,361],[657,447],[108,447],[76,350],[17,320],[7,234]],'ink');
-  a.poly([[72,160],[139,124],[237,133],[306,178],[312,336],[273,398],[249,447],[82,447],[100,323],[38,279]],'night');
-  a.poly([[472,177],[531,129],[624,140],[704,188],[725,288],[662,332],[681,447],[501,447],[467,336]],'night');
-  // Unequal stacks of server blocks make the fused silhouette architectural.
-  rack(a,80,82,76,228);rack(a,156,42,68,206);rack(a,224,70,62,165);
-  rack(a,492,42,66,206);rack(a,560,77,80,243);rack(a,643,115,55,199);
-  rack(a,28,188,52,145);rack(a,699,206,49,143);
-  roof(a,62,76,95);roof(a,556,70,98);
-  roof(a,9,255,64);roof(a,670,285,80);
-  // Crown of broken, vertical server blades. No helmet or humanoid face.
-  rack(a,287,21,44,111);rack(a,337,8,40,67);rack(a,382,17,37,67);rack(a,429,31,46,108);
-  a.poly([[294,54],[307,47],[309,64],[329,59],[330,41],[346,41],[347,61],[397,60],[399,47],[415,49],[415,66],[455,62],[467,75],[464,165],[447,181],[315,180],[298,163]],'dark','ink');
-  a.line([[300,65],[321,68],[334,64],[393,64]],'mid',3);
-  // Blank 144 x 88 hologram recess. Its icon and number belong to code.
-  a.rect(305,65,158,102,'ink');a.rect(308,67,151,3,'mid');a.rect(308,69,3,94,'tile');
-  a.rect(312,72,144,88,'ink');a.rect(456,74,3,87,'night');a.rect(315,163,136,3,'dark');
-  a.rect(300,86,6,14,'mid');a.rect(460,133,7,14,'mid');
-  // Shoulder cables branch toward the sternum, in shadow, like veins.
-  const cables=[[[181,0],[184,47],[197,83],[201,152],[246,187],[286,210],[306,247]],[[260,0],[256,53],[272,112],[273,158],[302,190],[323,207]],[[536,0],[528,49],[526,126],[501,172],[467,190],[445,221]],[[663,24],[658,104],[630,174],[567,190],[512,217],[476,250]],[[94,20],[96,117],[120,165],[165,185],[209,216]],[[711,60],[723,143],[714,204],[674,241],[627,258]]];
-  for(const pts of cables)tube(a,pts,7,'mid');
-  // Structural collar and rib cage are heavy, machined, and asymmetrical.
-  a.poly([[276,196],[313,180],[353,184],[384,196],[415,184],[455,185],[493,206],[477,229],[447,217],[415,213],[384,224],[352,214],[314,214],[290,227]],'dark','ink');
-  a.line([[284,200],[315,187],[352,191],[379,202]],'tile',4);
-  a.line([[391,202],[416,192],[452,194],[483,211]],'mid',4);
-  a.poly([[307,210],[329,221],[438,220],[461,210],[489,238],[494,290],[477,339],[445,366],[323,365],[285,340],[269,288],[276,237]],'ink');
+function tube(a,p,w,c='dark'){a.line(p,'ink',w+2);a.line(p,c,w);}
+function body(){
+  const outline=[[29,256],[44,225],[65,202],[69,90],[63,85],[80,58],[82,43],[93,48],[171,42],[178,26],[235,25],[247,37],[260,99],[282,139],[290,93],[481,93],[499,120],[511,39],[520,14],[536,13],[550,28],[584,33],[677,45],[691,38],[694,50],[712,77],[695,86],[700,214],[726,242],[721,277],[683,298],[631,303],[583,291],[549,318],[528,362],[535,407],[543,480],[222,480],[235,420],[247,374],[228,335],[211,306],[177,294],[127,301],[87,286],[43,279]];
+  const a=extract([20,0,720,482],384,224,outline,['ink','night','dark','mid','tile','coolant','red']);
+  if(ROUND>=2)for(let y=95;y<224;y++)for(let x=0;x<384;x++)if(a.d[(y*384+x)*4+3])a.px(x,y,'ink');
+  const map=pts=>pts.map(([x,y])=>[Math.round((x-20)*384/720),Math.round(y*224/482)]);
+  // Erase source arms, face/halo and projectiles before rebuilding the torso.
+  a.poly(map([[40,260],[69,201],[118,182],[153,139],[202,115],[271,131],[284,197],[252,274],[230,333],[204,347],[163,309],[107,304],[61,286]]),'ink');
+  a.poly(map([[493,122],[530,115],[594,134],[653,190],[666,259],[706,289],[712,397],[673,456],[599,457],[580,340],[537,297],[518,228]]),'ink');
+  a.poly(map([[269,75],[499,75],[499,224],[446,253],[320,253],[269,222]]),'ink');
+  a.poly(map([[271,247],[486,246],[518,382],[465,420],[302,421],[261,367]]),'ink');
+  a.poly([[116,91],[141,102],[162,114],[223,114],[249,94],[270,85],[280,128],[269,160],[258,186],[270,224],[111,224],[120,187],[111,157],[103,127]],'ink');
+  a.poly([[132,117],[145,138],[149,169],[138,192],[130,224],[113,224],[121,189],[112,159],[112,133]],'night');
+  a.poly([[245,112],[255,126],[257,158],[247,189],[253,224],[270,224],[259,187],[270,158],[273,129]],'night');
+  for(const p of [ [[60,0],[62,25],[69,42],[75,67],[72,85],[66,101]],[[93,0],[98,22],[104,49],[113,72],[132,90],[147,107]],[[131,0],[129,26],[136,53],[133,76],[144,98]],[[257,0],[255,31],[248,61],[238,86],[228,100]],[[291,0],[285,34],[278,52],[258,79],[241,99]],[[318,0],[316,25],[308,45]] ])tube(a,p,3,'dark');
+  for(const p of [[[18,76],[33,91],[53,97],[64,107]],[[0,114],[26,121],[53,116]],[[339,92],[360,94],[382,81]],[[325,113],[350,121],[382,114]]])tube(a,p,2,'dark');
+  for(const [x,y]of[[99,42],[105,53],[72,76],[271,39],[289,56],[333,97]]){a.rect(x-2,y-1,5,3,'ink');a.rect(x,y,2,1,'red');}
+  a.poly([[151,33],[157,29],[227,29],[232,35],[232,81],[225,87],[159,87],[150,81]],'ink');
+  a.line([[153,34],[157,32],[226,32]],'tile',2);a.line([[153,34],[153,79],[158,83]],'coolant',1);
+  a.line([[229,36],[229,80],[225,83],[160,83]],'dark',2);a.rect(156,36,72,44,'ink');
+  a.rect(149,44,3,7,'dark');a.rect(231,67,3,7,'dark');
+  a.poly([[159,101],[178,107],[204,107],[226,101],[240,113],[245,132],[241,153],[229,173],[209,183],[176,183],[155,172],[141,151],[139,129],[145,111]],'night');
   for(let i=0;i<5;i++){
-    const y=219+i*28,spread=[8,0,0,7,20][i];
-    tube(a,[[319,y],[290+spread,y+8],[279+spread,y+20],[289+spread,y+31],[317,y+38],[338,y+37]],13,'mid');
-    a.line([[316,y-3],[291+spread,y+5],[283+spread,y+15]],'tile',3);
-    tube(a,[[450,y+2],[479-spread,y+9],[489-spread,y+20],[478-spread,y+33],[449,y+38],[430,y+37]],13,'dark');
-    a.line([[452,y-1],[477-spread,y+7],[484-spread,y+16]],'mid',3);
+    const y=104+i*14,o=[145,141,142,147,155][i],p=[[178,y+4],[165,y+1],[154,y-3],[o,y+1],[o-2,y+8],[o+2,y+15],[155,y+19],[173,y+22]],q=p.map(([x,y])=>[384-x,y+1]);
+    tube(a,p,4,'mid');tube(a,q,4,'dark');a.line(p.slice(0,5).map(([x,y])=>[x,y-1]),'tile',1);a.line(q.slice(1,5).map(([x,y])=>[x-1,y-1]),'mid',1);
   }
-  // Solid metal socket surrounding a truly transparent 128x96 opening.
-  a.rect(312,222,144,112,'ink');a.rect(315,225,138,106,'dark');a.rect(317,226,134,3,'tile');
-  a.rect(320,230,128,96,null);
-  for(const x of [308,453])for(const y of [239,274,310]){a.rect(x,y,7,10,'mid');a.rect(x,y,2,7,'tile');}
-  // Abdomen is a hanging mass, with voids between cables, rather than legs.
-  for(const [x,y,dx]of[[283,349,-31],[312,366,-12],[347,348,14],[389,350,1],[427,358,17],[461,343,38]])tube(a,[[x,y],[x+dx,y+31],[x+dx+9,422],[x+dx+5,447]],12,'dark');
-  a.poly([[303,372],[347,385],[398,385],[457,368],[470,410],[457,447],[298,447],[286,416]],'night','ink');
-  a.line([[304,375],[348,391],[390,391]],'dark',4);
-  // Oil only: dark angular spills and a few cyan coolant drips.
-  for(const [x,y]of[[112,161],[238,114],[592,183],[678,262]]){a.poly([[x,y],[x+18,y+3],[x+13,y+16],[x+18,y+30],[x+9,y+45],[x+6,y+22],[x-4,y+15]],'ink');a.line([[x+3,y+10],[x+3,y+24],[x+7,y+29],[x+7,y+38]],'coolant',2);}
-  for(const [x,y]of[[167,116],[237,201],[552,161],[676,233],[132,290]])a.rect(x,y,3,2,'red');
-  if(ROUND>=2)refineBody(a);
-  if(ROUND>=3){
-    // Reclaimed android chassis embedded in the mass: dark, recognizable salvage.
-    for(const [x,y,flip]of[[49,174,false],[669,165,true],[206,282,false],[531,278,true]]){
-      const s=flip?-1:1;
-      a.poly([[x,y],[x+s*16,y-8],[x+s*36,y+2],[x+s*43,y+24],[x+s*27,y+42],[x+s*4,y+32]],'dark','ink');
-      a.line([[x+s*3,y+1],[x+s*16,y-4],[x+s*31,y+4]],'mid',3);
-      a.poly([[x+s*13,y+6],[x+s*29,y+9],[x+s*32,y+22],[x+s*18,y+29],[x+s*10,y+20]],'ink');
-      a.line([[x+s*15,y+10],[x+s*25,y+13]],'tile',2);
-      tube(a,[[x+s*18,y+36],[x+s*21,y+52],[x+s*9,y+68]],7,'dark');
-      a.rect(x+s*18,y+19,2,2,'red');
-    }
-    // Staggered old tiles over the broad collar: masonry fused into its chest.
-    for(const [x,y]of[[300,187],[324,193],[348,198],[419,192],[443,194]]){
-      a.poly([[x,y],[x+19,y+5],[x+15,y+15],[x+3,y+14],[x-3,y+8]],'dark','ink');
-      a.line([[x,y+1],[x+15,y+5]],'mid',2);
-      a.line([[x+5,y+4],[x+2,y+10]],'tile',1);
-    }
-    // Hardware along the rib edges is deliberately irregular; avoid perfect cloning.
-    for(const [x,y]of[[286,246],[288,274],[301,311],[309,348],[477,251],[470,309],[455,345]]){
-      a.rect(x,y,7,4,'ink');a.rect(x,y,3,2,'tile');
-    }
-    // Thin broken cable filaments at the outline, distinct from the big hoses.
-    for(const pts of [[[34,212],[20,200],[9,177],[4,152]],[[734,237],[750,229],[760,202],[766,171]],[[170,316],[160,334],[160,357]],[[610,312],[619,324],[617,339]]]){
-      a.line(pts,'ink',4);a.line(pts.map(([x,y])=>[x-1,y]),'dark',2);
-    }
-  }
-  if(ROUND>=4){
-    // Broken tile ends and cable clamps provide scale without brightening the mass.
-    clipped(a,b=>{
-      for(const [x,y]of[[84,114],[123,107],[592,108],[629,103],[34,293],[700,324]]){
-        b.poly([[x,y],[x+5,y+1],[x+3,y+4],[x+8,y+7],[x+2,y+8]],'ink');
-        b.line([[x-2,y-2],[x+1,y-1]],'tile',1);
-      }
-    },['dark','mid','tile']);
-    for(const [x,y]of[[198,142],[270,141],[526,120],[628,177],[246,322],[517,312]]){
-      a.rect(x-4,y,9,5,'ink');a.rect(x-3,y,6,2,'mid');a.px(x-3,y,'tile');
-    }
-    // Unlit connector rails frame the empty monitor without drawing a UI.
-    for(const [x,y]of[[300,114],[460,95]]){a.rect(x,y,6,20,'ink');a.rect(x+1,y+2,2,16,'dark');}
-  }
-  return a;
-}
-function shell(a,cx,cy,w,h,variant=0){
-  const pts=[[cx-w/2,cy+4],[cx-w/2+5,cy-h/3],[cx-8,cy-h/2],[cx+9,cy-h/2+3],[cx+w/2,cy-4],[cx+w/2-6,cy+h/3],[cx+4,cy+h/2],[cx-12,cy+h/2-2]].map(p=>p.map(Math.round));
-  a.poly(pts,'red','ink');
-  a.poly([[cx+6,cy-h/2+5],[cx+w/2-3,cy],[cx+w/2-8,cy+h/3],[cx+3,cy+h/2-2],[cx-4,cy+3]],'dark');
-  a.line([[cx-14,cy-Math.floor(h/2)+6],[cx-24,cy-8],[cx-19,cy+8]],'warm',3);
-  a.line([[cx+1,cy-Math.floor(h/2)+3],[cx-6,cy-2],[cx+1,cy+Math.floor(h/2)-1]],'ink',3);
-  a.poly([[cx+11,cy-5],[cx+21,cy-9],[cx+25,cy-2],[cx+18,cy+6],[cx+9,cy+4]],'ink');
-  a.line([[cx-12,cy+11],[cx-21,cy+16],[cx-20,cy+23]],'ink',2);
-  if(variant){a.line([[cx-7,cy-19],[cx-13,cy-9],[cx-7,cy-4]],'tile',2);}
-}
-function bug(lit=false){const a=drawingScale(new Raster(200,320),1.25);
-  // Bent arm assembled from distinct empty insect carapaces; small legs remain.
-  tube(a,[[111,8],[104,48],[82,90],[62,131],[71,183],[80,234]],26,'dark');
-  const shells=[[106,30,66,48],[92,76,69,57],[63,119,66,61],[64,163,66,49],[84,194,64,49]];
-  for(let i=0;i<shells.length;i++){
-    const [x,y,w,h]=shells[i];
-    for(const side of [-1,1])for(let j=0;j<2;j++){
-      const x1=x+side*21,y1=y-5+j*14,x2=x+side*(40+j*3),y2=y-18+j*18,x3=x+side*(45+j*3),y3=y-37+j*26;
-      a.line([[x1,y1],[x2,y2],[x3,y3]],'ink',7);a.line([[x1-1,y1-2],[x2-1,y2-2],[x3,y3]],'red',3);
-    }
-    shell(a,x,y,w,h,i%2);
-  }
-  // Three up-curled claw digits surround the low central palm, with thumb at right.
-  for(const pts of [ [[57,208],[34,211],[26,230],[34,245],[47,248],[36,233],[42,223],[58,226]],[[99,208],[126,206],[143,220],[145,235],[136,226],[124,222],[109,232]],[[56,229],[48,245],[57,253],[67,251],[61,240]] ]){
-    a.poly(pts,'red','ink');a.line(pts.slice(0,3),'warm',2);
-  }
-  a.poly([[68,208],[91,206],[110,220],[107,242],[91,255],[68,255],[54,241],[56,221]],'red','ink');
-  a.poly([[83,215],[102,222],[101,238],[88,250],[72,249],[62,237],[65,221]],'dark','ink');
-  a.poly([[72,221],[88,218],[98,228],[95,241],[81,249],[68,239],[67,229]],lit?'tell':'ink');
-  a.line([[71,222],[81,220],[90,223]],lit?'white':'red',3);
-  a.line([[72,230],[78,238],[86,229]],lit?'warm':'dark',3);
-  if(lit){a.rect(71,225,4,5,'white');a.rect(78,227,5,11,'tell');a.line([[61,218],[66,214],[72,214]],'tell',2);a.line([[100,225],[102,233],[98,241]],'tell',2);}
-  a.line([[78,180],[75,186],[77,198],[73,204]],'ink',4);a.line([[78,184],[78,194]],'coolant',2);
+  for(const p of [[[161,111],[155,115],[153,127],[158,132]],[[164,166],[164,181],[170,188],[176,186],[177,178]],[[223,164],[228,177],[226,188]],[[232,119],[237,132],[234,145]]])tube(a,p,1,'red');
+  a.rect(157,112,70,54,'ink');a.line([[159,113],[225,113],[225,165]],'dark',2);a.rect(160,115,64,48,null);
+  for(const x of [155,226])for(const y of [121,139,157]){a.rect(x,y,3,5,'dark');a.rect(x,y,1,3,'tile');}
   if(ROUND>=2){
-    // Elytra ridges and abdominal plates identify dead insect husks, not rocks.
-    for(const [cx,cy,w,h]of shells){
-      clipped(a,b=>{
-        b.poly([[cx-26,cy-11],[cx-17,cy-19],[cx-11,cy-16],[cx-15,cy-6],[cx-13,cy+9],[cx-21,cy+17],[cx-27,cy+6]],'warm');
-        b.poly([[cx-22,cy-8],[cx-16,cy-13],[cx-19,cy+5],[cx-23,cy+10]],'red');
-        b.line([[cx-17,cy-19],[cx-10,cy-22],[cx-5,cy-17]],'tile',1);
-        b.poly([[cx-8,cy+9],[cx-4,cy+5],[cx+1,cy+10],[cx-4,cy+20],[cx-9,cy+22]],'ink');
-        for(let j=0;j<3;j++)b.line([[cx+9+j*3,cy+8+j*5],[cx+18+j*3,cy+2+j*5]],'mid',2);
-        b.rect(cx-22,cy-1,3,4,'ink');b.rect(cx-20,cy+7,2,3,'ink');
-      },['red','dark','warm','mid']);
-      a.line([[cx+6,cy+Math.floor(h/2)-4],[cx+15,cy+Math.floor(h/2)+2],[cx+20,cy+Math.floor(h/2)-2]],'ink',4);
-    }
-    a.line([[126,41],[134,46],[138,58],[131,72]],'ink',5);
-    a.line([[125,41],[132,47],[136,58],[130,68]],'warm',2);
-    a.poly([[26,121],[16,126],[11,141],[18,151],[15,139],[23,136],[31,139]],'red','ink');
-    a.line([[23,128],[18,134]],'warm',2);
-    a.line([[59,157],[57,166],[61,173],[60,181]],'ink',3);
-    a.line([[60,161],[60,168]],'coolant',2);
-    a.line([[68,246],[75,250],[86,251]],lit?'tell':'red',2);
+    a.poly([[72,77],[88,70],[112,79],[134,96],[141,111],[131,124],[112,112],[93,99],[76,99]],'night');
+    tube(a,[[91,81],[111,89],[124,101],[132,116]],4,'dark');tube(a,[[276,79],[259,86],[245,98],[237,109]],4,'dark');
+    a.line([[99,84],[113,92],[120,100]],'mid',1);a.line([[256,88],[248,94]],'mid',1);
+    for(const p of [[[127,167],[129,185],[121,204],[124,223]],[[247,167],[242,185],[252,208],[250,223]],[[180,183],[177,204],[180,223]],[[209,183],[215,202],[214,223]]])tube(a,p,2,'dark');
   }
   if(ROUND>=3){
-    // A second scale of husks interrupts the repeated big elytra.
-    for(const [x,y]of[[126,25],[42,94],[93,147]]){
-      a.poly([[x-13,y-5],[x-5,y-12],[x+7,y-10],[x+14,y-2],[x+10,y+9],[x-1,y+13],[x-12,y+7]],'dark','ink');
-      a.poly([[x-11,y-4],[x-4,y-9],[x+2,y-6],[x-1,y+9],[x-10,y+5]],'red');
-      a.line([[x-9,y-5],[x-5,y-7]],'warm',2);
-      a.line([[x+1,y-8],[x-3,y+8]],'ink',2);
-      for(let i=0;i<3;i++)a.line([[x+7,y+i*3-3],[x+12,y+i*3-5]],'mid',1);
-      a.line([[x-8,y+6],[x-17,y+10],[x-19,y+5]],'red',2);
-      a.line([[x+7,y+6],[x+18,y+11],[x+21,y+4]],'red',2);
-    }
-    // Hollow socket in the upper shell and tiny chips in chitin ridges.
-    a.poly([[99,18],[105,15],[111,20],[109,29],[102,32],[97,26]],'ink');
-    a.line([[99,18],[104,16]],'warm',1);
-    for(const [x,y]of[[83,47],[63,83],[39,116],[43,165],[71,189]]){
-      clipped(a,b=>{b.rect(x,y,4,2,'ink');b.rect(x-2,y-2,3,1,'tile');},['red','warm','dark']);
-    }
-    // Palm reads as an open mechanical swarm port with radial shutters.
-    for(const pts of [[[67,229],[74,232]],[[87,221],[83,228]],[[94,236],[87,235]],[[79,247],[80,240]]])a.line(pts,lit?'warm':'mid',2);
+    for(const p of [[[151,167],[158,177],[169,180]],[[233,167],[227,178],[216,181]]]){tube(a,p,3,'mid');a.line(p.map(([x,y])=>[x-1,y-1]),'tile',1);}
+    a.poly([[129,177],[135,184],[134,197],[139,203],[133,213],[126,203]],'ink');a.line([[131,185],[131,194],[134,198]],'coolant',1);
+    a.line([[144,195],[149,202],[153,220]],'night',3);a.line([[236,194],[230,207],[231,223]],'night',4);
+    // A broad, continuous shadow belly makes this one creature, not loose props.
+    a.poly([[151,188],[170,196],[208,196],[230,189],[240,224],[141,224]],'ink');
+    a.line([[150,190],[157,204],[155,223]],'night',3);a.line([[229,191],[224,208],[227,223]],'night',3);
+    for(const p of [[[122,121],[119,146],[127,167]],[[260,121],[264,146],[253,169]]])tube(a,p,2,'dark');
   }
   if(ROUND>=4){
-    // Claw knuckles and dark segmented undersides, with top-left glints only.
-    for(const [x,y]of[[36,220],[126,217],[55,245]]){
-      clipped(a,b=>{b.rect(x,y,6,3,'ink');b.rect(x-1,y-2,5,1,'warm');},['red','warm']);
-    }
-    a.line([[65,212],[70,208],[80,208]],'warm',1);
-    a.line([[89,247],[96,243],[101,236]],'ink',2);
+    // Top-left rack glints remain subordinate to the empty display and arms.
+    for(const [x,y,w]of[[47,40,22],[49,54,19],[49,69,18],[88,21,15],[91,34,13],[326,43,20],[329,58,18]]){a.rect(x,y,w,1,'mid');a.rect(x,y+2,Math.floor(w*.6),1,'dark');}
+    for(const [x,y]of[[99,42],[271,39]]){a.rect(x-1,y,3,1,'red');a.rect(x,y-1,1,3,'red');}
+    // Dark loose conduits emerging below the lowest ribs, with black oil seams.
+    for(const p of [[[173,179],[169,193],[174,207],[172,223]],[[215,180],[221,195],[219,214],[224,223]]])tube(a,p,1,'dark');
+    a.poly([[240,181],[244,184],[243,194],[246,200],[242,203]],'ink');
   }
-  return a;
-}
-function blade(lit=false){const a=new Raster(144,288);
-  // Author chunky 2px clusters. The broad shoulder continues beyond the top edge.
-  a.poly([[17,0],[117,0],[130,29],[125,58],[112,78],[47,76],[23,51]],'ink');
-  a.poly([[21,0],[113,0],[125,29],[120,56],[108,72],[49,70],[28,49]],'brass');
-  a.poly([[27,0],[108,0],[118,30],[114,53],[103,65],[52,63],[34,45]],'red');
-  a.poly([[92,0],[108,0],[118,30],[114,53],[103,65],[88,59],[96,37]],'dark');
-  a.poly([[29,0],[41,0],[43,25],[52,44],[48,54],[38,40]],'warm');
-  a.line([[24,0],[27,29],[34,45]],'silver',2);
-  // Dujeong-gap construction: a broad riveted sleeve with rectangular stitched bays.
-  for(const p of [[[47,0],[49,21],[56,46],[64,64]],[[73,0],[74,25],[82,48],[86,62]],[[29,22],[61,25],[91,25],[116,32]],[[36,43],[64,47],[90,49],[113,52]]])a.line(p,'ink',2);
-  for(const [x,y]of[[35,10],[55,10],[80,12],[103,15],[43,32],[64,35],[87,36],[104,41],[55,53],[76,56],[96,56]])stud(a,x,y);
-  a.line([[49,69],[69,77],[106,78],[119,67]],'ink',7);
-  a.line([[49,69],[69,74],[106,74],[119,64]],'brass',3);
-  // Short, thick elbow with a dark flexible tendon, no stacked shoulder lamellae.
-  a.poly([[49,74],[107,76],[125,87],[119,110],[57,113],[42,92]],'ink');
-  a.poly([[55,78],[105,81],[117,89],[112,105],[61,106],[48,92]],'dark');
-  a.line([[55,83],[75,90],[104,89]],'mid',5);
-  a.line([[57,97],[79,103],[107,99]],'steel',3);
-  a.ellipse(112,93,14,16,'ink');a.ellipse(110,91,11,13,'brass');
-  a.ellipse(110,91,7,9,'dark');a.line([[105,86],[110,83]],'silver',2);
-  // Huge boxy forearm; flat gold edging, crimson armor and a shadowed right face.
-  a.poly([[56,91],[98,88],[127,100],[142,123],[135,146],[112,160],[52,151],[35,130],[37,108]],'ink');
-  a.poly([[57,96],[97,93],[123,104],[136,124],[130,142],[111,154],[55,146],[41,128],[43,110]],'brass');
-  a.poly([[59,102],[95,99],[118,109],[129,125],[124,139],[108,147],[59,140],[48,125],[50,112]],'red');
-  a.poly([[106,106],[118,109],[129,125],[124,139],[108,147],[94,140],[104,125]],'dark');
-  a.poly([[59,104],[70,102],[69,115],[76,132],[65,136],[55,124]],'warm');
-  a.line([[45,111],[58,99],[87,97]],'silver',2);
-  a.line([[78,102],[76,119],[86,141]],'ink',2);
-  a.line([[51,120],[76,123],[103,127],[123,127]],'ink',2);
-  for(const [x,y]of[[56,111],[82,109],[105,115],[60,130],[86,133],[111,135]])stud(a,x,y);
-  // Black oil pools in the right seam; a small cyan leak stays distinct from red armor.
-  a.poly([[121,111],[127,119],[124,129],[127,135],[118,143],[113,137],[118,128],[116,118]],'ink');
-  a.line([[121,119],[120,125],[123,130]],'coolant',3);a.rect(120,130,2,4,'cyan');
-  a.poly([[94,25],[100,28],[99,36],[104,42],[98,49],[95,40]],'ink');
-  a.line([[97,29],[97,35]],'coolant',2);
-  // Sword handle is behind four curled finger plates; one thumb crosses their right edge.
-  a.rect(65,126,16,50,'ink');a.rect(68,128,10,45,'brass');
-  for(let y=129;y<172;y+=7)a.line([[68,y],[77,y+4]],'dark',3);
-  a.poly([[38,127],[56,121],[79,127],[98,136],[107,154],[97,170],[53,174],[29,158],[26,143]],'ink');
-  a.poly([[39,132],[55,126],[77,132],[93,140],[100,154],[93,165],[54,168],[35,155],[32,143]],'red');
-  a.poly([[87,140],[98,146],[100,154],[93,165],[76,168],[72,159]],'dark');
-  // Four fingers wrap across the grip, with broad knuckle planes and gold caps.
-  for(let i=0;i<4;i++){
-    const y=131+i*9;
-    a.poly([[36,y],[48,y-3],[67,y+2],[78,y+7],[75,y+14],[59,y+10],[43,y+9],[33,y+5]],'ink');
-    a.poly([[38,y+1],[48,y],[65,y+4],[73,y+8],[71,y+11],[58,y+7],[43,y+6],[37,y+4]],'red');
-    a.line([[38,y+1],[48,y],[59,y+3]],'warm',2);
-    a.rect(42,y+1,5,4,'brass');a.rect(42,y+1,3,1,'silver');
-    if(lit)a.line([[49,y+1],[65,y+5],[71,y+8]],'tell',2);
-  }
-  a.poly([[79,133],[88,132],[98,140],[94,149],[82,155],[73,149],[76,141]],'ink');
-  a.poly([[81,137],[87,136],[93,141],[89,146],[82,150],[78,147]],'brass');
-  a.poly([[82,139],[86,138],[90,141],[86,145],[82,146]],'red');
-  a.line([[35,156],[49,167],[68,171],[93,167]],'brass',3);
-  if(lit){a.line([[94,143],[97,153],[92,161]],'tell',2);a.line([[39,133],[47,131]],'white',1);}
-  a.rect(66,171,14,7,'ink');a.rect(69,172,8,5,'brass');
-  // Compact oval Korean-style sword guard; straight broad single cutting edge.
-  a.poly([[44,176],[51,172],[94,172],[101,177],[98,182],[46,182]],'ink');
-  a.poly([[46,176],[53,174],[93,174],[98,177],[96,180],[48,180]],'brass');
-  a.line([[49,175],[92,175]],'silver',2);
-  a.rect(54,182,37,7,'ink');a.rect(57,182,31,5,'brass');
-  a.poly([[53,188],[91,188],[91,267],[72,287],[53,268]],'ink');
-  a.poly([[56,189],[88,189],[88,266],[72,284],[56,267]],'steel');
-  a.poly([[56,189],[63,189],[63,264],[72,284],[56,267]],lit?'tell':'edge');
-  a.poly([[81,190],[88,190],[88,266],[72,284],[81,263]],'mid');
-  a.line([[85,191],[85,263],[74,278]],'silver',2);
-  a.line([[68,192],[68,261]],'dark',2);
-  a.line([[75,219],[79,215]],'ink',2);a.line([[73,251],[77,248]],'ink',2);
-  if(lit){a.line([[56,190],[56,266],[72,284]],'white',2);a.line([[60,191],[60,263]],'tell',3);}
-  a.px(72,287,'ink');
   return a.scale(2);
 }
-function hatch(){const a=new Raster(64,96);
-  a.poly([[17,0],[63,0],[63,95],[15,95],[3,83],[0,58],[0,29],[7,9]],'ink');
-  a.poly([[19,3],[60,3],[60,92],[17,92],[6,80],[3,57],[3,30],[10,12]],'dark');
-  for(let i=0;i<5;i++){const y=5+i*18;
-    a.poly([[17,y],[59,y+2],[61,y+12],[53,y+15],[17,y+10],[8,y+14],[6,y+8]],'mid','ink');
-    a.line([[12,y+3],[19,y+1],[56,y+5]],'steel',2);a.line([[15,y+7],[53,y+11]],'tile',2);
-  }
-  a.rect(57,2,6,92,'ink');a.rect(58,3,3,88,'tile');
-  for(const y of [15,43,71]){a.rect(0,y,9,10,'ink');a.rect(1,y+1,7,7,'tile');a.rect(1,y+1,2,5,'steel');}
-  a.line([[26,26],[29,36],[25,44],[27,52]],'ink',4);a.line([[28,37],[28,44]],'coolant',2);
-  if(ROUND>=4){
-    for(const [x,y]of[[21,13],[36,49],[19,77]]){
-      a.rect(x,y,5,2,'ink');a.rect(x-1,y-2,3,1,'steel');
+function bug(lit=false){
+  const outline=[[210,114],[218,113],[216,129],[208,140],[234,145],[260,155],[251,175],[240,188],[243,207],[231,228],[218,246],[224,263],[219,291],[207,305],[198,300],[199,279],[192,267],[179,281],[178,308],[166,327],[174,347],[163,367],[145,380],[103,380],[75,365],[59,343],[44,326],[43,306],[50,288],[47,270],[54,249],[70,229],[83,212],[100,208],[116,191],[139,176],[150,156],[164,151],[179,137],[195,136],[203,122]];
+  const a=new Raster(100,160);a.blit(extract([40,112,224,270],100,122,outline,ROUND>=2?['ink','night','dark','red','warm']:['ink','night','dark','mid','red','warm']),0,0);
+  if(ROUND>=2){a.poly([[0,36],[31,34],[38,46],[28,57],[19,65],[0,62]],null);}
+  if(ROUND>=4)a.poly([[0,50],[25,52],[22,65],[14,74],[15,90],[0,95]],null);
+  const legs=[[[65,42],[74,46],[76,59],[71,69]],[[57,49],[62,59],[61,71],[54,80]],[[48,57],[51,71],[43,82]],[[38,71],[36,85],[29,91]],[[28,82],[21,75],[19,65]],[[20,92],[12,87],[8,78]],[[50,91],[58,100],[56,113]]];
+  for(const p of legs){tube(a,p,3,'red');a.line(p.map(([x,y])=>[x-1,y-1]),'warm',1);}
+  a.poly([[25,119],[38,111],[54,113],[65,124],[73,143],[65,155],[55,159],[45,159],[32,153],[23,141]],'ink');
+  a.poly([[28,121],[39,115],[52,117],[62,126],[68,142],[61,153],[53,159],[46,159],[34,149],[27,139]],'red');
+  a.poly([[52,120],[62,129],[67,142],[60,153],[53,158],[47,157],[52,145],[50,132]],'dark');
+  const claws=[[[31,127],[20,123],[15,110],[20,97],[29,94],[24,103],[25,112],[38,116]],[[28,141],[14,137],[7,127],[5,115],[10,108],[12,120],[19,125],[33,129]],[[62,123],[73,112],[82,114],[93,125],[94,140],[88,146],[88,133],[80,126],[68,134]],[[64,142],[77,140],[82,148],[80,157],[74,153],[70,150],[61,152]]];
+  for(const p of claws){a.poly(p,'red','ink');a.line(p.slice(0,4).map(([x,y])=>[x,y-1]),'warm',1);}
+  a.poly([[38,125],[48,121],[57,128],[60,141],[54,151],[43,152],[34,143],[33,133]],'ink');a.line([[36,131],[40,126],[47,124],[54,129]],'warm',2);
+  a.poly([[40,132],[49,128],[55,134],[54,145],[45,149],[38,143]],lit?'tell':'night');
+  for(const p of [[[39,133],[43,137]],[[50,130],[48,137]],[[55,140],[49,141]],[[45,148],[45,143]]])a.line(p,lit?'warm':'mid',2);
+  if(lit){a.line([[41,133],[44,132],[47,133]],'white',1);a.rect(44,136,4,6,'tell');}
+  if(ROUND>=2){for(const [x,y]of[[74,25],[40,70],[29,101]]){a.line([[x-8,y+1],[x-4,y-6],[x+3,y-8]],'warm',2);a.poly([[x+4,y-3],[x+8,y],[x+7,y+6],[x+2,y+8],[x,y+4]],'ink');a.line([[x-7,y+11],[x-1,y+15],[x+5,y+12]],'dark',2);}a.line([[48,101],[43,107],[45,116]],'ink',3);a.line([[44,108],[45,113]],'coolant',1);}
+  if(ROUND>=3){a.poly([[23,107],[35,104],[43,110],[44,119],[38,126],[30,124],[25,116]],'red','ink');a.line([[26,110],[33,107],[38,111]],'warm',2);a.line([[33,114],[36,121],[42,121]],'dark',3);a.line([[18,127],[22,131],[27,132]],'dark',2);a.line([[76,119],[81,120],[85,125]],'warm',2);}
+  if(ROUND>=2){
+    // Reuse the concept's hooked claw silhouette, inverted to cup the low palm.
+    // Fingers curl upward; the palm/base stays exactly on the bottom anchor.
+    a.rect(0,ROUND>=3?104:116,100,ROUND>=3?56:44,null);
+    const hand=extract([60,343,139,130],94,64,[[95,343],[128,346],[140,357],[154,359],[173,372],[188,385],[196,405],[194,426],[186,433],[180,434],[180,418],[178,407],[168,398],[153,397],[141,408],[125,414],[134,427],[149,439],[157,442],[153,447],[137,446],[118,435],[105,422],[99,415],[98,429],[110,441],[117,452],[111,457],[99,452],[93,448],[95,458],[108,462],[122,467],[115,472],[97,469],[83,462],[80,448],[69,441],[64,425],[64,410],[69,391],[66,385],[72,371],[83,364],[85,351]],['ink','night','dark','red','warm']);
+    for(let y=0;y<64;y++)for(let x=0;x<94;x++){const i=((63-y)*94+x)*4;if(hand.d[i+3])a.px(x+3,y+96,[...hand.d.subarray(i,i+4)]);}
+    a.poly([[34,140],[46,136],[59,140],[63,150],[59,159],[40,159],[32,151]],'red','ink');
+    a.poly([[39,143],[48,140],[56,143],[59,150],[54,156],[42,156],[36,150]],lit?'tell':'ink');
+    a.line([[39,144],[43,141],[49,141]],lit?'white':'warm',1);
+    a.line([[39,147],[44,149]],lit?'warm':'mid',2);a.line([[53,144],[50,149]],lit?'warm':'mid',2);a.line([[52,154],[48,151]],lit?'warm':'mid',2);
+    if(lit)a.rect(44,145,5,7,'tell');
+    if(ROUND>=3){
+      tube(a,[[28,101],[24,111],[27,123],[36,135]],5,'red');
+      a.line([[26,106],[24,113],[28,121]],'warm',1);
+      a.line([[70,128],[78,124],[84,120]],'warm',1);
     }
-    for(const y of [10,45,80]){a.rect(59,y,3,3,'ink');a.px(59,y,'silver');}
   }
-  return a;
+  a.rect(49,158,3,2,'red');return a.scale(2);
 }
-function core(){const a=new Raster(48,48);
-  a.poly([[12,1],[35,1],[46,12],[46,35],[35,46],[12,46],[1,35],[1,12]],'ink');
-  a.poly([[13,4],[34,4],[43,13],[43,34],[34,43],[13,43],[4,34],[4,13]],'mid');
-  a.line([[5,14],[14,5],[32,5]],'steel',2);
-  a.poly([[17,8],[31,8],[39,17],[39,31],[31,39],[17,39],[8,31],[8,17]],'brass','ink');
-  a.poly([[18,12],[29,12],[35,18],[35,29],[29,35],[18,35],[12,29],[12,18]],'yellow');
-  a.rect(18,16,12,17,'ink');a.rect(20,17,8,13,'brass');a.rect(21,18,5,9,'yellow');a.rect(21,18,3,3,'white');
-  for(const [x,y]of[[20,3],[40,20],[20,40],[3,20]])a.rect(x,y,5,5,'ink');
+function blade(lit=false){
+  const a=new Raster(144,288);
+  a.blit(extract([514,125,180,174],118,88,[[516,140],[525,128],[540,144],[557,146],[588,144],[612,157],[627,183],[636,207],[650,209],[654,218],[644,229],[653,244],[668,256],[680,280],[664,296],[623,286],[592,264],[570,254],[560,232],[536,218],[525,180]],['ink','night','dark','red','warm','brass','steel']),4,0);
+  a.blit(extract([591,277,125,137],92,95,[[600,285],[619,294],[639,292],[650,280],[668,278],[685,290],[697,314],[707,339],[713,365],[705,388],[687,412],[660,402],[646,379],[618,365],[614,338],[597,320]],['ink','night','dark','red','warm','brass','steel']),44,77);
+  a.blit(extract([595,367,108,111],72,64,[[602,391],[612,381],[635,378],[649,369],[668,373],[685,390],[693,415],[682,441],[672,457],[678,468],[667,477],[654,471],[650,458],[625,455],[609,444],[598,425],[597,409]],['ink','night','dark','red','warm','brass','steel']),36,126);
+  for(const p of [[[12,9],[21,40],[36,52],[57,58],[81,54]],[[64,84],[58,99],[62,117],[75,128]],[[92,79],[105,78],[116,91],[122,112],[125,131]],[[76,133],[87,139],[94,153],[95,170]]]){a.line(p,'ink',4);a.line(p,'brass',2);}
+  for(const p of [[[24,19],[31,30],[34,41]],[[40,17],[47,29],[53,43]],[[57,22],[65,35],[68,45]],[[85,94],[94,104],[96,117]],[[101,92],[111,103],[114,115]]])a.line(p,'ink',1);
+  for(const [x,y]of[[23,19],[38,18],[54,21],[33,35],[48,36],[65,39],[85,94],[104,94],[91,113],[110,113]]){a.rect(x,y,3,3,'ink');a.rect(x,y,2,2,'brass');a.px(x,y,'steel');}
+  a.poly([[113,106],[119,113],[117,124],[121,132],[116,140],[111,130]],'ink');a.line([[115,115],[114,122],[117,129]],'coolant',2);a.px(115,118,'cyan');
+  a.rect(67,143,10,40,'ink');a.rect(69,145,6,36,'brass');for(let y=147;y<180;y+=5)a.line([[69,y],[74,y+2]],'dark',2);
+  for(let i=0;i<4;i++){const x=48+i*9,y=155+i*2;a.poly([[x,y],[x+5,y-3],[x+11,y],[x+12,y+11],[x+7,y+17],[x,y+12]],'ink');a.poly([[x+2,y+1],[x+5,y],[x+8,y+2],[x+9,y+10],[x+5,y+13],[x+2,y+10]],'red');a.rect(x+2,y+1,5,3,'brass');a.rect(x+2,y,3,1,'steel');}
+  a.poly([[79,146],[86,145],[93,151],[92,160],[86,166],[79,160],[75,154]],'ink');a.poly([[81,149],[86,148],[90,153],[89,159],[85,162],[80,157]],'red');a.line([[81,149],[86,148],[89,152]],'brass',2);
+  a.poly([[52,179],[57,176],[85,176],[91,179],[89,184],[54,184]],'ink');a.poly([[54,179],[58,178],[84,178],[88,180],[86,182],[55,182]],'brass');a.line([[56,179],[84,179]],'steel',1);
+  a.rect(63,183,19,5,'ink');a.rect(65,183,15,4,'brass');
+  a.poly([[62,187],[83,187],[83,270],[72,287],[62,276]],'ink');a.poly([[64,188],[81,188],[81,270],[72,285],[64,275]],'steel');
+  a.poly([[64,188],[68,188],[68,273],[72,285],[64,275]],lit?'cyan':'edge');a.poly([[77,189],[81,189],[81,270],[72,285],[77,268]],'mid');a.line([[75,190],[75,265]],'tile',1);
+  if(lit){a.line([[64,189],[64,275],[72,285]],'white',1);a.line([[67,189],[67,273]],'cyan',1);}
+  if(ROUND>=2){
+    a.poly([[37,7],[55,9],[66,20],[61,25],[48,17],[40,19]],'red');a.line([[34,8],[42,10],[46,14]],'warm',2);
+    a.poly([[53,61],[68,63],[80,73],[99,70],[106,81],[99,94],[83,99],[66,88],[58,74]],'ink');
+    a.poly([[56,64],[67,66],[79,77],[98,74],[101,81],[95,90],[84,94],[69,85],[62,73]],'red');
+    a.poly([[87,77],[98,74],[101,81],[95,90],[84,94],[81,87]],'dark');
+    a.line([[57,66],[68,70],[76,80]],'warm',2);a.line([[64,57],[70,65],[84,68],[96,62]],'brass',2);
+    a.line([[64,63],[73,71],[87,73],[99,67]],'ink',3);a.line([[66,64],[74,70],[88,71]],'mid',1);
+    for(const [x,y]of[[69,74],[82,83],[94,80]]){a.rect(x,y,3,3,'ink');a.rect(x,y,2,1,'brass');}
+  }
+  if(ROUND>=3){a.poly([[52,28],[55,31],[54,37],[58,42],[55,45],[50,39]],'ink');a.line([[70,95],[73,106],[78,113]],'warm',2);for(const [x,y]of[[32,48],[96,81],[118,117]]){a.rect(x,y,3,2,'ink');a.px(x-1,y-1,'brass');}a.line([[67,202],[67,211]],lit?'white':'silver',1);a.line([[78,244],[80,242]],'ink',1);}
   if(ROUND>=4){
-    a.rect(14,14,20,21,'yellow');
-    // Three actual muzzle bores replace the accidental numeral-shaped center.
-    for(const [x,y]of[[17,18],[27,18],[22,28]]){
-      a.rect(x-1,y-1,7,7,'brass');a.rect(x,y,5,5,'ink');a.rect(x+1,y+1,3,3,'dark');a.px(x,y,'white');
-    }
-    a.line([[12,29],[16,34],[20,36]],'brass',2);
-    for(const [x,y]of[[8,14],[34,32]]){a.rect(x,y,5,3,'ink');a.rect(x,y,3,1,'steel');}
-    a.rect(19,6,9,3,'yellow');a.rect(6,20,3,8,'brass');a.rect(39,20,3,8,'brass');
+    // Remove the source's last crimson drip beside the new blade collar.
+    for(let y=183;y<195;y++)for(let x=0;x<144;x++){const i=(y*144+x)*4,k='#'+a.d.subarray(i,i+3).toString('hex');if(a.d[i+3]&&(k===P.red||k===P.warm))a.px(x,y,'ink');}
   }
-  if(ROUND>=5){
-    // A single horizontal barrel bank avoids the three-bore accidental face.
-    a.rect(13,14,23,21,'yellow');a.rect(11,19,27,13,'brass');
-    a.rect(12,20,25,10,'ink');a.rect(12,19,25,1,'white');
-    for(const x of [14,20,26,32]){a.rect(x,22,3,6,'dark');a.rect(x,21,3,1,'steel');}
-    a.rect(17,33,14,2,'brass');a.rect(18,12,11,3,'yellow');
+  a.px(72,287,'ink');return a.scale(2);
+}
+function hatch(){const a=new Raster(32,48);a.poly([[11,0],[31,0],[31,47],[10,47],[3,40],[0,26],[1,12],[5,4]],'ink');a.poly([[10,2],[29,2],[29,45],[12,45],[5,39],[2,25],[3,13],[7,6]],'night');
+  for(let i=0;i<4;i++){const y=3+i*12,p=[[30,y+1],[23,y+4],[13,y+4],[6,y],[3,y+4],[5,y+9],[13,y+12],[24,y+12],[30,y+9]];tube(a,p,3,'mid');a.line(p.slice(0,5).map(([x,y])=>[x,y-1]),'tile',1);if(ROUND>=3)a.line([[7,y+4],[12,y+7],[23,y+8]],'dark',1);}
+  a.rect(29,1,3,46,'ink');a.rect(29,2,1,43,'tile');for(const y of [5,22,39]){a.rect(0,y,4,5,'ink');a.rect(1,y,2,4,'mid');a.px(1,y,'tile');}return a.scale(2);
+}
+function hero(){const a=decode(path.resolve(OUT,'../../../../../Assets/Resources/DraftSprites/hero_idle_4f.png')).crop(0,0,64,64);for(let i=0;i<a.d.length;i+=4){const c=a.d[i+3]>=128?rgba('edge'):[0,0,0,0];for(let k=0;k<4;k++)a.d[i+k]=c[k];}return a;}
+function resize(a,w,h){const b=new Raster(w,h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const p=(Math.floor(y*a.h/h)*a.w+Math.floor(x*a.w/w))*4;b.px(x,y,[...a.d.subarray(p,p+4)]);}return b;}
+const POS=ROUND>=4?{body:[96,8],bug:[151,146],blade:[603,0],core:[456,262],hatch:[416,238]}:ROUND>=2?{body:[96,112],bug:[151,250],blade:[603,104],core:[456,366],hatch:[416,342]}:{body:[96,8],bug:[151,139],blade:[603,40],core:[456,262],hatch:[416,238]};
+function preview(parts,active=false,full=false,arena=false){
+  const a=new Raster(960,arena?540:ROUND>=4?640:ROUND>=2?744:(full?688:540),'#0b0a14');
+  for(const [x,y,w]of[[0,301,57],[62,340,35],[854,278,59],[920,318,40]]){a.rect(x,y,w,170,'night');a.rect(x+8,y+17,6,11,'dark');}
+  if(ROUND>=2){
+    // Muted distant skyline reveals the creature silhouette in the dark arena.
+    const off=ROUND>=4?-104:0;
+    for(const [x,y,w,h]of[[0,440,60,240],[68,484,39,198],[111,465,40,217],[802,458,52,224],[863,416,44,266],[918,461,42,221]]){a.rect(x,y+off,w,h,'dark');a.rect(x+5,y+off+17,3,13,'mid');a.rect(x+20,y+off+49,3,9,'mid');}
+    for(const x of [210,760])a.line([[x,450],[x+6,580],[x+30,680]],'night',8);
   }
-  return a;
+  a.blit(parts.boss_body,...POS.body);a.blit(parts.boss_hatch_core,...POS.core);a.blit(parts.boss_hatch_half,POS.hatch[0]-(active?36:0),POS.hatch[1]);a.blit(parts.boss_hatch_half,POS.hatch[0]+64+(active?36:0),POS.hatch[1],true);
+  a.blit(parts[active?'boss_bug_arm_lit':'boss_bug_arm'],...POS.bug);
+  const sword=parts[active?'boss_blade_arm_lit':'boss_blade_arm'];a.blit(ROUND>=2||full?sword:resize(sword,216,432),POS.blade[0],arena?-62:POS.blade[1]);
+  const floor=arena?516:ROUND>=4?578:ROUND>=2?682:(full?626:478);a.rect(0,floor,960,7,'ink');a.rect(0,floor+1,960,2,'steel');a.rect(0,floor+7,960,18,'dark');
+  for(let x=0;x<960;x+=48){a.rect(x,floor+7,2,18,'ink');a.rect(x+5,floor+8,37,2,'tile');}a.rect(0,floor+25,960,6,'ink');a.blit(hero(),449,floor-63);return a;
 }
-function hero(){const ref=decode(path.resolve(OUT,'../../../../../Assets/Resources/DraftSprites/hero_idle_4f.png')).crop(0,0,64,64);for(let i=0;i<ref.d.length;i+=4){const alpha=ref.d[i+3];const c=alpha>=128?rgba('edge'):[0,0,0,0];for(let k=0;k<4;k++)ref.d[i+k]=c[k];}return ref;}
-function preview(parts,active=false){const a=new Raster(960,540,'#0b0a14');
-  // Sparse arena architecture; all boss parts remain at 1x native pixel density.
-  for(const [x,y,w]of[[0,295,68],[74,341,33],[854,278,59],[920,318,40]]){a.rect(x,y,w,205,'night');a.rect(x+8,y+17,6,11,'dark');a.rect(x+w-17,y+42,6,12,'dark');}
-  a.blit(parts.boss_body,96,14);
-  a.blit(parts.boss_hatch_core,456,268);
-  a.blit(parts.boss_hatch_half,416-(active?35:0),244);
-  a.blit(parts.boss_hatch_half,480+(active?35:0),244,true);
-  a.blit(parts[active?'boss_bug_arm_lit':'boss_bug_arm'],141,128);
-  a.blit(parts[active?'boss_blade_arm_lit':'boss_blade_arm'],620,-112);
-  a.rect(0,466,960,7,'ink');a.rect(0,467,960,3,'steel');a.rect(0,473,960,16,'dark');
-  for(let x=0;x<960;x+=48){a.rect(x,473,2,15,'ink');a.rect(x+4,474,38,2,'tile');}
-  a.rect(0,489,960,5,'ink');a.rect(0,494,960,10,'night');
-  for(const x of [90,250,676,846]){a.poly([[x,497],[x+44,497],[x+37,539],[x+7,539]],'dark','ink');a.rect(x+8,500,4,40,'mid');}
-  for(const x of [128,727])tube(a,[[x,503],[x+24,521],[x+84,527],[x+112,503]],3,'mid');
-  a.blit(hero(),449,403);
-  return a;
+function compare(parts){
+  if(ROUND<3){const h=ROUND>=2?744:540,a=new Raster(1536,h+32,'#0b0a14');a.blit(source.crop(0,0,756,540),0,ROUND>=2?136:24);a.blit(preview(parts,false).crop(96,0,756,h),780,24);return a;}
+  // Both panes use native 1:1 pixels. No per-part resize, no clipped armor.
+  const a=new Raster(1944,ROUND>=4?672:776,'#0b0a14');a.blit(source.crop(0,0,756,572),96,ROUND>=4?24:136);a.blit(preview(parts,false),984,24);return a;
 }
-const parts={boss_body:body(),boss_bug_arm:bug(),boss_bug_arm_lit:bug(true),boss_blade_arm:blade(),boss_blade_arm_lit:blade(true),boss_hatch_half:hatch(),boss_hatch_core:core()};
-fs.mkdirSync(path.join(OUT,'review'),{recursive:true});
-for(const [name,a]of Object.entries(parts))a.save(name+'.png');
-preview(parts).save('preview_1x.png');preview(parts,true).scale(2).save('preview_2x.png');
-preview(parts,true).save('review/round_'+ROUND+'_1x.png');
-const sheet=new Raster(1136,608,'#0b0a14');sheet.blit(parts.boss_bug_arm,8,16);sheet.blit(parts.boss_bug_arm_lit,216,16);sheet.blit(parts.boss_blade_arm,432,16);sheet.blit(parts.boss_blade_arm_lit,728,16);sheet.blit(parts.boss_hatch_half,1040,20);sheet.blit(parts.boss_hatch_core,1048,145);sheet.save('parts_1x.png');
-parts.boss_bug_arm_lit.scale(4).save('review/bug_4x.png');parts.boss_blade_arm_lit.scale(4).save('review/blade_4x.png');parts.boss_hatch_half.scale(4).save('review/hatch_4x.png');parts.boss_body.crop(268,178,232,198).scale(4).save('review/chest_4x.png');
-const metrics={round:ROUND,parts:{},palette:[],preview:{size:[1920,1080],background:'#0B0A14',nativeArena:[960,540],nearestNeighbour:2}};
-const all=new Set();
-for(const [name,a]of Object.entries(parts)){const colors=new Set(),alpha=new Set();let n=0,luma=0;for(let i=0;i<a.d.length;i+=4){alpha.add(a.d[i+3]);if(a.d[i+3]){const hex='#'+a.d.subarray(i,i+3).toString('hex');colors.add(hex);all.add(hex);n++;luma+=(.2126*a.d[i]+.7152*a.d[i+1]+.0722*a.d[i+2])/255;}}
-  metrics.parts[name]={size:[a.w,a.h],opaqueColors:colors.size,alpha:[...alpha].sort((a,b)=>a-b),opaquePixels:n,meanLuma:Number((luma/n).toFixed(4)),palette:[...colors].sort()};
-  if(colors.size>16||[...alpha].some(x=>x!==0&&x!==255))throw Error('Palette/alpha constraint failed');
-  if(!decode(path.join(OUT,name+'.png')).d.equals(a.d))throw Error('PNG roundtrip failed');
+const parts={boss_body:body(),boss_bug_arm:bug(),boss_bug_arm_lit:bug(true),boss_blade_arm:blade(),boss_blade_arm_lit:blade(true),boss_hatch_half:hatch(),boss_hatch_core:decode(path.join(OUT,'v1/boss_hatch_core.png'))};
+fs.mkdirSync(path.join(OUT,'review_v2'),{recursive:true});for(const [n,a]of Object.entries(parts))a.save(n+'.png');
+preview(parts).save('preview_1x.png');preview(parts,true).scale(2).save('preview_2x.png');preview(parts,true,true).save('preview_full_1x.png');preview(parts,true).save('review_v2/round_'+ROUND+'_1x.png');compare(parts).save('compare_concept.png');compare(parts).save('review_v2/round_'+ROUND+'_compare.png');
+if(ROUND>=4)preview(parts,true,false,true).save('review_v2/arena_960x540.png');
+const sheet=new Raster(1136,608,'#0b0a14');for(const [n,x,y]of[['boss_bug_arm',8,16],['boss_bug_arm_lit',216,16],['boss_blade_arm',432,16],['boss_blade_arm_lit',728,16],['boss_hatch_half',1040,20],['boss_hatch_core',1048,145]])sheet.blit(parts[n],x,y);sheet.save('parts_1x.png');
+parts.boss_body.crop(260,180,248,210).scale(4).save('review_v2/chest_4x.png');for(const [n,f]of[['boss_bug_arm_lit','bug'],['boss_blade_arm_lit','blade'],['boss_hatch_half','hatch']])parts[n].scale(4).save('review_v2/'+f+'_4x.png');
+const union=new Set(),metrics={round:ROUND,parts:{},checks:{}};
+for(const [n,a]of Object.entries(parts)){const c=new Set(),alpha=new Set();for(let i=0;i<a.d.length;i+=4){alpha.add(a.d[i+3]);if(a.d[i+3]){const k='#'+a.d.subarray(i,i+3).toString('hex');c.add(k);union.add(k);}}if(c.size>16||[...alpha].some(v=>v!==0&&v!==255))throw Error('Palette/alpha: '+n);if(!decode(path.join(OUT,n+'.png')).d.equals(a.d))throw Error('Roundtrip: '+n);metrics.parts[n]={size:[a.w,a.h],colors:c.size,alpha:[...alpha].sort(),palette:[...c].sort()};}
+for(const c of union)if(!Object.values(P).includes(c))throw Error('Unapproved palette');
+for(const n of ['boss_bug_arm','boss_blade_arm']){const a=parts[n],b=parts[n+'_lit'];for(let i=3;i<a.d.length;i+=4)if(a.d[i]!==b.d[i])throw Error('Lit silhouette');if(!a.d[((a.h-1)*a.w+a.w/2)*4+3])throw Error('Pivot');}
+for(let y=72;y<160;y++)for(let x=312;x<456;x++){const i=(y*768+x)*4;if(!parts.boss_body.d.subarray(i,i+4).equals(Buffer.from(rgba('ink'))))throw Error('Window');}
+for(let y=230;y<326;y++)for(let x=320;x<448;x++)if(parts.boss_body.d[(y*768+x)*4+3])throw Error('Hatch');
+if(!preview(parts,true).scale(2).d.equals(decode(path.join(OUT,'preview_2x.png')).d))throw Error('Preview2x');
+metrics.palette=[...union].sort();metrics.checks={hardAlpha:true,paletteMembership:true,combinedColors:union.size,roundTrip:true,litMaskEqual:true,bottomCenterArmPixels:true,emptyWindow144x88:true,hatchHole128x96:true,exact2xPreview:true};
+if(ROUND>=4){
+  const assembly=JSON.parse(fs.readFileSync(path.join(OUT,'v1/assembly.json'),'utf8'));
+  assembly.status='DRAFT v2 - concept underpainting, four visual review rounds; not imported';
+  assembly.parts['boss_blade_arm.png'].registration='Blade tip includes pixel 144,575; bottom-center pivot remains 144,576. Full armor silhouette now fits inside the canvas.';
+  assembly.bodyLocal.bugArmTopLeft=[55,138];assembly.bodyLocal.bladeArmTopLeft=[507,-8];
+  assembly.preview={nativeSize:[960,640],'preview_1x.png':'Idle arms, closed chest, uncropped native-size parts.','preview_2x.png':'1920x1280, exact 2x nearest-neighbour. Lit arms and open hatch are a review display, not gameplay timing.',arenaBackground:'#0B0A14',bodyTopLeft:POS.body,bugArmTopLeft:POS.bug,bladeArmTopLeft:POS.blade,leftHatchClosedTopLeft:POS.hatch,rightHatchClosedTopLeft:[480,238],hatchOpeningOffsetEachSide:36,coreTopLeft:POS.core,heroCanvasTopLeft:[449,515],heroCanvasSize:[64,64],heroVisibleHeight:59,bridgeTopY:578,drawOrder:['arena','body','core','hatch halves','arms','bridge','hero silhouette'],bladeArmFraming:'All 576 rows shown at native size. Larger proof canvas prevents clipping and fractional scaling.',gameViewportCheck:{file:'review_v2/arena_960x540.png',size:[960,540],bladeTopLeft:[603,-62],heroCanvasTopLeft:[449,453],bridgeTopY:516,note:'Native pixels. Top 62 rows of the huge upper arm extend above the viewport; tip ends y514.'}};
+  assembly.comparison={file:'compare_concept.png',size:[1944,672],left:'boss_concept_4.png crop [0,0,756,572] at [96,24]; attack explanation cards omitted',right:'Uncropped 960x640 idle assembly at [984,24]',scale:'Both source and assembly are 1 image pixel per output pixel, without resizing.',note:'Full native blade extends lower than the reference because it is down-pointing and retains requested 288x576 size.'};
+  assembly.sourceArt={path:'../boss_concept_4.png',method:'Masked area sampling to half-size authoring grid, 16-color semantic quantization, small-island cleanup, integer pixel redraw, exact 2x export',bodyCrop:[20,0,720,482],bugCrop:[40,112,224,270],clawCrop:[60,343,139,130],armorCrops:[[514,125,180,174],[591,277,125,137],[595,367,108,111]],face:'Removed before quantized body compositing; window is uniformly #080b14.'};
+  assembly.limitations=['Asset draft only; Unity imports, .meta pivots, animation and Play/WebGL tests remain unperformed.','PNG files do not embed Unity PPU or pivots. Apply the recorded values when integrating.','Final visual acceptance belongs to the user. The taller proof shows all native pixels; use the 960x540 check for viewport framing.'];
+  for(const [n,a]of Object.entries(parts)){const s=assembly.parts[n+'.png'];if(s.size[0]!==a.w||s.size[1]!==a.h)throw Error('Dimensions differ: '+n);}
+  const old=JSON.parse(fs.readFileSync(path.join(OUT,'v1/assembly.json'),'utf8'));
+  for(const n of Object.keys(assembly.parts))if(JSON.stringify(assembly.parts[n].pivotNormalized)!==JSON.stringify(old.parts[n].pivotNormalized))throw Error('Pivot changed');
+  // No crimson or burgundy pixels anywhere in the sword/collar zone.
+  for(const n of ['boss_blade_arm','boss_blade_arm_lit']){const a=parts[n];for(let y=374;y<a.h;y++)for(let x=0;x<a.w;x++){const i=(y*a.w+x)*4,k='#'+a.d.subarray(i,i+3).toString('hex');if(a.d[i+3]&&[P.red,P.warm,P.tell].includes(k))throw Error('Red blade stain');}}
+  if(union.size!==16)throw Error('Expected original shared 16 colors');
+  metrics.checks.sameSizesAndPivotsAsV1=true;metrics.checks.noRedOnBlade=true;metrics.checks.nativeProofWithoutPartScaling=true;
+  metrics.preview={native:[960,640],enlarged:[1920,1280],comparison:[1944,672],gameViewport:[960,540]};
+  fs.writeFileSync(path.join(OUT,'assembly.json'),JSON.stringify(assembly,null,2)+'\n');
 }
-metrics.palette=[...all].sort();
-if(all.size>16)throw Error('Combined sprite palette exceeds 16 colors');
-const assembly=JSON.parse(fs.readFileSync(path.join(OUT,'assembly.json'),'utf8'));
-for(const [name,a]of Object.entries(parts)){
-  const spec=assembly.parts[name+'.png'];
-  if(spec.size[0]!==a.w||spec.size[1]!==a.h)throw Error('Assembly size mismatch: '+name);
-}
-for(const name of ['boss_bug_arm','boss_bug_arm_lit','boss_blade_arm','boss_blade_arm_lit']){
-  const a=parts[name],pivot=assembly.parts[name+'.png'].pivotNormalized;
-  if(pivot[0]!==0.5||pivot[1]!==0||a.d[((a.h-1)*a.w+a.w/2)*4+3]!==255)throw Error('Bottom-center registration mismatch: '+name);
-}
-metrics.armScale={bladeToBugCanvasArea:288*576/(200*320),bladeToBugOpaqueArea:Number((metrics.parts.boss_blade_arm.opaquePixels/metrics.parts.boss_bug_arm.opaquePixels).toFixed(3)),bladeVisibleHeight:464,bladeTipPreviewBottomEdge:[764,464],bugPalmPreviewBottomEdge:[241,448]};
-for(const pair of [['boss_bug_arm','boss_bug_arm_lit'],['boss_blade_arm','boss_blade_arm_lit']]){const a=parts[pair[0]],b=parts[pair[1]];for(let i=3;i<a.d.length;i+=4)if(a.d[i]!==b.d[i])throw Error('Tell silhouette changed');}
-// Validate requested recess geometry and authored palette membership.
-for(let y=230;y<326;y++)for(let x=320;x<448;x++)if(parts.boss_body.d[(y*768+x)*4+3]!==0)throw Error('Chest aperture obstructed');
-for(let y=72;y<160;y++)for(let x=312;x<456;x++){const i=(y*768+x)*4;if(!parts.boss_body.d.subarray(i,i+4).equals(Buffer.from(rgba('ink'))))throw Error('Monitor not blank');}
-for(const c of all)if(!Object.values(P).includes(c))throw Error('Unapproved sprite color');
-const p1=preview(parts,true),p2=decode(path.join(OUT,'preview_2x.png'));
-for(let y=0;y<1080;y++)for(let x=0;x<1920;x++){const i=(y*1920+x)*4,j=(Math.floor(y/2)*960+Math.floor(x/2))*4;if(!p2.d.subarray(i,i+4).equals(p1.d.subarray(j,j+4)))throw Error('Nearest neighbour mismatch');}
-const hp=hero();let minY=64,maxY=0;for(let y=0;y<64;y++)for(let x=0;x<64;x++)if(hp.d[(y*64+x)*4+3]){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
-metrics.preview.hero={canvas:[64,64],visibleHeight:maxY-minY+1,source:'Assets/Resources/DraftSprites/hero_idle_4f.png, frame 0 alpha >=128, recolored as silhouette',topLeft:[449,403]};
-metrics.checks={rgbaPngRoundTrip:true,hardAlpha:true,allSpritesAtMost16Colors:true,total16Colors:all.size===16,baseAndLitSameAlpha:true,transparentHatch128x96:true,blankHologram144x88:true,nearestNeighbour2x:true};
-metrics.checks.assemblySizesMatch=true;metrics.checks.bottomCenterArmRegistration=true;
-fs.writeFileSync(path.join(OUT,'metrics.json'),JSON.stringify(metrics,null,2)+'\n');
-console.log(JSON.stringify({round:ROUND,parts:Object.fromEntries(Object.entries(metrics.parts).map(([k,v])=>[k,{size:v.size,colors:v.opaqueColors}])),unionColors:all.size},null,2));
+fs.writeFileSync(path.join(OUT,'metrics.json'),JSON.stringify(metrics,null,2)+'\n');console.log(JSON.stringify({round:ROUND,checks:metrics.checks},null,2));

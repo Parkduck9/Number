@@ -1,83 +1,97 @@
-FINAL BOSS PARTS - DRAFT, 2026-11-10
+FINAL BOSS PARTS - CONCEPT REVISION v2, 2026-11-10
 
-Created entirely by generate.cjs using Node.js built-ins. No paid service, image
-generation API, image editor, antialiasing, gradients, or downloaded artwork.
-All generated images are confined to this directory. No Git operations were used.
+Reference: ../boss_concept_4.png. This revision directly reuses the supplied
+concept pixels for the roofed shoulders, fused shells, claw and armored arm.
+The cute face and its halo are removed. The window is uniformly dark and empty.
+The body is a continuous dark hunch with roofed server shoulders, curved ribs,
+vein-like cables and dim red machine lights. The straight sword points down;
+its lit edge is cyan/white. Liquid marks are black oil or cyan coolant.
 
-DELIVERABLES (opaque RGB count; transparency excluded)
-boss_body.png            768 x 448    8 colors
-boss_bug_arm.png         200 x 320    7 colors
-boss_bug_arm_lit.png     200 x 320    9 colors
-boss_blade_arm.png       288 x 576   11 colors
-boss_blade_arm_lit.png   288 x 576   12 colors
-boss_hatch_half.png       64 x  96    7 colors
-boss_hatch_core.png       48 x  48    7 colors
-preview_2x.png          1920 x 1080   2x nearest-neighbor of a 960 x 540 arena
+FILES / UNCHANGED SPRITE DIMENSIONS AND UNITY PIVOTS
+boss_body.png           768x448    pivot 0,0
+boss_bug_arm.png        200x320    pivot 0.5,0 (lower central palm)
+boss_bug_arm_lit.png    200x320    pivot 0.5,0
+boss_blade_arm.png      288x576    pivot 0.5,0 (sword tip)
+boss_blade_arm_lit.png  288x576    pivot 0.5,0
+boss_hatch_half.png      64x96     pivot 0.5,0.5 (flip for right half)
+boss_hatch_core.png      48x48     pivot 0.5,0.5 (retained yellow gun bank)
 
-The seven parts share exactly 16 opaque colors from docs/design/PALETTE.md.
-Transparent pixels are RGBA 0,0,0,0. Every opaque alpha is 255.
-Preview background #0B0A14 is the user-requested additional preview-only color.
-Reserved bright red/yellow are limited to attack tells and the active gun core.
-The dim background body uses 8 colors; average encoded luma is 0.0928 (0-1).
-Upper-left material lighting is used; active parts add local emissive pixels.
+All seven parts share the EXACT original 16 opaque palette colors. Alpha is
+0 or 255, and all transparent pixels are zero RGBA. Six redrawn parts use
+an exact 2x grid; the retained 48x48 core keeps its previous native pixels.
+Base/lit alpha masks match. Non-emissive material highlights face upper left.
+Window rectangle: [312,72,144,88]. Transparent hatch: [320,230,128,96].
 
 PREVIEWS
-preview_2x.png shows both lit arms and open hatch so the core is visible.
-preview_1x.png shows idle arms and a closed hatch.
-parts_1x.png places all seven-part variants except the large body on one board.
-review/round_1_1x.png through round_6_1x.png preserve the review sequence.
-review/*_4x.png are enlarged checks of the arms, hatch, and chest region.
-The hero uses the first actual hero_idle_4f frame's alpha, thresholded at 128
-and recolored to a silhouette. Its 64x64 canvas has a 59-pixel visible height.
+preview_1x.png: 960x640 idle assembly, hatch closed; every part at native size.
+preview_2x.png: 1920x1280 exact 2x nearest-neighbour; both lit arms and open hatch
+               shown together for art review, not proposed attack timing.
+preview_full_1x.png: native active assembly (960x640).
+parts_1x.png: both arm variants, hatch half and core, fully uncropped.
+compare_concept.png: 1944x672, source concept on the left, new idle assembly on
+                    the right. BOTH use one source pixel per output pixel.
+                    Source crop [0,0,756,572] excludes the attack-card sidebar.
+                    The requested larger down-pointing blade extends lower
+                    than the concept's original upward-pointing sword.
+review_v2/arena_960x540.png: native-resolution viewport check. The top 62 rows of
+                    the huge blade arm continue above the viewport, while its
+                    tip ends at y514, above the bridge at y516. No resizing.
+review_v2/*_4x.png: chest, hatch, bug and blade detail checks.
 
-VISUAL REVIEW AND REFINEMENTS
-1. Generated and inspected assembled native-size image, parts board, and 4x
-   chest. Found repeated polygonal bug shells, shield-like arm, and empty lower
-   mass. Retained dark body and clearly separated interactive parts.
-2. Added shell ridges/empty cavities, segmented insect undersides, cloth seams,
-   oil/coolant, lower server salvage and draped hoses. Inspected 1x assembly and
-   4x arms. Needed more variety and a less shield-shaped shoulder.
-3. Added smaller overlapping husks, dark salvaged machine modules, broken collar
-   tiles and thin cables. Redrew shoulder as a broad studded sleeve with cloth
-   tabs. Inspected 1x, 2x assembly and 4x hatch. Core resembled a numeral zero.
-4. Added small tile chips, cable clamps, claw knuckles, hatch fasteners and guard
-   fittings. Reworked core into gun bores. Inspected 1x idle/active, 4x parts and
-   core. The three bores accidentally suggested a face, which was rejected.
-5. Replaced the core center with one horizontal four-barrel bank. Inspected
-   final native assembly and core. No facial layout or baked hologram glyphs.
+The proof canvas is taller than v1's 960x540 to show the full 576px arm without
+clipping its shoulder or shrinking its pixels. All sprite dimensions are
+unchanged. assembly.json records both proof and viewport positions.
+The preview hero is the actual 64x64 hero_idle_4f frame-0 alpha silhouette,
+thresholded to hard alpha; 59 pixels tall. Preview scenery is review-only.
 
-6. User requested much heavier arms. Redrew the blade arm at 288x576 with
-   broad crimson studded sleeve/forearm, a huge four-finger-and-thumb gauntlet,
-   a wide straight sword, black oil and cyan coolant. Edge and finger seams
-   glow in the lit variant. Bug geometry re-rasterized at 200x320. Blade opaque
-   area is 2.38x the bug arm (canvas area 2.59x). Shoulder continues above the
-   960x540 arena; visible blade arm spans 464 pixels, versus the 59px hero.
-   Inspected native idle, 2x active, full parts sheet and 4x detail views.
+FOUR LOOK / FIX ROUNDS (actual intermediate images in review_v2/)
+1. Extracted masked concept shoulders, shell arm and three armor segments;
+   rebuilt the empty window, ribs, claw, grip and down-pointing sword. Inspected
+   source comparison, native parts and 4x chest. Found residual source-arm
+   pixels on the body, a generic claw, overly dark material planes and an
+   unsuitable fractional-scale blade presentation.
+2. Removed residual source colors from the lower body, added broad deltoid
+   shadows and lower tendons, replaced the claw with an inverted concept-hand
+   cutout around the bottom palm, thickened the armored elbow. Changed the
+   proof to fully native arm pixels. Inspected comparison and parts board.
+   Found dark burgundy planes quantizing into blue, and comparison crop cutting
+   the outer armor. The source-hand silhouette was also too dark to read.
+3. Preserved the source burgundy color ramp before palette matching; restored
+   readable shell/cloth planes, cleaned the hand connection and lower ribs,
+   and removed the comparison crop. Inspected native assembly, parts and 4x
+   bug. Found a residual non-bug fragment at its left edge and unnecessary
+   empty space above the proof; needed a separate actual-size viewport check.
+4. Removed the stray bug fragment, refined roof/rack glints and lower cables,
+   removed the last crimson source drip beside the sword collar, and tightened
+   the proof to 960x640. Inspected comparison, active 2x assembly, 4x blade,
+   hatch and 960x540 viewport. Final tests pass (metrics.json).
 
-AUTOMATED CHECKS (all passed; see metrics.json)
-- Exact part dimensions and RGBA PNG decode/encode pixel identity.
-- Binary alpha; <=16 opaque colors per part; exactly 16 across the set.
-- Every sprite color belongs to the selected documented project palette.
-- Idle/lit variants have identical alpha masks and registration.
-- Body hatch rectangle (320,230,128,96) is completely transparent.
-- Hologram rectangle (312,72,144,88) is uniformly dark and empty.
-- Every pixel of preview_2x.png matches the corresponding native pixel exactly.
-- Existing hero visible silhouette height is 59 pixels.
+Review snapshots: round_1_1x.png through round_4_1x.png and each matching
+round_N_compare.png. Early rounds preserve their experimental canvas sizes;
+only round 4 is the delivered composition. The copied v1/review/ is separate.
 
-REPRODUCE
-From the project root:
+REPRODUCE / VALIDATE
   node docs/design/concept/boss/parts_draft/generate.cjs
-The default is round 6. Historical review PNGs remain available; numeric
-arguments only select legacy detail layers and no longer restore old arm sizes.
-Run without an argument to reproduce the current approved-scope draft.
-Node built-ins only; no package install required.
+Default round: 4. Node.js built-ins only. raster.cjs contains the previous
+integer rasterizer and RGBA PNG codec. All source images are local.
+Numeric rounds 1-4 recreate the recorded revision layers, with outputs written
+to this directory. Run the default again after inspecting an earlier round.
 
-HANDOFF / LIMITATIONS
-assembly.json records normalized Unity pivots, 32 PPU, body-local rectangles,
-assembly positions, and optional import settings. PNG files cannot themselves
-apply Unity pivots; .meta settings and game integration remain unperformed.
-The bug anchor is the lower central edge of the palm, as requested. The sword
-anchor is directly below its bottommost tip pixel. Hatch right half is a flip.
-No Unity editor, Play mode or WebGL integration was tested. No .cs, scenes,
-prefabs or Assets files were changed. Root CREDITS.md records the AI-created
-boss draft; local CREDITS.txt contains the detailed provenance. Final style approval remains with the art owner.
+Checks run by the generator:
+- RGBA PNG encode/decode pixel identity; alpha only 0/255.
+- Original shared 16-color palette; every part <=16 colors.
+- Exact sprite sizes and unchanged normalized pivots against v1/assembly.json.
+- Same base/lit alpha masks; visible palm/tip at bottom-center registration.
+- Blank 144x88 window; transparent 128x96 hatch hole.
+- No red, burgundy or bright red pixels in the blade/collar region.
+- preview_2x is pixel-identical to an exact integer enlargement.
+- Full proof uses native sprite sizes without scaling any individual part.
+
+PRESERVATION / HANDOFF
+v1/ is the complete previous directory snapshot, including original PNGs,
+generator, assembly, metrics, notes and review images. It is not overwritten.
+No git operations, .cs, .unity, .prefab, Assets files or Unity imports were used.
+Root CREDITS.md and local CREDITS.txt disclose source-pixel reuse and AI editing.
+PNG does not embed Unity PPU/pivots: use assembly.json when integrating.
+No Unity Play/WebGL or attack-motion test has been performed. Visual acceptance
+remains with the user; these are reviewable draft assets, not game integration.

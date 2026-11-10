@@ -1,5 +1,5 @@
 {
-  "status": "DRAFT - review before importing into Assets",
+  "status": "DRAFT v2 - concept underpainting, four visual review rounds; not imported",
   "pixelsPerUnit": 32,
   "filter": "Point",
   "mipmaps": false,
@@ -62,7 +62,7 @@
         9,
         18
       ],
-      "registration": "Blade tip includes pixel 144,575, directly above bottom-center image edge 144,576. Shoulder is intentionally open at top edge and continues into the body."
+      "registration": "Blade tip includes pixel 144,575; bottom-center pivot remains 144,576. Full armor silhouette now fits inside the canvas."
     },
     "boss_blade_arm_lit.png": {
       "size": [
@@ -130,12 +130,12 @@
       170
     ],
     "bugArmTopLeft": [
-      45,
-      114
+      55,
+      138
     ],
     "bladeArmTopLeft": [
-      524,
-      -126
+      507,
+      -8
     ],
     "hatchLeftClosedTopLeft": [
       320,
@@ -153,46 +153,46 @@
   "preview": {
     "nativeSize": [
       960,
-      540
+      640
     ],
-    "preview_1x.png": "Closed hatch, idle arm variants",
-    "preview_2x.png": "1920x1080 nearest-neighbor enlargement. Both tells and open hatch shown together to review all active parts; not a gameplay timing proposal.",
+    "preview_1x.png": "Idle arms, closed chest, uncropped native-size parts.",
+    "preview_2x.png": "1920x1280, exact 2x nearest-neighbour. Lit arms and open hatch are a review display, not gameplay timing.",
     "arenaBackground": "#0B0A14",
     "bodyTopLeft": [
       96,
-      14
+      8
     ],
     "bugArmTopLeft": [
-      141,
-      128
+      151,
+      146
     ],
     "bladeArmTopLeft": [
-      620,
-      -112
+      603,
+      0
     ],
     "leftHatchClosedTopLeft": [
       416,
-      244
+      238
     ],
     "rightHatchClosedTopLeft": [
       480,
-      244
+      238
     ],
-    "hatchOpeningOffsetEachSide": 35,
+    "hatchOpeningOffsetEachSide": 36,
     "coreTopLeft": [
       456,
-      268
+      262
     ],
     "heroCanvasTopLeft": [
       449,
-      403
+      515
     ],
     "heroCanvasSize": [
       64,
       64
     ],
     "heroVisibleHeight": 59,
-    "bridgeTopY": 466,
+    "bridgeTopY": 578,
     "drawOrder": [
       "arena",
       "body",
@@ -202,12 +202,82 @@
       "bridge",
       "hero silhouette"
     ],
-    "bladeArmFraming": "Native 1:1 pixels. Upper 112 rows continue off-screen; all 464 remaining rows fit above bridge. Tip bottom edge at y=464; bridge begins y=466."
+    "bladeArmFraming": "All 576 rows shown at native size. Larger proof canvas prevents clipping and fractional scaling.",
+    "gameViewportCheck": {
+      "file": "review_v2/arena_960x540.png",
+      "size": [
+        960,
+        540
+      ],
+      "bladeTopLeft": [
+        603,
+        -62
+      ],
+      "heroCanvasTopLeft": [
+        449,
+        453
+      ],
+      "bridgeTopY": 516,
+      "note": "Native pixels. Top 62 rows of the huge upper arm extend above the viewport; tip ends y514."
+    }
   },
   "limitations": [
-    "PNG cannot apply Unity Sprite pivots or PPU. Set the recorded values when approved for import; no .meta files were created.",
-    "No editor play test, WebGL test, attack animation or collision integration was performed. This is an asset-only draft.",
-    "The hologram recess is intentionally blank; the icon and number are supplied by game code.",
-    "Visual style remains subject to art review against the finer existing DraftSprites; this is a procedural pixel draft, not production approval."
-  ]
+    "Asset draft only; Unity imports, .meta pivots, animation and Play/WebGL tests remain unperformed.",
+    "PNG files do not embed Unity PPU or pivots. Apply the recorded values when integrating.",
+    "Final visual acceptance belongs to the user. The taller proof shows all native pixels; use the 960x540 check for viewport framing."
+  ],
+  "comparison": {
+    "file": "compare_concept.png",
+    "size": [
+      1944,
+      672
+    ],
+    "left": "boss_concept_4.png crop [0,0,756,572] at [96,24]; attack explanation cards omitted",
+    "right": "Uncropped 960x640 idle assembly at [984,24]",
+    "scale": "Both source and assembly are 1 image pixel per output pixel, without resizing.",
+    "note": "Full native blade extends lower than the reference because it is down-pointing and retains requested 288x576 size."
+  },
+  "sourceArt": {
+    "path": "../boss_concept_4.png",
+    "method": "Masked area sampling to half-size authoring grid, 16-color semantic quantization, small-island cleanup, integer pixel redraw, exact 2x export",
+    "bodyCrop": [
+      20,
+      0,
+      720,
+      482
+    ],
+    "bugCrop": [
+      40,
+      112,
+      224,
+      270
+    ],
+    "clawCrop": [
+      60,
+      343,
+      139,
+      130
+    ],
+    "armorCrops": [
+      [
+        514,
+        125,
+        180,
+        174
+      ],
+      [
+        591,
+        277,
+        125,
+        137
+      ],
+      [
+        595,
+        367,
+        108,
+        111
+      ]
+    ],
+    "face": "Removed before quantized body compositing; window is uniformly #080b14."
+  }
 }

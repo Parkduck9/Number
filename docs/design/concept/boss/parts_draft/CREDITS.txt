@@ -1,23 +1,27 @@
-DRAFT ASSET PROVENANCE - summarized in project CREDITS.md
+DRAFT v2 ASSET PROVENANCE - also recorded in root CREDITS.md
 
-Final boss pixel parts: AI-assisted creation (OpenAI Codex). Codex authored a
-deterministic Node.js integer-pixel raster script and visually reviewed/refined
-six versions, including the enlarged blade/bug arm revision. No image-generation API was called and no paid assets were used.
+Source: docs/design/concept/boss/boss_concept_4.png, supplied by the user and
+identified in the project as Google Gemini concept artwork.
+Unlike v1, this revision DOES reuse source image pixels. Roofed server shoulder
+sections, insect shells/claw and crimson/gold armor are masked and area-sampled
+to a small integer grid, quantized to the existing 16-color palette, cleaned of
+small color islands, and selectively redrawn by Codex using a local Node script.
+The source cute face/halo and upward-pointing weapon are excluded. New artwork:
+empty dark display, rib cage/door fitting, palm port, grip, down-pointing straight
+blade, cyan/white edge tell, black oil/cyan coolant and connecting cables.
+The yellow gun core is retained pixel-for-pixel from the prior Codex draft.
 
-Composition reference: docs/design/concept/boss/boss_concept_4.png, supplied by
-the user and identified as Gemini concept art. Body/arm/chest arrangement only;
-no source concept pixels are copied. Face is omitted. Liquid marks are black
-oil and cyan coolant. Blade is straight; armor uses studded sleeve construction.
+AI disclosure: Google Gemini (user-supplied source) -> OpenAI Codex (local pixel
+editing, deterministic script authoring and four visual review/fix rounds).
+No new image-generation API, paid service, download or third-party asset used.
 
-Palette: docs/design/PALETTE.md (16 existing colors selected; no new sprite colors).
-Style references: existing Assets/Resources/DraftSprites hero, bug, and android
-sprites. Preview-only hero silhouette reuses alpha from frame 0 of
-Assets/Resources/DraftSprites/hero_idle_4f.png, thresholded to hard alpha.
-The existing project credit for that hero remains applicable.
+Palette: the same 16 project colors used by v1/generate.cjs, selected originally
+from docs/design/PALETTE.md. Style reference: existing hero, bug and android
+sprites in Assets/Resources/DraftSprites. Preview hero silhouette reuses the
+alpha of hero_idle_4f.png frame 0, thresholded at 128; existing hero credits apply.
 
-Guidance: .claude/skills/pixel-art and .claude/skills/pixel-art-sprites, including
-their patterns and validation references; project ANTI_SLOP.md and boss-v2.md.
-No additional external assets or asset licenses were introduced.
-
-Images and generator remain in docs/design/concept/boss/parts_draft/.
-Root CREDITS.md records the draft and this local provenance file.
+Authored scripts: generate.cjs and raster.cjs (the v1 integer raster/PNG codec).
+inspect.cjs creates source detail crops for review only. All scripts run locally
+using Node.js built-ins. Source, original v1 snapshot and derived artwork remain
+in the private project; no added external license is asserted for the concept.
+No game files were installed or modified. Final art approval belongs to the user.

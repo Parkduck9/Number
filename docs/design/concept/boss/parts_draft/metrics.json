@@ -1,18 +1,16 @@
 {
-  "round": 6,
+  "round": 4,
   "parts": {
     "boss_body": {
       "size": [
         768,
         448
       ],
-      "opaqueColors": 8,
+      "colors": 7,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 266520,
-      "meanLuma": 0.0928,
       "palette": [
         "#080b14",
         "#0b1026",
@@ -20,7 +18,6 @@
         "#226076",
         "#2d3050",
         "#3f4a6e",
-        "#42a9bd",
         "#7f1a22"
       ]
     },
@@ -29,19 +26,16 @@
         200,
         320
       ],
-      "opaqueColors": 7,
+      "colors": 6,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 34356,
-      "meanLuma": 0.1279,
       "palette": [
         "#080b14",
+        "#0b1026",
         "#1a1d33",
-        "#226076",
         "#2d3050",
-        "#3f4a6e",
         "#7a3a3c",
         "#7f1a22"
       ]
@@ -51,19 +45,15 @@
         200,
         320
       ],
-      "opaqueColors": 9,
+      "colors": 7,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 34356,
-      "meanLuma": 0.1374,
       "palette": [
         "#080b14",
+        "#0b1026",
         "#1a1d33",
-        "#226076",
-        "#2d3050",
-        "#3f4a6e",
         "#7a3a3c",
         "#7f1a22",
         "#d6d7d0",
@@ -75,18 +65,18 @@
         288,
         576
       ],
-      "opaqueColors": 11,
+      "colors": 13,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 81800,
-      "meanLuma": 0.2384,
       "palette": [
         "#080b14",
+        "#0b1026",
         "#1a1d33",
         "#226076",
         "#2d3050",
+        "#3f4a6e",
         "#42a9bd",
         "#62677d",
         "#7a3a3c",
@@ -101,26 +91,24 @@
         288,
         576
       ],
-      "opaqueColors": 12,
+      "colors": 12,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 81800,
-      "meanLuma": 0.2312,
       "palette": [
         "#080b14",
+        "#0b1026",
         "#1a1d33",
         "#226076",
         "#2d3050",
+        "#3f4a6e",
         "#42a9bd",
         "#62677d",
         "#7a3a3c",
         "#7f1a22",
-        "#858a9b",
         "#b8862e",
-        "#d6d7d0",
-        "#f21c2a"
+        "#d6d7d0"
       ]
     },
     "boss_hatch_half": {
@@ -128,21 +116,17 @@
         64,
         96
       ],
-      "opaqueColors": 7,
+      "colors": 5,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 5811,
-      "meanLuma": 0.1565,
       "palette": [
         "#080b14",
+        "#0b1026",
         "#1a1d33",
-        "#226076",
         "#2d3050",
-        "#3f4a6e",
-        "#62677d",
-        "#858a9b"
+        "#3f4a6e"
       ]
     },
     "boss_hatch_core": {
@@ -150,13 +134,11 @@
         48,
         48
       ],
-      "opaqueColors": 7,
+      "colors": 7,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 1828,
-      "meanLuma": 0.2714,
       "palette": [
         "#080b14",
         "#1a1d33",
@@ -167,6 +149,20 @@
         "#ffd43b"
       ]
     }
+  },
+  "checks": {
+    "hardAlpha": true,
+    "paletteMembership": true,
+    "combinedColors": 16,
+    "roundTrip": true,
+    "litMaskEqual": true,
+    "bottomCenterArmPixels": true,
+    "emptyWindow144x88": true,
+    "hatchHole128x96": true,
+    "exact2xPreview": true,
+    "sameSizesAndPivotsAsV1": true,
+    "noRedOnBlade": true,
+    "nativeProofWithoutPartScaling": true
   },
   "palette": [
     "#080b14",
@@ -187,52 +183,21 @@
     "#ffd43b"
   ],
   "preview": {
-    "size": [
-      1920,
-      1080
+    "native": [
+      960,
+      640
     ],
-    "background": "#0B0A14",
-    "nativeArena": [
+    "enlarged": [
+      1920,
+      1280
+    ],
+    "comparison": [
+      1944,
+      672
+    ],
+    "gameViewport": [
       960,
       540
-    ],
-    "nearestNeighbour": 2,
-    "hero": {
-      "canvas": [
-        64,
-        64
-      ],
-      "visibleHeight": 59,
-      "source": "Assets/Resources/DraftSprites/hero_idle_4f.png, frame 0 alpha >=128, recolored as silhouette",
-      "topLeft": [
-        449,
-        403
-      ]
-    }
-  },
-  "armScale": {
-    "bladeToBugCanvasArea": 2.592,
-    "bladeToBugOpaqueArea": 2.381,
-    "bladeVisibleHeight": 464,
-    "bladeTipPreviewBottomEdge": [
-      764,
-      464
-    ],
-    "bugPalmPreviewBottomEdge": [
-      241,
-      448
     ]
-  },
-  "checks": {
-    "rgbaPngRoundTrip": true,
-    "hardAlpha": true,
-    "allSpritesAtMost16Colors": true,
-    "total16Colors": true,
-    "baseAndLitSameAlpha": true,
-    "transparentHatch128x96": true,
-    "blankHologram144x88": true,
-    "nearestNeighbour2x": true,
-    "assemblySizesMatch": true,
-    "bottomCenterArmRegistration": true
   }
 }
