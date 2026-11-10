@@ -322,6 +322,7 @@ public class BossFight : MonoBehaviour
         float gap = SlamGap[Phase - 1], lead = Mathf.Min(gap * 0.8f, 0.6f), tt = 0f, lockedUntil = -10f;
         int k = 0;
         bool struck = false, parried = false;
+        ParryHeight h = ParryRing.RandomHeight(); // per slam, presentation only
         while (k < n)
         {
             float dt = Dt;
@@ -349,16 +350,17 @@ public class BossFight : MonoBehaviour
             }
             if (struck && (parried || tt > s + WindowLate))
             {
-                if (inZone && parried) Clang(zx);
+                if (inZone && parried) Clang(zx, h);
                 else if (inZone) player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(zx, player.transform.position.y), Unparryable = true });
                 if (!inZone || !parried) ring.Hide();
                 k++;
                 struck = parried = false;
+                h = ParryRing.RandomHeight();
             }
             else if (!struck && inZone && tt >= s - lead)
             {
                 int face = player.transform.position.x >= zx ? 1 : -1;
-                ring.Show(new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y), face, lead, s - tt, tt >= s - WindowEarly);
+                ring.Show(new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y + ParryRing.Offset(h)), face, lead, s - tt, tt >= s - WindowEarly);
             }
             else if (!struck) ring.Hide();
             yield return null;
@@ -387,15 +389,13 @@ public class BossFight : MonoBehaviour
         return Mathf.Abs(pp.x - zx) < ZoneHalf + 0.35f && pp.y - 1f < BladeHigh;
     }
 
-    void Clang(float zx)
+    void Clang(float zx, ParryHeight h)
     {
         int face = player.transform.position.x >= zx ? 1 : -1;
-        Vector2 c = new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y);
-        player.DuelClash(false);
+        Vector2 c = new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y + ParryRing.Offset(h));
+        player.DuelClash(false, h);
         ring.Flash();
-        SpriteFx.Play("parry", c - new Vector2(0f, 30f / SpriteFx.Ppu));
-        SpriteFx.Play("parry-clash", c, face > 0, 102);
-        ParryFeedback.Show(c);
+        SpriteFx.Play("parry_talisman", c, face > 0, 102); // blade on the player's left (face > 0): flipped
         Sfx.Play(SfxId.Parry);
         Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
     }

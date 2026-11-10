@@ -55,6 +55,7 @@ public class EliteDuel : MonoBehaviour
     int n, k, face;             // face = elite facing (toward the player)
     float gap, t, lockedUntil, ringFrom, lastStrikeAt = -10f, lastGuardAt = -10f, finishedAt = -1f;
     bool struck, parried, ownHeld, ownLock;
+    ParryHeight height;         // current exchange's strike height (rolled per exchange; presentation only)
 
     float StrikeAt(int i) => FirstHit + i * gap;
     bool HasFoe => elite is Object o && o != null; // Unity null check (an interface reference skips it)
@@ -89,6 +90,7 @@ public class EliteDuel : MonoBehaviour
         t = ringFrom = 0f;
         k = 0;
         struck = parried = false;
+        height = ParryRing.RandomHeight();
         lockedUntil = lastStrikeAt = lastGuardAt = -10f;
         finishedAt = -1f;
         if (!GameFlow.EnemiesHeld) { GameFlow.EnemiesHeld = true; ownHeld = true; }
@@ -143,19 +145,17 @@ public class EliteDuel : MonoBehaviour
         UpdatePips();
     }
 
-    // Where the blades meet: the player's front edge at the elite's body height (same spot as the normal melee rings).
-    Vector2 Contact() => new Vector2(player.transform.position.x - face * 0.45f, elite.transform.position.y);
+    // Where the blades meet: the player's front edge at the elite's body height + the strike height (like the normal melee rings).
+    Vector2 Contact() => new Vector2(player.transform.position.x - face * 0.45f, elite.transform.position.y + ParryRing.Offset(height));
 
     static float Semitone(int i) => Mathf.Pow(2f, i / 12f);
 
     void PlayerClang()
     {
         Vector2 c = Contact();
-        player.DuelClash(false);
+        player.DuelClash(false, height);
         PlayerController.ParryCount++; // dice charge, same as a normal parry
-        SpriteFx.Play("parry", c - new Vector2(0f, 30f / SpriteFx.Ppu));
-        SpriteFx.Play("parry-clash", c, face > 0, 102);
-        ParryFeedback.Show(c);
+        SpriteFx.Play("parry_talisman", c, face > 0, 102); // a blow from the left (elite on the left, face > 0): flipped
         Sfx.Play(SfxId.Parry, 1f, Semitone(k));
         Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
         pipPopFrame[k] = Time.frameCount;
@@ -165,13 +165,14 @@ public class EliteDuel : MonoBehaviour
     void Counter()
     {
         Vector2 c = Contact();
-        player.DuelClash(true);
+        player.DuelClash(true, height);
         ParryFx.Slash(c, null, -face);
-        SpriteFx.Play("parry-clash", c, face < 0, 102);
+        SpriteFx.Play("parry_talisman", c, face < 0, 102); // the hero's blow, met from the elite's side
         Sfx.Play(SfxId.Parry, 0.8f, Semitone(k));
         lastGuardAt = t;
         k++;
         struck = parried = false;
+        height = ParryRing.RandomHeight();
         ringFrom = t;
     }
 

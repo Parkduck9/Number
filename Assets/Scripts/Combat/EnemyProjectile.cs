@@ -27,8 +27,23 @@ public class EnemyProjectile : MonoBehaviour
     [System.NonSerialized] public float ReflectLife = Juice.ReflectLife; // s a parried shot keeps flying (the boss sets it longer)
     [System.NonSerialized] public Vector2? ReflectTarget;                 // boss hatch: the weakened shot lobs back into it instead of just dropping
 
+    // DECISIONS 25 sniper shot relay: a human enemy on the path bats the shot at the player once (spends one of its strikes).
+    const float RelayRadius = 0.6f;      // (T) u from an enemy body that counts as reaching it
+    const float RelayTellTime = 0.25f;   // (T) s before contact: the batter's number pops
+    const float RelaySpeedMul = 1.1f;
+    const float RelayLineLength = 1.5f, RelayLineTime = 0.15f;
+    static readonly Color RelayColor = new Color(1f, 0.353f, 0.235f); // #FF5A3C
+    // Set by a sniper: the shot is relayable, never by its own shooter.
+    public TestEnemy RelayShooter { get => shooter; set { shooter = value; relayable = true; } }
+    TestEnemy shooter;
+    bool relayable, relayed;
+    TestEnemy relayTold; // whose number already popped for this shot
+    static readonly RaycastHit2D[] RelayHits = new RaycastHit2D[8];
+    static ContactFilter2D relayFilter;
+    static bool relayFilterReady;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() => Active.Clear(); // Domain Reload is off
+    static void ResetStatics() { Active.Clear(); relayFilterReady = false; } // Domain Reload is off
     void OnEnable() => Active.Add(this);
     void OnDisable() => Active.Remove(this);
 
@@ -87,6 +102,7 @@ public class EnemyProjectile : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+        if (relayable && !relayed && !Reflected && TryRelay(prev, dir, dist)) return; // batted: tests the player from the next frame
         if (passedPlayer) return;
         Collider2D col = Physics2D.BoxCast(prev, size, 0f, dir, dist, playerMask).collider;
         if (col == null) return;
@@ -126,6 +142,67 @@ public class EnemyProjectile : MonoBehaviour
             Rend.color = new Color(1f, 1f, 1f, 0.85f); // pale: still reads as reflected
         }
         else Rend.color = Color.white;
+    }
+
+    // This frame's sweep reached a relayer: bat. Else pop the number of the one it reaches within RelayTellTime (tell).
+    bool TryRelay(Vector2 prev, Vector2 dir, float dist)
+    {
+        TestEnemy e = FirstRelayer(prev, dir, dist);
+        if (e != null) { Relay(e); return true; }
+        e = FirstRelayer(transform.position, dir, velocity.magnitude * RelayTellTime);
+        if (e != null && e != relayTold) { relayTold = e; e.Number.Pop(); }
+        return false;
+    }
+
+    TestEnemy FirstRelayer(Vector2 from, Vector2 dir, float dist)
+    {
+        if (!relayFilterReady)
+        {
+            relayFilter = new ContactFilter2D();
+            relayFilter.SetLayerMask(LayerMask.GetMask("Enemy"));
+            relayFilter.useTriggers = Physics2D.queriesHitTriggers;
+            relayFilterReady = true;
+        }
+        int n = Physics2D.CircleCast(from, RelayRadius, dir, relayFilter, RelayHits, dist);
+        TestEnemy best = null;
+        float bestDist = float.MaxValue;
+        for (int i = 0; i < n; i++)
+        {
+            if (RelayHits[i].distance >= bestDist) continue;
+            TestEnemy e = RelayHits[i].collider.GetComponentInParent<TestEnemy>();
+            if (e == null || e == shooter || !e.CanRelay) continue;
+            best = e;
+            bestDist = RelayHits[i].distance;
+        }
+        return best;
+    }
+
+    // Re-aimed at the player's centre, faster, red-orange, with a short aim line. Still parryable (Reflect); never relayed again.
+    void Relay(TestEnemy e)
+    {
+        relayed = true;
+        Vector2 pos = transform.position;
+        e.SpendStrikeOnRelay(pos);
+        PlayerController pc = FindFirstObjectByType<PlayerController>(); // rare event: no cache
+        Vector2 to = pc != null ? (Vector2)pc.transform.position - pos : -velocity;
+        float speed = velocity.magnitude * RelaySpeedMul;
+        Vector2 dir = to.sqrMagnitude > 0.0001f ? to.normalized : Vector2.right;
+        velocity = dir * speed;
+        passedPlayer = false; // a new threat, even if it was dodged before
+        dieAt = Time.time + Lifetime;
+        Rend.color = frames != null ? Color.Lerp(Color.white, RelayColor, 0.7f) : RelayColor;
+        if (frames != null) AlignToVelocity(velocity);
+        Sfx.Play(SfxId.Parry, 0.35f);
+
+        var line = new GameObject("RelayLine");
+        line.transform.position = pos + dir * (RelayLineLength * 0.5f);
+        line.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+        line.transform.localScale = new Vector3(RelayLineLength, 1f / 32f, 1f); // 1 px thin
+        var lsr = line.AddComponent<SpriteRenderer>();
+        lsr.sprite = ParryFx.Square;
+        lsr.color = new Color(RelayColor.r, RelayColor.g, RelayColor.b, 0.45f);
+        lsr.sortingOrder = 49;
+        Destroy(line, RelayLineTime);
     }
 
     SpriteRenderer Rend => sr != null ? sr : sr = GetComponent<SpriteRenderer>();

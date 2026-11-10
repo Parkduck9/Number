@@ -1,5 +1,9 @@
 using UnityEngine;
 
+// Melee strike height (user 11-10): presentation only, rolled when a parryable melee strike winds up. Moves the ring / talisman
+// contact point and picks the hero's parry pose; the LMB timing is the same for all three. Mid first = the HitInfo default (shots).
+public enum ParryHeight { Mid, High, Low }
+
 // Melee parry timing tell (user 11-10, replaces the red swing box): a pale target ring at the contact point and a red ring sliding in
 // from the enemy's side that meets it exactly when the strike lands (TestEnemy's parry eta, so the picture and the LMB window agree).
 // Merge = short talisman-yellow flash, then gone. Code-drawn 1 px pixel ring (+ dark rim), unlit Sprites/Default on the FX layer
@@ -25,6 +29,10 @@ public class ParryRing : MonoBehaviour
     float flashUntil = -1f;
 
     public bool Flashing => flashUntil >= 0f;
+
+    public const float HighOffset = 0.75f, LowOffset = -0.6f; // (T) u from the mid contact: head / knee height
+    public static ParryHeight RandomHeight() => (ParryHeight)Random.Range(0, 3);
+    public static float Offset(ParryHeight h) => h == ParryHeight.High ? HighOffset : h == ParryHeight.Low ? LowOffset : 0f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { sprite = null; mat = null; } // Domain Reload is off

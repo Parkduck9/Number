@@ -11,6 +11,7 @@ public struct HitInfo
     public float TravelDirX; // projectiles: sign of horizontal travel; 0 = judge front/back by SourcePosition
     public bool Unparryable; // parry attempts count as a hit; only a dash dodges it
     public bool Pierce; // player skill hits: ignore the Android front-block guard
+    public ParryHeight Height; // melee strikes: rolled at the windup (ParryRing); Mid for shots. Presentation only
 }
 
 public enum HitResult { Hit, Parried, Dodged }

@@ -8,7 +8,7 @@ public class DuelLetterbox : MonoBehaviour
     const float Height = 0.08f;     // (T) share of the screen height per bar
     const float SlideTime = 0.2f;   // (T) s
     const float FlashAlpha = 0.7f;  // (T)
-    const int CanvasOrder = 25;     // under ParryFeedback (30), control hints (35) and the HUD
+    const int CanvasOrder = 25;     // under the control hints (35) and the HUD
 
     RectTransform top, bottom;
     Image flash;

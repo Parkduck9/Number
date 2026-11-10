@@ -23,12 +23,6 @@ public static class Juice
     public static readonly UnityEngine.Color BlockTint = new UnityEngine.Color(0.55f, 0.6f, 0.75f);       // Android blocks a hit (no damage)
     public const float ParryEnemyTintTime = 0.25f; // s (scaled: holds through the parry hit-stop)
 
-    // Successful parry, screen side (ParryFeedback, real time so it shows during the hit-stop).
-    public const float ParryFlashAlpha = 0.35f, ParryFlashTime = 0.12f; // full-screen white flash
-    public const float ParryPopupTime = 0.5f;  // "PARRY!" text at the contact point, rises and fades
-    public const int ParryPopupSize = 24;      // reference px (Mulmaru: multiples of 12)
-    public const float ParryPopupRise = 24f;   // reference px over its life
-    public static readonly UnityEngine.Color ParryPopupColor = new UnityEngine.Color(1f, 0.824f, 0.29f); // broadcast gold #FFD24A
     // Parried shots fly back (harmless, then vanish) instead of disappearing.
     public const float ReflectLife = 0.6f; // a parried shot drops away for this long (EnemyProjectile: weakened, falls)
 

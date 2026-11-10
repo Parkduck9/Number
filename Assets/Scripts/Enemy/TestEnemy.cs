@@ -119,6 +119,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     ParryRing ring;           // melee parry timing tell (built on first strike)
     float ringTotal = -1f;    // eta when the current ring started (-1 = not started; reset by EnterState except into Strike)
     Vector2 ringContact;      // target ring centre, fixed for the windup
+    ParryHeight strikeHeight; // melee: rolled when a Windup / Charge starts (ring + player parry FX / pose; presentation only)
     Vector2 sniperDir;        // aim (unit), fixed once locked
     bool sniperLocked;
     float nextAimAt;          // sniper: no new aim before this (SniperReaimDelay)
@@ -489,6 +490,27 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
         sight.Show(m, m + dir * len, sniperLocked);
     }
 
+    // DECISIONS 25 sniper shot relay: a human going about its pattern (not down, frozen, open, staggered, dueling or a boss wave).
+    public bool CanRelay => IsHuman && !IsBossWave && !InDuel && isActiveAndEnabled &&
+        (state == State.Approach || state == State.Windup || state == State.Recover || state == State.Turn || state == State.Charge || state == State.RushWindup);
+
+    // Batting the shot spends one strike: the chain (or the next one, from Approach) is one shorter; the displayed number stays.
+    // The last strike spent = straight into the counter window, as after a finished chain.
+    public void SpendStrikeOnRelay(Vector2 shotPos)
+    {
+        ParryFx.NudgeVisual(visual != null ? visual.transform : null, shotPos.x >= transform.position.x ? 1 : -1);
+        number.Pop();
+        strikesLeft--; // Approach: the count was set on entering it and is kept into the Windup
+        if (strikesLeft > 0)
+        {
+            if (state != State.Approach) number.SetFlame(strikesLeft == 1); // Windup / RushWindup light it on entry
+            return;
+        }
+        strikesLeft = 0;
+        number.SetPulse(false);
+        EnterState(State.Open);
+    }
+
     void FinishReset()
     {
         number.SetBroken(false);
@@ -508,7 +530,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             Damage = 1,
             SourcePosition = transform.position,
             IsSpecial = special,
-            Unparryable = unparryable
+            Unparryable = unparryable,
+            Height = ranged ? ParryHeight.Mid : strikeHeight
         };
         Collider2D col = null;
         if (ranged)
@@ -516,7 +539,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             if (kind == Kind.Sniper)
             {
                 Vector2 shot = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
-                EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor, DraftSprites.BulletSniper);
+                EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor, DraftSprites.BulletSniper)
+                    .RelayShooter = this; // DECISIONS 25: other humans on its path bat it at the player
                 MomentFx.SniperMuzzle(Muzzle, shot);
             }
             else
@@ -586,6 +610,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
         stateEnteredAt = Time.time;
         if (next != State.Charge) rushing = false;
         if (next != State.Strike) ringTotal = -1f; // Windup/Charge -> Strike keeps the merged ring until DoStrike flashes it
+        if (next == State.Windup || next == State.Charge) strikeHeight = ParryRing.RandomHeight();
         switch (next)
         {
             case State.Approach:
@@ -720,12 +745,14 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
 
     // Where the blow meets the player: the player's front edge (body half-width 0.45) at the attack box's height, kept inside the
     // attack box during a windup so a player standing deep in it or at its far edge still gets a ring on the box.
+    // The strike height moves it up / down, kept inside the box (1.4 tall: High +0.75 lands on its top edge, +0.7).
     Vector2 ParryContact()
     {
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
         float x = player.transform.position.x - facing * 0.45f;
         if (state != State.Charge) x = Mathf.Clamp(x, c.x - attackSize.x * 0.5f, c.x + attackSize.x * 0.5f);
-        return new Vector2(x, c.y);
+        float half = attackSize.y * 0.5f;
+        return new Vector2(x, c.y + Mathf.Clamp(ParryRing.Offset(strikeHeight), -half, half));
     }
 
     // true = damage applied

@@ -47,6 +47,37 @@ public static class DraftSprites
     public static Sprite[] BulletCitizen => bulletCitizen ??= Load("bullet_citizen_2f", 2);
     public static Sprite[] BulletBug => bulletBug ??= Load("bullet_bug_2f", 2);
 
+    // Successful-parry poses (user 11-10): hero_parry_{mid,hi,lo}{1,2,3}_2f, 0 = impact, 1 = after. Missing strips are skipped.
+    static readonly Sprite[][] heroParryPoses = new Sprite[9][];
+    static readonly string[] PoseHeights = { "mid", "hi", "lo" }; // ParryHeight order
+
+    // A random pose for that height other than 'previous' (unless it is the only one in); HeroParry (may be null) when none is in.
+    public static Sprite[] HeroParryPose(ParryHeight height, Sprite[] previous)
+    {
+        int h = (int)height, n = 0;
+        Sprite[] pick = null, same = null;
+        for (int i = 0; i < 3; i++)
+        {
+            Sprite[] s = heroParryPoses[h * 3 + i] ??= Load("hero_parry_" + PoseHeights[h] + (i + 1) + "_2f", 2);
+            if (s == null) continue;
+            if (s == previous) same = s;
+            else if (Random.Range(0, ++n) == 0) pick = s; // uniform over the others
+        }
+        return pick ?? same ?? HeroParry;
+    }
+
+    // Helper NPC strips (copies of the hero set, no NPC yet); null until Codex's PNGs are in.
+    static Sprite[] helperWalk, helperRun, helperIdle, helperAttack, helperDash, helperHurt, helperJump, helperGrapple, helperParry;
+    public static Sprite[] HelperWalk => helperWalk ??= Load("helper_walk_6f", 6);
+    public static Sprite[] HelperRun => helperRun ??= Load("helper_run_6f", 6);
+    public static Sprite[] HelperIdle => helperIdle ??= Load("helper_idle_4f", 4);
+    public static Sprite[] HelperAttack => helperAttack ??= Load("helper_attack_5f", 5);
+    public static Sprite[] HelperDash => helperDash ??= Load("helper_dash_3f", 3);
+    public static Sprite[] HelperHurt => helperHurt ??= Load("helper_hurt_1f", 1);
+    public static Sprite[] HelperJump => helperJump ??= Load("helper_jump_4f", 4);
+    public static Sprite[] HelperGrapple => helperGrapple ??= Load("helper_grapple_1f", 1);
+    public static Sprite[] HelperParry => helperParry ??= Load("helper_parry_2f", 2);
+
     static Sprite[] Load(string name, int count)
     {
         Sprite[] s = Resources.LoadAll<Sprite>("DraftSprites/" + name).OrderBy(x => x.name).ToArray();

@@ -190,13 +190,34 @@ public class PlayerController : MonoBehaviour
     {
         if (state != State.Locomotion) EnterState(State.Locomotion);
         Facing = face;
-        parryGuardUntil = parryFlashUntil = -999f;
+        parryGuardUntil = parryFlashUntil = parryPoseUntil = -999f;
     }
-    public void DuelClash(bool counter)
+    public void DuelClash(bool counter, ParryHeight height)
     {
-        duelPose = counter ? DraftSprites.Pick(DraftSprites.HeroAttack, 2, DraftSprites.Hero) : DraftSprites.Pick(DraftSprites.HeroParry, 0, DraftSprites.HeroAttack ?? DraftSprites.Hero);
+        if (!counter)
+        {
+            duelPoseUntil = -1f; // a counter pose still on screen must not hide the parry pose
+            ShowParryPose(height, 0.15f, true);
+            duelFlashUntil = Time.time + parryFlashTime;
+            return;
+        }
+        duelPose = DraftSprites.Pick(DraftSprites.HeroAttack, 2, DraftSprites.Hero);
         duelPoseUntil = Time.time + 0.15f;
-        if (!counter) duelFlashUntil = Time.time + parryFlashTime;
+    }
+
+    // Successful-parry pose (user 11-10): one of three strips for the strike's height (never the same strip twice in a row),
+    // frame 0 at impact, frame 1 after ParryPoseKey. Scaled time, so the parry hit-stop holds frame 0. Shown while in Locomotion
+    // (a riposte / dash takes over); duel and boss clangs force it like the old duel pose (the boss slam's LMB also starts a swing).
+    const float ParryPoseKey = 0.08f, ParryPoseTime = 0.25f; // (T) s
+    Sprite[] parryPose;
+    float parryPoseAt, parryPoseUntil = -999f;
+    bool parryPoseForced;
+    void ShowParryPose(ParryHeight height, float time, bool forced)
+    {
+        parryPose = DraftSprites.HeroParryPose(height, parryPose);
+        parryPoseAt = Time.time;
+        parryPoseUntil = Time.time + time;
+        parryPoseForced = forced;
     }
     public void DuelHitStop(float seconds) => StartHitStop(seconds, false, true); // finisher: runs although the duel still holds the input lock
 
@@ -1062,10 +1083,9 @@ public class PlayerController : MonoBehaviour
             parryFlashUntil = Time.time + parryFlashTime;
             parryGuardUntil = Time.time + parryGuardTime;
             ParryCount++;
-            Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.8f, 0f);
-            SpriteFx.Play("parry", contact - new Vector2(0f, 30f / SpriteFx.Ppu)); // burst centre is 30px above the pivot
-            SpriteFx.Play("parry-clash", contact, Facing < 0, 102); // layered over the "parry" burst; debris flies toward the attacker
-            ParryFeedback.Show(contact); // screen flash + "PARRY!" popup (playtest 11-09: parries were not readable)
+            Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.45f, ParryRing.Offset(info.Height)); // where the ring merges (TestEnemy.ParryContact)
+            SpriteFx.Play("parry_talisman", contact, Facing < 0, 102); // pivot = contact point; art takes a blow from the right
+            ShowParryPose(info.Height, ParryPoseTime, false);
             Sfx.Play(SfxId.Parry);
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
@@ -1087,7 +1107,10 @@ public class PlayerController : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = Facing < 0;
-        if (draftSprite) visual.sprite = now < duelPoseUntil ? duelPose : DraftFrame(now);
+        if (draftSprite)
+            visual.sprite = now < duelPoseUntil ? duelPose
+                : now < parryPoseUntil && (parryPoseForced || state == State.Locomotion) ? DraftSprites.Pick(parryPose, now - parryPoseAt < ParryPoseKey ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero)
+                : DraftFrame(now);
         Color c = draftSprite ? Color.white : BaseColor;
         if (state == State.Dash || lunging) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);

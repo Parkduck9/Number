@@ -398,8 +398,8 @@ public static class DiceSkillKit
     }
 
     // Screen overlay for the skills (one per scene, built on demand): colour flash, glitch bars, a skill-name caption, a big
-    // number (skill 4 countdown). Real time like ParryFeedback, frozen while the pause menu is open. Canvas 31: over the parry
-    // flash (30), under the control hints (35) and the HUDs.
+    // number (skill 4 countdown). Real time, frozen while the pause menu is open. Canvas 31: under the control
+    // hints (35) and the HUDs.
     public class Overlay : MonoBehaviour
     {
         static Overlay inst;
