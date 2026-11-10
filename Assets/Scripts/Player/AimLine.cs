@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// DECISIONS 22 aim line: a faint dotted pixel line from the throwing hand toward the mouse so the player sees where the RMB issen
+// DECISIONS 22 aim line: a faint dotted pixel line from the body centre toward the mouse so the player sees where the RMB issen
 // (and the lunge) points. 2 px on / 2 px off, 1 px wide, pale #FFF1D6 at low alpha, stops at the issen range (IssenRange) or a few
 // px short of the mouse crosshair (MouseCrosshair draws the cursor itself). Hidden while input is locked (dialogue, elite duel, dice),
 // paused or dead. Pooled 1 px dots on the 1/32 u pixel grid, unlit (Sprites/Default) on the FX layer. Added by PlayerController.Awake.
@@ -45,10 +45,8 @@ public class AimLine : MonoBehaviour
 
     void Draw(Vector2 mouse)
     {
-        // Hand on the side the mouse is on.
-        float dxm = mouse.x - player.transform.position.x;
-        int face = Mathf.Abs(dxm) > 0.01f ? (dxm > 0f ? 1 : -1) : player.Facing;
-        Vector2 hand = (Vector2)player.transform.position + new Vector2(face * 0.35f, 0.25f);
+        // DECISIONS 27: from the body centre (mid-torso = the body collider centre = transform.position), not the face / hand.
+        Vector2 hand = player.transform.position;
         Vector2 d = mouse - hand;
         float len = d.magnitude;
         if (len < 0.01f) return;

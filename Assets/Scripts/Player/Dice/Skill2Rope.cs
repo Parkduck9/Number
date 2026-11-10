@@ -7,7 +7,7 @@ using UnityEngine;
 // The hold ends with the whirl, so the struck bodies all fly at once. Drawn like GrappleRope (stretched squares, FX layer).
 public static class Skill2Rope
 {
-    const float Radius = 4.5f;   // contract R (units)
+    const float Radius = 6.75f;  // (T) R (units): DECISIONS 27 longer rope, 1.5x the original 4.5
     const float Reach = 0.07f;   // (T) s the rope shoots out to R
     const float Sweep = 0.32f;   // (T) s for one full turn
     const float Retract = 0.06f; // (T) s the rope comes back

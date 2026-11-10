@@ -954,7 +954,44 @@ public class PlayerController : MonoBehaviour
         if (!swingHits.Add(enemy)) return true;
         // A lunge hit comes from where the lunge began (the sweep spans from there): the Android "from above / behind" test must not
         // depend on which frame the fast-moving body happened to be sampled at (Fable review 11-09).
-        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false, Pierce = pierce });
+        var info = new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false, Pierce = pierce };
+        EnemyStruck?.Invoke(enemy);
+        if (DeferredHits != null) // DECISIONS 27 dice face 4: the blow is stored and lands when the hold ends
+        {
+            DeferredHits.Add(new DeferredHit { Enemy = enemy, Col = col, Info = info, From = from });
+            swingDamaged++;
+            Sfx.Play(SfxId.Hit, 0.5f);
+            PlayHitSpark(col.ClosestPoint(from), Facing);
+            return true;
+        }
+        return LandHit(enemy, col, from, info);
+    }
+
+    // DECISIONS 27 dice face 4: while non-null, player blows are recorded here instead of landing; ResolveDeferredHits lands them.
+    public struct DeferredHit { public TestEnemy Enemy; public Collider2D Col; public HitInfo Info; public Vector2 From; }
+    public System.Collections.Generic.List<DeferredHit> DeferredHits;
+    // Every blow that reaches an enemy (damaging, blocked or deferred). DECISIONS 27 dice face 5 listens; do not hit enemies from a handler.
+    public event System.Action<TestEnemy> EnemyStruck;
+
+    // All stored blows land now, one shared impact (the first ones get the hit-stop + shake, like a lunge). Enemies gone meanwhile are skipped.
+    public void ResolveDeferredHits()
+    {
+        System.Collections.Generic.List<DeferredHit> hits = DeferredHits;
+        DeferredHits = null;
+        if (hits == null) return;
+        swingHitStops = 0;
+        swingDamaged = 0;
+        foreach (DeferredHit h in hits)
+        {
+            TestEnemy e = h.Enemy;
+            if (e == null || !e.gameObject.activeInHierarchy || e.Current == TestEnemy.State.Stunned || h.Col == null) continue;
+            LandHit(e, h.Col, h.From, h.Info);
+        }
+    }
+
+    bool LandHit(TestEnemy enemy, Collider2D col, Vector2 from, HitInfo info)
+    {
+        bool damaged = enemy.ReceivePlayerHit(info);
         if (!damaged) return false;
         swingDamaged++;
         Sfx.Play(SfxId.Hit);

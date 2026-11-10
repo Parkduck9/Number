@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Shared helpers for the lucky-dice skills (DECISIONS 18/19, Skill1Blink..Skill6Path, DiceReplay):
+// Shared helpers for the lucky-dice skills (DECISIONS 18/19, Skill1Blink..Skill6Path):
 //  - flag ownership: EnemiesHeld / InputLocked / Player.SpeedMul / Health.SetInvulnerable are set through here and released only
 //    if a skill set them (finally blocks), and again on scene unload + play start (Domain Reload is off; a coroutine killed with
 //    its LuckyDice never runs its finally).

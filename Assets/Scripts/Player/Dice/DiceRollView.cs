@@ -50,6 +50,7 @@ public class DiceRollView : MonoBehaviour
     const float FlyTime = 0.25f, BounceTime = 0.18f, RollTime = 0.12f, FlashTime = 0.15f, TailTime = 0.25f; // (T) 0.25 + 0.3 + 0.15
     const float FloorY = -Die * 0.5f;          // die pivot is bottom-centre, so at rest the die is centred on the screen
     const float SquashTime = 0.07f, Squash = 0.2f, BounceHeight = 44f;
+    const int TumbleFrames = 3;                // dice_roll_0..2 (see Play)
     static readonly Vector2 ThrowFrom = new Vector2(-560f, 330f), Land1 = new Vector2(-200f, FloorY), Land2 = new Vector2(-72f, FloorY);
     static readonly Color Talisman = new Color32(0xF2, 0xC9, 0x4C, 0xFF);
     static readonly Color Ink = new Color32(0x14, 0x10, 0x1C, 0xFF);
@@ -170,7 +171,9 @@ public class DiceRollView : MonoBehaviour
                 rate = Mathf.Lerp(16f, 6f, k);
             }
             spin += dt * rate;
-            if (art) die.sprite = DiceArt.Roll[(int)spin % 4];
+            // Tilted frames only: dice_roll_3 is the upright die showing one pip (same pixels as dice_face_1), so cycling into it
+            // flashed a "1" just before the real face. (DECISIONS 27 bug: the landed face must be the rolled face.)
+            if (art) die.sprite = DiceArt.Roll[(int)spin % TumbleFrames];
             dieRt.anchoredPosition = Snap(p);
             float sinceLand = landed2 ? t - t2 : landed1 ? t - t1 : -1f;
             SetSquash(sinceLand);
