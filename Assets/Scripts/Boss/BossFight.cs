@@ -100,17 +100,23 @@ public class BossFight : MonoBehaviour
         BossArt.Ensure();
         BossArt.DrawHolo(-1, -1);
         if (squareMat == null) { squareMat = new Material(Shader.Find("Sprites/Default")); bugMat = new Material(squareMat); }
+        // empty slot -> boss-v2 draft parts in Resources/BossArt (Codex), else the code-drawn BossArt
+        if (bodyArt == null) bodyArt = Res("boss_body");
+        if (hatchArt == null) hatchArt = Res("boss_hatch_half");
+        if (bugArmArt == null) bugArmArt = Res("boss_bug_arm");
+        if (bladeArmArt == null) bladeArmArt = Res("boss_blade_arm");
+        Sprite hatchCore = Res("boss_hatch_core");
         body = MakePart("Body", new[] { BossArt.Body, BossArt.Body, BossArt.BodyFlash }, bodyArt, -107, BodyAt);
         crack1 = Make("Cracks1", BossArt.Crack1, "Background", -106, BodyAt);
         crack2 = Make("Cracks2", BossArt.Crack2, "Background", -106, BodyAt);
         crack1.enabled = crack2.enabled = false;
-        hatchInside = Make("HatchInside", BossArt.HatchInside, "Background", -105, HatchAt);
+        hatchInside = Make("HatchInside", hatchCore != null ? hatchCore : BossArt.HatchInside, "Background", -105, HatchAt);
         hatchL = MakePart("HatchL", BossArt.Hatch, hatchArt, -104, HatchAt);
         hatchR = MakePart("HatchR", BossArt.Hatch, hatchArt, -104, HatchAt);
         hatchR.Sr.flipX = true;
         holo = Make("Hologram", BossArt.Holo, "Background", -103, HoloAt);
-        bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest);
-        blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest);
+        bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest, Res("boss_bug_arm_lit"));
+        blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest, Res("boss_blade_arm_lit"));
 
         for (int i = 0; i < bugs.Length; i++) { bugs[i] = Make("Bug", BossArt.Bug, "FX", 40, Vector2.zero); bugs[i].enabled = false; }
         zoneLane = Make("DangerLane", ParryFx.Square, "World", 4, Vector2.zero);
@@ -161,9 +167,12 @@ public class BossFight : MonoBehaviour
         return sr;
     }
 
-    Part MakePart(string name, Sprite[] v, Sprite art, int order, Vector2 pos)
+    static Sprite Res(string name) => Resources.Load<Sprite>("BossArt/" + name);
+
+    // override art: Normal / Lit (= art when no lit sprite: glow becomes a tint blink) / Flash (white tint, see Show)
+    Part MakePart(string name, Sprite[] v, Sprite art, int order, Vector2 pos, Sprite artLit = null)
     {
-        var p = new Part { V = art != null ? new[] { art, art, art } : v, Pos = pos };
+        var p = new Part { V = art != null ? new[] { art, artLit != null ? artLit : art, art } : v, Pos = pos };
         p.Sr = Make(name, p.V[BossArt.Normal], "Background", order, pos);
         return p;
     }
@@ -613,8 +622,9 @@ public class BossFight : MonoBehaviour
         bool flash = now < p.FlashUntil;
         int v = flash ? BossArt.Flash : p.Glow && blink ? BossArt.Lit : BossArt.Normal;
         p.Sr.sprite = p.V[v];
-        bool noVariants = p.V[BossArt.Normal] == p.V[BossArt.Lit];
-        p.Sr.color = noVariants && flash ? Color.white : noVariants && v == BossArt.Lit ? new Color(1f, 0.55f, 0.45f) : tint;
+        bool noVariants = p.V[BossArt.Normal] == p.V[BossArt.Flash]; // override art: no baked white flash
+        bool noLit = p.V[BossArt.Normal] == p.V[BossArt.Lit];
+        p.Sr.color = noVariants && flash ? Color.white : noLit && v == BossArt.Lit ? new Color(1f, 0.55f, 0.45f) : tint;
         p.Sr.transform.position = new Vector3(Snap(p.Pos.x), Snap(p.Pos.y + dy - sink), 0f);
     }
 
