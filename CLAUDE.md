@@ -26,7 +26,8 @@
 
 ### GPT(Codex) 호출
 - GPT는 **Claude가 `codex` 스킬로 호출할 때만** 쓴다. 주로 에셋 작업에 쓴다.
-- 난이도별로 라우팅한다: 어려움 `gpt-6-astra` / 보통 `gpt-6.1-sol` (기본값) / 쉬움 `gpt-6-luna`. 실패하면 한 단계씩 낮춘다.
+- **2026-11-10 사용자 변경:** Codex는 항상 `gpt-6.1-sol` + reasoning effort **high**로 호출한다. sol이 실패(크레딧·사용량)할 때만 낮추고 사용자에게 알린다.
+- (이전 규칙) 난이도별로 라우팅한다: 어려움 `gpt-6-astra` / 보통 `gpt-6.1-sol` (기본값) / 쉬움 `gpt-6-luna`. 실패하면 한 단계씩 낮춘다.
 - 자세한 방법: `.claude/skills/codex/SKILL.md`
 
 ### 기타

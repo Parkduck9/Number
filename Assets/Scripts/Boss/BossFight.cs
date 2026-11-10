@@ -29,29 +29,32 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     [SerializeField] TMP_FontAsset font;  // "smash the machines" hint
 
     // ---- numbers (T) ----
-    const int MaxHp = 45;                                   // phase 1 = 45..31, 2 = 30..16, 3 = 15..1 (30 before the core, DECISIONS 31)
+    const int MaxHp = 60;                                   // phase 1 = 60..41, 2 = 40..21, 3 = 20..1 (45 before, DECISIONS 33: harder)
     const int ArmHitDamage = 1, ReflectDamage = 1, DuelDamage = 6;
     const float StartX = 6.5f, StartAfter = 3f;             // fight starts when the player walks past x or after s
     // weak-point core (DECISIONS 31), replaces the 0.9 s rest between attacks: drop, open (hittable), pull back
     const int CoreHitDamage = 1, CoreIssenDamage = 2;
-    const float CoreDrop = 0.3f, CoreOpen = 1.6f, CoreRetract = 0.3f;
+    const float CoreDrop = 0.3f, CoreOpen = 1.2f, CoreRetract = 0.3f; // CoreOpen 1.6 -> 1.2 (DECISIONS 33)
     const float CoreHitEvery = 0.1f, CoreHalf = 0.75f, CoreIssenPast = 1.6f; // s between LMB hits (safety only: Swung fires once per swing, swings are >= attackDuration 0.3 s apart minus one frame); u half size; u issen lands past it
     public static int DiceDamage(int face) => (face + 1) / 2; // faces 1..6 -> 1, 1, 2, 2, 3, 3
-    const float WaveSpeed = 9f, WaveEvery = 1.3f, WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
+    const float WaveSpeed = 10.5f, WaveEvery = 1.1f, // was 9 / 1.3 (DECISIONS 33)
+ WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
     static readonly float[] GapLows = { 2f, 3.8f };         // gap on the floor (stand) / at jump height
     const float ZoneHalf = 1.5f, StuckTime = 3f, FirstSlam = 0.5f;
     const float WindowEarly = 0.25f, WindowLate = 0.1f, Lockout = 0.25f; // same LMB window as EliteDuel
-    // B tracks (DECISIONS 29): after each slam the blade re-aims at the player's x, slides there in SlamShift, waits SlamAim, slams
-    const float SlamShift = 0.2f, RingLead = 0.6f;               // ring always 0.6 s (DECISIONS 28), starts after the slide
-    static readonly float[] SlamAim = { 0.75f, 0.68f, 0.6f };    // by phase: s from the slide's end to the slam (>= RingLead)
+    // B tracks (DECISIONS 29): after each slam the blade re-aims at the player's x, slides there in SlamShift, waits SlamAim, slams.
+    // DECISIONS 33: while it waits it keeps following the player's x (TrackSpeed u/s) and locks only when the ring appears.
+    const float SlamShift = 0.15f, RingLead = 0.6f, TrackSpeed = 9f; // ring always 0.6 s (DECISIONS 28), starts after the slide
+    static readonly float[] SlamAim = { 0.85f, 0.8f, 0.75f };    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
     // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime; LOW = jump over, HIGH = stay down / dash
-    const float SweepWarn = 0.6f, SweepArmTip = 7f, SweepHeadHalf = 0.75f, SweepTrailW = 5f, SweepFromX = 0.5f, SweepToX = RoomW - 0.5f; // arm half on screen at the ends
-    static readonly float[] SweepTime = { 0.8f, 0.7f, 0.6f };   // by phase
+    const float SweepWarn = 0.5f, // was 0.6 (DECISIONS 33)
+ SweepArmTip = 7f, SweepHeadHalf = 0.75f, SweepTrailW = 5f, SweepFromX = 0.5f, SweepToX = RoomW - 0.5f; // arm half on screen at the ends
+    static readonly float[] SweepTime = { 0.7f, 0.6f, 0.5f };   // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
     static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8)
     // C: volleys of small shots; fan aimed at the player, phase 3 alternates with a spiral arc over the lower half
     const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.3125f, FanSpread = 50f, SpiralStep = 0.045f;
     const int FanShots = 5, SideFanShots = 3, SpiralShots = 9, MaxShots = 40; // MaxShots: live cap (WebGL)
-    static readonly float[] VolleyEvery = { 0.8f, 0.7f, 0.6f }; // by phase
+    static readonly float[] VolleyEvery = { 0.7f, 0.6f, 0.5f }; // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
 
     // ---- layout (room 30 x 16.875, floor top y 2) ----
     const float Floor = 2f, RoomW = 30f, Px = 1f / 32f;
@@ -114,7 +117,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     SpriteRenderer zoneFloor, zoneLane, white, sweepFill, sweepLine, sweepHead, sweepTrail;
     float sweepY = -1f; // band centre while the B' warning / slash shows, < 0 = off
     readonly SpriteRenderer[] zoneEdge = new SpriteRenderer[2];           // FX: blinking side lines of the danger lane
-    readonly SpriteRenderer[] gapMark = new SpriteRenderer[Waves * 2];    // FX: bright bars at each wall's gap (bottom, top)
     static readonly int FlashId = Shader.PropertyToID("_Flash");
     readonly SpriteRenderer[] aimDots = new SpriteRenderer[14];
     readonly SpriteRenderer[] coreBracket = new SpriteRenderer[8]; // gold lock-on corners around the open core (DECISIONS 32)
@@ -171,12 +173,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             zoneEdge[i] = Make("DangerEdge", ParryFx.Square, "World", 6, Vector2.zero);
             zoneEdge[i].transform.localScale = new Vector3(Px, 8f, 1f);
             zoneEdge[i].enabled = false;
-        }
-        for (int i = 0; i < gapMark.Length; i++)
-        {
-            gapMark[i] = Make("GapMark", ParryFx.Square, "FX", 41, Vector2.zero);
-            gapMark[i].transform.localScale = new Vector3(2f * WaveHalfW + 0.5f, 2f * Px, 1f);
-            gapMark[i].enabled = false;
         }
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
         sweepLine = Make("SweepLine", ParryFx.Square, "World", 6, Vector2.zero);
@@ -299,11 +295,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             do atk = ph == 1 ? PhaseOnePool[Random.Range(0, PhaseOnePool.Length)] : Random.Range(0, 4);
             while (last >= 0 && (atk == last || (IsBlade(atk) && IsBlade(last))));
             last = atk;
-            int n = ph == 1 ? Random.Range(3, 5) : ph == 2 ? Random.Range(4, 7) : Random.Range(5, 8);
-            float tell = ph == 1 ? 1f : 0.8f;
+            int n = ph == 1 ? Random.Range(4, 6) : ph == 2 ? Random.Range(5, 8) : Random.Range(6, 9); // +1 each (DECISIONS 33)
+            float tell = ph == 1 ? 0.8f : 0.65f; // was 1 / 0.8
             BossArt.DrawHolo(atk == 3 ? BossArt.IconBlade : atk, n); // icon index == attack index (sweep reuses the blade)
             Sfx.Play(SfxId.EnemyTell);
-            if (ph == 3 && atk != 2 && (atk == 1 || Random.value < 0.5f)) StartCoroutine(AttackC(Mathf.Max(3, n - 2), tell, true)); // overlap
+            if (atk != 2 && (ph == 3 ? atk == 1 || Random.value < 0.5f : ph == 2 && Random.value < 0.35f)) // overlap (phase 2 too, DECISIONS 33)
+                StartCoroutine(AttackC(Mathf.Max(3, n - 2), tell, true));
             yield return atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : AttackC(n, tell, false);
             BossArt.DrawHolo(-1, -1);
             while (sideRunning) yield return null;
@@ -446,7 +443,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             {
                 waveOn[w] = false;
                 for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++) bugs[i].enabled = false;
-                gapMark[w * 2].enabled = gapMark[w * 2 + 1].enabled = false;
                 continue;
             }
             if (!waveHit[w] && dt > 0f && Mathf.Abs(pp.x - waveX[w]) < WaveHalfW + 0.35f)
@@ -455,14 +451,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
                 if (feet < WaveTop && (feet < gapLo[w] || top > gapLo[w] + GapH) &&
                     player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(waveX[w] - 1f, pp.y), Unparryable = true }) == HitResult.Hit)
                     waveHit[w] = true; // one hit per wall (a dash / i-frames pass through)
-            }
-            bool on = (flutter & 1) == 0 || waveX[w] < 0f;
-            for (int m = 0; m < 2; m++)
-            {
-                SpriteRenderer g = gapMark[w * 2 + m];
-                g.enabled = true;
-                g.transform.position = new Vector3(Snap(waveX[w]), Snap(gapLo[w] + m * GapH) + (m == 0 ? -Px : Px), 0f);
-                g.color = new Color(Cyan.r, Cyan.g, Cyan.b, on ? 0.95f : 0.55f); // "through here"
             }
             for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++)
             {
@@ -499,6 +487,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
                 else if (!parried && tt >= s - WindowEarly && tt - dt <= s + WindowLate) parried = true;
                 else if (tt < s - WindowEarly || tt > s + WindowLate) lockedUntil = tt + Lockout; // anti-mash
             }
+            // DECISIONS 33: after the slide the blade keeps following the player until the ring shows, then the spot is locked
+            if (!struck && dt > 0f && (k == 0 || tt >= SlamShift) && tt < s - RingLead)
+                zx = Mathf.MoveTowards(zx, Mathf.Clamp(player.transform.position.x, 3.5f, RoomW - 3.5f), TrackSpeed * dt);
             if (!struck)
             {
                 // k > 0: rise off the floor while sliding sideways to the new target, then hold high; drop in the last 0.12 s
@@ -836,7 +827,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
-        for (int i = 0; i < gapMark.Length; i++) gapMark[i].enabled = false;
         var shots = EnemyProjectile.Active;
         for (int i = shots.Count - 1; i >= 0; i--) { GameObject g = shots[i].gameObject; g.SetActive(false); Destroy(g); }
         ShatterFx.Play(holo, Vector2.down, HoloAt, Cyan); // the number breaks

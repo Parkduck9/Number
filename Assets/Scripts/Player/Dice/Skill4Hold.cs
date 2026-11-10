@@ -4,7 +4,7 @@ using UnityEngine;
 
 // Dice face 4, 칼집 일섬 sheath cut (DECISIONS 32, replaces 18/27's time hold). The hero does not move: input locked, enemies held,
 // hero invulnerable. The hero stands in the drawn-blade follow-through pose and the world greys (blue-grey quad on the FX layer, a
-// full-colour copy of the hero above it); a thin white slash line appears across each on-screen enemy, one by one (nearest first)
+// full-colour copy of the hero above it); a thin white slash line appears across each of the nearest four on-screen enemies (DECISIONS 33), one by one (nearest first)
 // with a tick; then the click (the sheath closes: sound + white flash), the colour comes back and every marked enemy is struck at
 // once (piercing player hit, one shared hit-stop + shake). Boss fight: RunBoss draws the lines over the core while BossFight.Held
 // freezes the boss; LuckyDice.BossSkill then calls Click + BossFight.SkillHit.
@@ -16,6 +16,7 @@ public static class Skill4Hold
     const float Recover = 0.3f;  // (T) s still invulnerable after the strike
     const float LineLen = 2.2f, BossLineLen = 3f; // (T) u
     const int BossLines = 4;
+    const int MaxCuts = 4;       // field: at most four enemies (user, 11/10)
     const int TintOrder = 60, MirrorOrder = 62, LineOrder = 96; // FX layer: under the spark sheets (100+)
     static readonly Color Tint = new Color(0.36f, 0.42f, 0.54f, 0.45f); // blue-grey "stopped world"
 
@@ -24,6 +25,7 @@ public static class Skill4Hold
         if (DiceSkillKit.PlayerGone(ctx)) yield break;
         PlayerController p = ctx.Player;
         List<TestEnemy> targets = DiceSkillKit.Targets(ctx, p.Body.position);
+        if (targets.Count > MaxCuts) targets = targets.GetRange(0, MaxCuts); // nearest four (face 4 = 4 cuts, like face 5 = 5 talismans)
         var points = new List<Vector2>();
         foreach (TestEnemy e in targets) points.Add(DiceSkillKit.Center(e));
         DiceSkillKit.Caption("SHEATH CUT", "칼집 일섬", Color.white);
