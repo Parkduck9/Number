@@ -2,14 +2,14 @@ FINAL BOSS PARTS - DRAFT, 2026-11-10
 
 Created entirely by generate.cjs using Node.js built-ins. No paid service, image
 generation API, image editor, antialiasing, gradients, or downloaded artwork.
-All generated files are confined to this directory. No Git operations were used.
+All generated images are confined to this directory. No Git operations were used.
 
 DELIVERABLES (opaque RGB count; transparency excluded)
 boss_body.png            768 x 448    8 colors
-boss_bug_arm.png         160 x 256    7 colors
-boss_bug_arm_lit.png     160 x 256    9 colors
-boss_blade_arm.png       160 x 320   12 colors
-boss_blade_arm_lit.png   160 x 320   13 colors
+boss_bug_arm.png         200 x 320    7 colors
+boss_bug_arm_lit.png     200 x 320    9 colors
+boss_blade_arm.png       288 x 576   11 colors
+boss_blade_arm_lit.png   288 x 576   12 colors
 boss_hatch_half.png       64 x  96    7 colors
 boss_hatch_core.png       48 x  48    7 colors
 preview_2x.png          1920 x 1080   2x nearest-neighbor of a 960 x 540 arena
@@ -25,7 +25,7 @@ PREVIEWS
 preview_2x.png shows both lit arms and open hatch so the core is visible.
 preview_1x.png shows idle arms and a closed hatch.
 parts_1x.png places all seven-part variants except the large body on one board.
-review/round_1_1x.png through round_5_1x.png preserve the review sequence.
+review/round_1_1x.png through round_6_1x.png preserve the review sequence.
 review/*_4x.png are enlarged checks of the arms, hatch, and chest region.
 The hero uses the first actual hero_idle_4f frame's alpha, thresholded at 128
 and recolored to a silhouette. Its 64x64 canvas has a 59-pixel visible height.
@@ -46,6 +46,14 @@ VISUAL REVIEW AND REFINEMENTS
 5. Replaced the core center with one horizontal four-barrel bank. Inspected
    final native assembly and core. No facial layout or baked hologram glyphs.
 
+6. User requested much heavier arms. Redrew the blade arm at 288x576 with
+   broad crimson studded sleeve/forearm, a huge four-finger-and-thumb gauntlet,
+   a wide straight sword, black oil and cyan coolant. Edge and finger seams
+   glow in the lit variant. Bug geometry re-rasterized at 200x320. Blade opaque
+   area is 2.38x the bug arm (canvas area 2.59x). Shoulder continues above the
+   960x540 arena; visible blade arm spans 464 pixels, versus the 59px hero.
+   Inspected native idle, 2x active, full parts sheet and 4x detail views.
+
 AUTOMATED CHECKS (all passed; see metrics.json)
 - Exact part dimensions and RGBA PNG decode/encode pixel identity.
 - Binary alpha; <=16 opaque colors per part; exactly 16 across the set.
@@ -59,8 +67,9 @@ AUTOMATED CHECKS (all passed; see metrics.json)
 REPRODUCE
 From the project root:
   node docs/design/concept/boss/parts_draft/generate.cjs
-The default is final round 5. Supplying 1 through 4 regenerates an earlier
-revision and overwrites the current deliverables; rerun with 5 to restore final.
+The default is round 6. Historical review PNGs remain available; numeric
+arguments only select legacy detail layers and no longer restore old arm sizes.
+Run without an argument to reproduce the current approved-scope draft.
 Node built-ins only; no package install required.
 
 HANDOFF / LIMITATIONS
@@ -70,6 +79,5 @@ apply Unity pivots; .meta settings and game integration remain unperformed.
 The bug anchor is the lower central edge of the palm, as requested. The sword
 anchor is directly below its bottommost tip pixel. Hatch right half is a flip.
 No Unity editor, Play mode or WebGL integration was tested. No .cs, scenes,
-prefabs, Assets files or root CREDITS.md were changed. The task's output-only
-constraint takes precedence; copy the local CREDITS.txt note into root credits
-when these drafts are accepted. Final style approval remains with the art owner.
+prefabs or Assets files were changed. Root CREDITS.md records the AI-created
+boss draft; local CREDITS.txt contains the detailed provenance. Final style approval remains with the art owner.

@@ -1,8 +1,8 @@
-DRAFT ASSET PROVENANCE - ready for transfer to project CREDITS.md on acceptance
+DRAFT ASSET PROVENANCE - summarized in project CREDITS.md
 
 Final boss pixel parts: AI-assisted creation (OpenAI Codex). Codex authored a
 deterministic Node.js integer-pixel raster script and visually reviewed/refined
-five versions. No image-generation API was called and no paid assets were used.
+six versions, including the enlarged blade/bug arm revision. No image-generation API was called and no paid assets were used.
 
 Composition reference: docs/design/concept/boss/boss_concept_4.png, supplied by
 the user and identified as Gemini concept art. Body/arm/chest arrangement only;
@@ -19,5 +19,5 @@ Guidance: .claude/skills/pixel-art and .claude/skills/pixel-art-sprites, includi
 their patterns and validation references; project ANTI_SLOP.md and boss-v2.md.
 No additional external assets or asset licenses were introduced.
 
-This file is local because the task explicitly restricted every output to
-docs/design/concept/boss/parts_draft/. Root project credits were not edited.
+Images and generator remain in docs/design/concept/boss/parts_draft/.
+Root CREDITS.md records the draft and this local provenance file.

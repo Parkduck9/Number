@@ -1,5 +1,5 @@
 {
-  "round": 5,
+  "round": 6,
   "parts": {
     "boss_body": {
       "size": [
@@ -26,16 +26,16 @@
     },
     "boss_bug_arm": {
       "size": [
-        160,
-        256
+        200,
+        320
       ],
       "opaqueColors": 7,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 21907,
-      "meanLuma": 0.1241,
+      "opaquePixels": 34356,
+      "meanLuma": 0.1279,
       "palette": [
         "#080b14",
         "#1a1d33",
@@ -48,16 +48,16 @@
     },
     "boss_bug_arm_lit": {
       "size": [
-        160,
-        256
+        200,
+        320
       ],
       "opaqueColors": 9,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 21907,
-      "meanLuma": 0.1335,
+      "opaquePixels": 34356,
+      "meanLuma": 0.1374,
       "palette": [
         "#080b14",
         "#1a1d33",
@@ -72,22 +72,21 @@
     },
     "boss_blade_arm": {
       "size": [
-        160,
-        320
+        288,
+        576
       ],
-      "opaqueColors": 12,
+      "opaqueColors": 11,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 13041,
-      "meanLuma": 0.2324,
+      "opaquePixels": 81800,
+      "meanLuma": 0.2384,
       "palette": [
         "#080b14",
         "#1a1d33",
         "#226076",
         "#2d3050",
-        "#3f4a6e",
         "#42a9bd",
         "#62677d",
         "#7a3a3c",
@@ -99,22 +98,21 @@
     },
     "boss_blade_arm_lit": {
       "size": [
-        160,
-        320
+        288,
+        576
       ],
-      "opaqueColors": 13,
+      "opaqueColors": 12,
       "alpha": [
         0,
         255
       ],
-      "opaquePixels": 13041,
-      "meanLuma": 0.2182,
+      "opaquePixels": 81800,
+      "meanLuma": 0.2312,
       "palette": [
         "#080b14",
         "#1a1d33",
         "#226076",
         "#2d3050",
-        "#3f4a6e",
         "#42a9bd",
         "#62677d",
         "#7a3a3c",
@@ -212,6 +210,19 @@
       ]
     }
   },
+  "armScale": {
+    "bladeToBugCanvasArea": 2.592,
+    "bladeToBugOpaqueArea": 2.381,
+    "bladeVisibleHeight": 464,
+    "bladeTipPreviewBottomEdge": [
+      764,
+      464
+    ],
+    "bugPalmPreviewBottomEdge": [
+      241,
+      448
+    ]
+  },
   "checks": {
     "rgbaPngRoundTrip": true,
     "hardAlpha": true,
@@ -220,6 +231,8 @@
     "baseAndLitSameAlpha": true,
     "transparentHatch128x96": true,
     "blankHologram144x88": true,
-    "nearestNeighbour2x": true
+    "nearestNeighbour2x": true,
+    "assemblySizesMatch": true,
+    "bottomCenterArmRegistration": true
   }
 }

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const OUT = __dirname;
-const ROUND = Number(process.argv[2] || 5);
+const ROUND = Number(process.argv[2] || 6);
 const P = {
   ink:'#080b14', night:'#0b1026', dark:'#1a1d33', mid:'#2d3050', tile:'#3f4a6e',
   steel:'#62677d', silver:'#858a9b', edge:'#b8bec8', white:'#d6d7d0',
@@ -30,7 +30,20 @@ function encode(a){const head=Buffer.alloc(13);head.writeUInt32BE(a.w);head.writ
 function decode(file){const b=fs.readFileSync(file),w=b.readUInt32BE(16),h=b.readUInt32BE(20);if(b[24]!==8||b[25]!==6)throw Error('RGBA8 PNG required');let p=8,ids=[];while(p<b.length){const n=b.readUInt32BE(p),t=b.toString('ascii',p+4,p+8);if(t==='IDAT')ids.push(b.subarray(p+8,p+8+n));p+=n+12;}const raw=zlib.inflateSync(Buffer.concat(ids)),a=new Raster(w,h),stride=w*4;for(let y=0;y<h;y++){const f=raw[y*(stride+1)];for(let x=0;x<stride;x++){const o=y*stride+x,l=x>=4?a.d[o-4]:0,u=y?a.d[o-stride]:0,ul=y&&x>=4?a.d[o-stride-4]:0;let v=0;if(f===1)v=l;if(f===2)v=u;if(f===3)v=Math.floor((l+u)/2);if(f===4){const q=l+u-ul,dl=Math.abs(q-l),du=Math.abs(q-u),dul=Math.abs(q-ul);v=dl<=du&&dl<=dul?l:du<=dul?u:ul;}a.d[o]=(raw[y*(stride+1)+1+x]+v)&255;}}return a;}
 function tube(a,points,width=9,c='mid'){a.line(points,'ink',width+4);a.line(points,c,width);a.line(points.map(([x,y])=>[x-2,y-2]),'dark',Math.max(1,width-5));}
 function stud(a,x,y){a.rect(x,y,4,4,'ink');a.rect(x,y,3,2,'brass');a.px(x,y,'silver');}
-function clipped(a,draw,allowed){const b=new Raster(a.w,a.h);draw(b);const keep=allowed.map(c=>rgba(c).slice(0,3).join(','));for(let i=0;i<a.d.length;i+=4)if(a.d[i+3]&&b.d[i+3]&&keep.includes([...a.d.subarray(i,i+3)].join(',')))b.d.copy(a.d,i,i,i+4);}
+// Re-rasterize enlarged bug geometry at native resolution, never resize its bitmap.
+function drawingScale(a,s){
+  const n=v=>Math.round(v*s),pts=p=>p.map(([x,y])=>[n(x),n(y)]);
+  return new Proxy(a,{get(t,k){
+    if(k==='geometryScale')return s;
+    if(k==='px')return(x,y,c)=>t.px(n(x),n(y),c);
+    if(k==='rect')return(x,y,w,h,c)=>t.rect(n(x),n(y),n(x+w)-n(x),n(y+h)-n(y),c);
+    if(k==='poly')return(p,c,o)=>t.poly(pts(p),c,o);
+    if(k==='line')return(p,c,w=1)=>t.line(pts(p),c,n(w));
+    if(k==='ellipse')return(x,y,rx,ry,c)=>t.ellipse(n(x),n(y),n(rx),n(ry),c);
+    return typeof t[k]==='function'?t[k].bind(t):t[k];
+  }});
+}
+function clipped(a,draw,allowed){const b=new Raster(a.w,a.h);draw(a.geometryScale?drawingScale(b,a.geometryScale):b);const keep=allowed.map(c=>rgba(c).slice(0,3).join(','));for(let i=0;i<a.d.length;i+=4)if(a.d[i+3]&&b.d[i+3]&&keep.includes([...a.d.subarray(i,i+3)].join(',')))b.d.copy(a.d,i,i,i+4);}
 function refineBody(a){
   // Dark broken equipment in the skirt, varied widths and interrupted bays.
   rack(a,123,323,63,118);rack(a,190,337,47,111);
@@ -169,7 +182,7 @@ function shell(a,cx,cy,w,h,variant=0){
   a.line([[cx-12,cy+11],[cx-21,cy+16],[cx-20,cy+23]],'ink',2);
   if(variant){a.line([[cx-7,cy-19],[cx-13,cy-9],[cx-7,cy-4]],'tile',2);}
 }
-function bug(lit=false){const a=new Raster(160,256);
+function bug(lit=false){const a=drawingScale(new Raster(200,320),1.25);
   // Bent arm assembled from distinct empty insect carapaces; small legs remain.
   tube(a,[[111,8],[104,48],[82,90],[62,131],[71,183],[80,234]],26,'dark');
   const shells=[[106,30,66,48],[92,76,69,57],[63,119,66,61],[64,163,66,49],[84,194,64,49]];
@@ -243,91 +256,77 @@ function bug(lit=false){const a=new Raster(160,256);
   }
   return a;
 }
-function blade(lit=false){const a=new Raster(160,320);
-  tube(a,[[66,5],[75,56],[97,102],[91,141]],25,'dark');
-  // Broad riveted textile-covered brigandine sleeve, not stacked samurai lamellae.
-  a.poly([[31,5],[71,2],[103,17],[117,50],[109,79],[82,89],[48,71],[32,42]],'ink');
-  a.poly([[34,8],[70,5],[100,20],[111,49],[104,73],[82,81],[51,67],[36,40]],'brass');
-  a.poly([[39,12],[69,10],[95,23],[105,48],[99,68],[80,75],[55,62],[42,38]],'red','ink');
-  a.poly([[84,20],[98,27],[106,48],[100,67],[83,75],[76,64],[83,47]],'dark');
-  a.line([[41,15],[64,13],[78,18]],'warm',3);
-  for(const [x,y]of[[49,24],[68,25],[86,31],[53,42],[72,43],[91,49],[62,59],[81,62]])stud(a,x,y);
-  // Elbow articulation: a flexible dark joint and two hardware straps.
-  a.poly([[58,75],[89,86],[108,78],[119,105],[108,128],[78,116]],'dark','ink');
-  a.line([[65,79],[87,90],[107,85]],'brass',4);a.line([[73,96],[91,106],[114,100]],'mid',6);
-  a.ellipse(100,110,13,13,'ink');a.ellipse(98,108,10,10,'mid');a.ellipse(96,106,4,4,'steel');
-  a.poly([[88,115],[113,114],[127,137],[119,164],[99,180],[69,161],[70,136]],'brass','ink');
-  a.poly([[89,121],[109,121],[119,139],[113,157],[98,170],[77,157],[77,139]],'red','ink');
-  a.poly([[109,129],[119,142],[111,158],[100,167],[95,151]],'dark');
-  a.line([[82,136],[90,125],[101,125]],'warm',3);
-  for(const [x,y]of[[86,135],[103,138],[83,151],[101,153]])stud(a,x,y);
-  // Short straight grip, compact oval guard, single cutting edge and pointed end.
-  a.rect(72,147,16,34,'ink');a.rect(75,149,10,31,'warm');
-  for(let y=151;y<178;y+=6){a.line([[75,y],[84,y+4]],'ink',2);a.px(75,y,'brass');}
-  a.poly([[57,150],[65,142],[78,146],[87,155],[90,173],[83,183],[61,179],[53,167]],'red','ink');
-  for(let i=0;i<4;i++){const y=151+i*7;a.poly([[60,y],[70,y-1],[81,y+4],[81,y+9],[69,y+5],[59,y+5]],'red','ink');stud(a,61,y);}
-  a.poly([[57,182],[64,177],[96,177],[103,182],[99,189],[61,189]],'brass','ink');
-  a.line([[62,180],[94,180]],'silver',2);a.rect(72,189,18,8,'brass');
-  // Constant vertical spine x=89. Straight edge x=71 until the final pointed tip.
-  a.poly([[71,196],[89,196],[89,299],[80,319],[71,304]],'ink');
-  a.poly([[73,197],[87,197],[87,299],[80,316],[73,303]],'steel');
-  a.poly([[73,197],[77,197],[77,303],[80,316],[73,303]],lit?'tell':'edge');
-  a.rect(80,198,2,103,'mid');a.line([[87,199],[87,299],[80,316]],'silver',1);
-  if(lit){a.line([[73,198],[73,302],[80,316]],'white',1);a.line([[76,199],[76,302]],'tell',2);}
-  a.px(80,319,'ink');
-  if(ROUND>=2){
-    // Break the shield-like fill into textile seams over riveted internal plates.
-    clipped(a,b=>{
-      b.poly([[46,15],[53,18],[56,38],[63,52],[57,60],[48,44]],'warm');
-      b.poly([[69,13],[76,20],[72,36],[78,53],[75,70],[67,62],[70,47],[65,28]],'dark');
-      b.line([[42,19],[48,40],[55,55]],'ink',2);
-      b.line([[55,20],[61,42],[71,62]],'ink',1);
-      b.line([[45,36],[69,39],[89,46]],'ink',1);
-      b.line([[51,53],[72,57],[91,62]],'ink',1);
-      b.poly([[100,33],[106,40],[105,59],[101,62],[98,52]],'ink');
-      b.line([[81,131],[86,140],[82,151],[87,162]],'warm',3);
-      b.poly([[109,143],[105,151],[110,159],[104,162],[101,151],[105,141]],'ink');
-    },['red','warm','dark']);
-    for(const [x,y]of[[49,24],[68,25],[86,31],[53,42],[72,43],[91,49],[62,59],[81,62]])stud(a,x,y);
-    a.line([[35,8],[53,6],[70,6]],'silver',1);
-    a.line([[106,46],[105,53],[102,56]],'coolant',2);
-    a.rect(101,57,2,3,'cyan');
-    a.line([[82,213],[85,216]],'ink',1);a.line([[82,267],[85,264]],'ink',1);
-    a.line([[74,232],[76,230]],lit?'white':'silver',1);
+function blade(lit=false){const a=new Raster(144,288);
+  // Author chunky 2px clusters. The broad shoulder continues beyond the top edge.
+  a.poly([[17,0],[117,0],[130,29],[125,58],[112,78],[47,76],[23,51]],'ink');
+  a.poly([[21,0],[113,0],[125,29],[120,56],[108,72],[49,70],[28,49]],'brass');
+  a.poly([[27,0],[108,0],[118,30],[114,53],[103,65],[52,63],[34,45]],'red');
+  a.poly([[92,0],[108,0],[118,30],[114,53],[103,65],[88,59],[96,37]],'dark');
+  a.poly([[29,0],[41,0],[43,25],[52,44],[48,54],[38,40]],'warm');
+  a.line([[24,0],[27,29],[34,45]],'silver',2);
+  // Dujeong-gap construction: a broad riveted sleeve with rectangular stitched bays.
+  for(const p of [[[47,0],[49,21],[56,46],[64,64]],[[73,0],[74,25],[82,48],[86,62]],[[29,22],[61,25],[91,25],[116,32]],[[36,43],[64,47],[90,49],[113,52]]])a.line(p,'ink',2);
+  for(const [x,y]of[[35,10],[55,10],[80,12],[103,15],[43,32],[64,35],[87,36],[104,41],[55,53],[76,56],[96,56]])stud(a,x,y);
+  a.line([[49,69],[69,77],[106,78],[119,67]],'ink',7);
+  a.line([[49,69],[69,74],[106,74],[119,64]],'brass',3);
+  // Short, thick elbow with a dark flexible tendon, no stacked shoulder lamellae.
+  a.poly([[49,74],[107,76],[125,87],[119,110],[57,113],[42,92]],'ink');
+  a.poly([[55,78],[105,81],[117,89],[112,105],[61,106],[48,92]],'dark');
+  a.line([[55,83],[75,90],[104,89]],'mid',5);
+  a.line([[57,97],[79,103],[107,99]],'steel',3);
+  a.ellipse(112,93,14,16,'ink');a.ellipse(110,91,11,13,'brass');
+  a.ellipse(110,91,7,9,'dark');a.line([[105,86],[110,83]],'silver',2);
+  // Huge boxy forearm; flat gold edging, crimson armor and a shadowed right face.
+  a.poly([[56,91],[98,88],[127,100],[142,123],[135,146],[112,160],[52,151],[35,130],[37,108]],'ink');
+  a.poly([[57,96],[97,93],[123,104],[136,124],[130,142],[111,154],[55,146],[41,128],[43,110]],'brass');
+  a.poly([[59,102],[95,99],[118,109],[129,125],[124,139],[108,147],[59,140],[48,125],[50,112]],'red');
+  a.poly([[106,106],[118,109],[129,125],[124,139],[108,147],[94,140],[104,125]],'dark');
+  a.poly([[59,104],[70,102],[69,115],[76,132],[65,136],[55,124]],'warm');
+  a.line([[45,111],[58,99],[87,97]],'silver',2);
+  a.line([[78,102],[76,119],[86,141]],'ink',2);
+  a.line([[51,120],[76,123],[103,127],[123,127]],'ink',2);
+  for(const [x,y]of[[56,111],[82,109],[105,115],[60,130],[86,133],[111,135]])stud(a,x,y);
+  // Black oil pools in the right seam; a small cyan leak stays distinct from red armor.
+  a.poly([[121,111],[127,119],[124,129],[127,135],[118,143],[113,137],[118,128],[116,118]],'ink');
+  a.line([[121,119],[120,125],[123,130]],'coolant',3);a.rect(120,130,2,4,'cyan');
+  a.poly([[94,25],[100,28],[99,36],[104,42],[98,49],[95,40]],'ink');
+  a.line([[97,29],[97,35]],'coolant',2);
+  // Sword handle is behind four curled finger plates; one thumb crosses their right edge.
+  a.rect(65,126,16,50,'ink');a.rect(68,128,10,45,'brass');
+  for(let y=129;y<172;y+=7)a.line([[68,y],[77,y+4]],'dark',3);
+  a.poly([[38,127],[56,121],[79,127],[98,136],[107,154],[97,170],[53,174],[29,158],[26,143]],'ink');
+  a.poly([[39,132],[55,126],[77,132],[93,140],[100,154],[93,165],[54,168],[35,155],[32,143]],'red');
+  a.poly([[87,140],[98,146],[100,154],[93,165],[76,168],[72,159]],'dark');
+  // Four fingers wrap across the grip, with broad knuckle planes and gold caps.
+  for(let i=0;i<4;i++){
+    const y=131+i*9;
+    a.poly([[36,y],[48,y-3],[67,y+2],[78,y+7],[75,y+14],[59,y+10],[43,y+9],[33,y+5]],'ink');
+    a.poly([[38,y+1],[48,y],[65,y+4],[73,y+8],[71,y+11],[58,y+7],[43,y+6],[37,y+4]],'red');
+    a.line([[38,y+1],[48,y],[59,y+3]],'warm',2);
+    a.rect(42,y+1,5,4,'brass');a.rect(42,y+1,3,1,'silver');
+    if(lit)a.line([[49,y+1],[65,y+5],[71,y+8]],'tell',2);
   }
-  if(ROUND>=3){
-    a.rect(22,0,104,84,null);
-    // Wide hanging dujeong-gap sleeve with a blunt cuff, cloth edge and stud rows.
-    // The silhouette is a sleeve, not an isolated pointed heraldic shield.
-    a.poly([[35,4],[66,2],[89,11],[104,26],[113,54],[110,76],[92,88],[55,75],[39,50],[29,25]],'ink');
-    a.poly([[36,8],[65,6],[86,15],[99,29],[107,55],[104,73],[91,81],[59,70],[44,47],[35,25]],'red');
-    a.poly([[76,13],[91,23],[102,47],[106,61],[102,73],[92,81],[80,74],[86,53],[80,37]],'dark');
-    a.poly([[38,12],[48,14],[52,31],[52,49],[63,64],[57,65],[44,46],[37,26]],'warm');
-    a.line([[36,8],[47,5],[65,6],[84,14],[96,25]],'brass',3);
-    a.line([[36,12],[36,26],[44,47],[58,70],[91,83],[107,74]],'brass',2);
-    a.line([[42,10],[59,9],[70,13]],'silver',1);
-    a.line([[46,20],[50,38],[59,56],[66,68]],'ink',1);
-    a.line([[63,15],[66,33],[74,51],[79,70]],'ink',2);
-    a.line([[39,29],[56,32],[77,36],[98,43]],'ink',1);
-    a.line([[47,49],[65,51],[83,58],[106,61]],'ink',1);
-    for(const [x,y]of[[43,19],[58,21],[74,26],[89,32],[50,39],[67,41],[84,46],[97,51],[58,58],[75,62],[94,67]])stud(a,x,y);
-    // Worn cloth tabs at the cuff and compact metal knuckle fasteners.
-    a.poly([[57,74],[65,78],[64,86],[60,84]],'red','ink');
-    a.poly([[74,80],[82,84],[80,91],[75,89]],'red','ink');
-    a.line([[104,51],[101,57],[103,62],[99,68]],'ink',3);
-    a.line([[103,55],[103,59]],'coolant',1);
-    a.rect(102,62,1,2,'cyan');
-    for(const [x,y]of[[79,124],[91,121],[118,140]]){a.rect(x,y,4,2,'ink');a.px(x,y-1,'silver');}
-    a.line([[78,87],[86,91],[98,90]],'tile',2);
-  }
-  if(ROUND>=4){
-    // Small, flat oval hwando-style guard fittings; no katana curvature or hamon.
-    a.rect(61,182,3,3,'warm');a.rect(95,182,3,3,'warm');
-    a.rect(70,190,3,5,'ink');a.rect(88,190,3,5,'ink');
-    a.line([[77,125],[83,120],[90,119]],'silver',1);
-    a.line([[110,163],[106,168],[101,171]],'ink',2);
-  }
-  return a;
+  a.poly([[79,133],[88,132],[98,140],[94,149],[82,155],[73,149],[76,141]],'ink');
+  a.poly([[81,137],[87,136],[93,141],[89,146],[82,150],[78,147]],'brass');
+  a.poly([[82,139],[86,138],[90,141],[86,145],[82,146]],'red');
+  a.line([[35,156],[49,167],[68,171],[93,167]],'brass',3);
+  if(lit){a.line([[94,143],[97,153],[92,161]],'tell',2);a.line([[39,133],[47,131]],'white',1);}
+  a.rect(66,171,14,7,'ink');a.rect(69,172,8,5,'brass');
+  // Compact oval Korean-style sword guard; straight broad single cutting edge.
+  a.poly([[44,176],[51,172],[94,172],[101,177],[98,182],[46,182]],'ink');
+  a.poly([[46,176],[53,174],[93,174],[98,177],[96,180],[48,180]],'brass');
+  a.line([[49,175],[92,175]],'silver',2);
+  a.rect(54,182,37,7,'ink');a.rect(57,182,31,5,'brass');
+  a.poly([[53,188],[91,188],[91,267],[72,287],[53,268]],'ink');
+  a.poly([[56,189],[88,189],[88,266],[72,284],[56,267]],'steel');
+  a.poly([[56,189],[63,189],[63,264],[72,284],[56,267]],lit?'tell':'edge');
+  a.poly([[81,190],[88,190],[88,266],[72,284],[81,263]],'mid');
+  a.line([[85,191],[85,263],[74,278]],'silver',2);
+  a.line([[68,192],[68,261]],'dark',2);
+  a.line([[75,219],[79,215]],'ink',2);a.line([[73,251],[77,248]],'ink',2);
+  if(lit){a.line([[56,190],[56,266],[72,284]],'white',2);a.line([[60,191],[60,263]],'tell',3);}
+  a.px(72,287,'ink');
+  return a.scale(2);
 }
 function hatch(){const a=new Raster(64,96);
   a.poly([[17,0],[63,0],[63,95],[15,95],[3,83],[0,58],[0,29],[7,9]],'ink');
@@ -382,8 +381,8 @@ function preview(parts,active=false){const a=new Raster(960,540,'#0b0a14');
   a.blit(parts.boss_hatch_core,456,268);
   a.blit(parts.boss_hatch_half,416-(active?35:0),244);
   a.blit(parts.boss_hatch_half,480+(active?35:0),244,true);
-  a.blit(parts[active?'boss_bug_arm_lit':'boss_bug_arm'],173,152);
-  a.blit(parts[active?'boss_blade_arm_lit':'boss_blade_arm'],630,143);
+  a.blit(parts[active?'boss_bug_arm_lit':'boss_bug_arm'],141,128);
+  a.blit(parts[active?'boss_blade_arm_lit':'boss_blade_arm'],620,-112);
   a.rect(0,466,960,7,'ink');a.rect(0,467,960,3,'steel');a.rect(0,473,960,16,'dark');
   for(let x=0;x<960;x+=48){a.rect(x,473,2,15,'ink');a.rect(x+4,474,38,2,'tile');}
   a.rect(0,489,960,5,'ink');a.rect(0,494,960,10,'night');
@@ -397,7 +396,7 @@ fs.mkdirSync(path.join(OUT,'review'),{recursive:true});
 for(const [name,a]of Object.entries(parts))a.save(name+'.png');
 preview(parts).save('preview_1x.png');preview(parts,true).scale(2).save('preview_2x.png');
 preview(parts,true).save('review/round_'+ROUND+'_1x.png');
-const sheet=new Raster(840,380,'#0b0a14');sheet.blit(parts.boss_bug_arm,10,15);sheet.blit(parts.boss_bug_arm_lit,172,15);sheet.blit(parts.boss_blade_arm,340,15);sheet.blit(parts.boss_blade_arm_lit,502,15);sheet.blit(parts.boss_hatch_half,690,20);sheet.blit(parts.boss_hatch_core,700,145);sheet.save('parts_1x.png');
+const sheet=new Raster(1136,608,'#0b0a14');sheet.blit(parts.boss_bug_arm,8,16);sheet.blit(parts.boss_bug_arm_lit,216,16);sheet.blit(parts.boss_blade_arm,432,16);sheet.blit(parts.boss_blade_arm_lit,728,16);sheet.blit(parts.boss_hatch_half,1040,20);sheet.blit(parts.boss_hatch_core,1048,145);sheet.save('parts_1x.png');
 parts.boss_bug_arm_lit.scale(4).save('review/bug_4x.png');parts.boss_blade_arm_lit.scale(4).save('review/blade_4x.png');parts.boss_hatch_half.scale(4).save('review/hatch_4x.png');parts.boss_body.crop(268,178,232,198).scale(4).save('review/chest_4x.png');
 const metrics={round:ROUND,parts:{},palette:[],preview:{size:[1920,1080],background:'#0B0A14',nativeArena:[960,540],nearestNeighbour:2}};
 const all=new Set();
@@ -407,6 +406,17 @@ for(const [name,a]of Object.entries(parts)){const colors=new Set(),alpha=new Set
   if(!decode(path.join(OUT,name+'.png')).d.equals(a.d))throw Error('PNG roundtrip failed');
 }
 metrics.palette=[...all].sort();
+if(all.size>16)throw Error('Combined sprite palette exceeds 16 colors');
+const assembly=JSON.parse(fs.readFileSync(path.join(OUT,'assembly.json'),'utf8'));
+for(const [name,a]of Object.entries(parts)){
+  const spec=assembly.parts[name+'.png'];
+  if(spec.size[0]!==a.w||spec.size[1]!==a.h)throw Error('Assembly size mismatch: '+name);
+}
+for(const name of ['boss_bug_arm','boss_bug_arm_lit','boss_blade_arm','boss_blade_arm_lit']){
+  const a=parts[name],pivot=assembly.parts[name+'.png'].pivotNormalized;
+  if(pivot[0]!==0.5||pivot[1]!==0||a.d[((a.h-1)*a.w+a.w/2)*4+3]!==255)throw Error('Bottom-center registration mismatch: '+name);
+}
+metrics.armScale={bladeToBugCanvasArea:288*576/(200*320),bladeToBugOpaqueArea:Number((metrics.parts.boss_blade_arm.opaquePixels/metrics.parts.boss_bug_arm.opaquePixels).toFixed(3)),bladeVisibleHeight:464,bladeTipPreviewBottomEdge:[764,464],bugPalmPreviewBottomEdge:[241,448]};
 for(const pair of [['boss_bug_arm','boss_bug_arm_lit'],['boss_blade_arm','boss_blade_arm_lit']]){const a=parts[pair[0]],b=parts[pair[1]];for(let i=3;i<a.d.length;i+=4)if(a.d[i]!==b.d[i])throw Error('Tell silhouette changed');}
 // Validate requested recess geometry and authored palette membership.
 for(let y=230;y<326;y++)for(let x=320;x<448;x++)if(parts.boss_body.d[(y*768+x)*4+3]!==0)throw Error('Chest aperture obstructed');
@@ -417,5 +427,6 @@ for(let y=0;y<1080;y++)for(let x=0;x<1920;x++){const i=(y*1920+x)*4,j=(Math.floo
 const hp=hero();let minY=64,maxY=0;for(let y=0;y<64;y++)for(let x=0;x<64;x++)if(hp.d[(y*64+x)*4+3]){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
 metrics.preview.hero={canvas:[64,64],visibleHeight:maxY-minY+1,source:'Assets/Resources/DraftSprites/hero_idle_4f.png, frame 0 alpha >=128, recolored as silhouette',topLeft:[449,403]};
 metrics.checks={rgbaPngRoundTrip:true,hardAlpha:true,allSpritesAtMost16Colors:true,total16Colors:all.size===16,baseAndLitSameAlpha:true,transparentHatch128x96:true,blankHologram144x88:true,nearestNeighbour2x:true};
+metrics.checks.assemblySizesMatch=true;metrics.checks.bottomCenterArmRegistration=true;
 fs.writeFileSync(path.join(OUT,'metrics.json'),JSON.stringify(metrics,null,2)+'\n');
 console.log(JSON.stringify({round:ROUND,parts:Object.fromEntries(Object.entries(metrics.parts).map(([k,v])=>[k,{size:v.size,colors:v.opaqueColors}])),unionColors:all.size},null,2));
