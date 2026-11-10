@@ -1,7 +1,12 @@
-# PLACEHOLDER ending text for END-01 (press the stop button). The user rewrites these lines.
+# DRAFT ending text for the single ending (DECISIONS 21: Yudo smashes all the machinery). Claude draft 2026-11-10 - the user rewrites/approves these lines.
 # format:  speakerId | Korean | English
 @mode talk
-broadcast | [임시] 정지 버튼이 눌렸다. | [PLACEHOLDER] The stop button is pressed.
-yudo | [임시] 행운의 숫자 같은 건 처음부터 없었어. | [PLACEHOLDER] There was never a lucky number.
-yudo | [임시] 전부 AI가 정한 거였어. | [PLACEHOLDER] The AI decided all of it.
-broadcast | [임시] END-01 | [PLACEHOLDER] END-01
+broadcast | 오늘의… 행운의… 숫자… 는… | Today's... lucky... number... is...
+broadcast | ……………… | ................
+yudo | 버튼? 이게 무슨 버튼인지 난 몰라. | A button? I don't know what any of these buttons do.
+yudo | 그래서 그냥 다 부쉈지. | So I just broke all of them.
+citizen | …어? 숫자가… 안 보여. | ...Huh? I can't see the number anymore.
+citizen | 오늘 운은… 내가 정해도 되는 건가? | Do I... get to decide my own luck today?
+yudo | 점괘는 내가 봐 줄게. 공짜로. | I'll read your fortune. Free of charge.
+yudo | 오늘은… 대길. | Today is... great luck.
+broadcast | [END] | [END]
