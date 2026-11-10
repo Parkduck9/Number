@@ -56,6 +56,13 @@ public static class PartsBackdropKit
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 12.5f, lamp, OProp);
             Put(p, "props/crates_neon", null, 0f, 22f, Y0, OProp);
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 28.5f, lamp, OProp);
+            // segment end (x 30..76) was bare
+            Put(p, "props/vending_dancheong", null, 0f, 36f, Y0, OProp);
+            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 44.5f, lamp, OProp);
+            Put(p, "props/crates_neon", null, 0f, 52f, Y0, OProp);
+            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 60.5f, lamp, OProp);
+            Put(p, "props/vending_dancheong", null, 0f, 67f, Y0, OProp);
+            Put(p, "props/crates_neon", null, 0f, 73f, Y0, OProp);
         }
         else
         {
@@ -64,10 +71,24 @@ public static class PartsBackdropKit
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 33f, lamp, OProp);
             Put(p, "props/vending_dancheong", null, 0f, 38f, Y0, OProp);
             Put(p, "props/crates_neon", null, 0f, 44.5f, Y0, OProp);
+            // segment end (x 46..76) was bare
+            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 51f, lamp, OProp);
+            Put(p, "props/vending_dancheong", null, 0f, 57f, Y0, OProp);
+            Put(p, "props/crates_neon", null, 0f, 64f, Y0, OProp);
+            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 69.5f, lamp, OProp);
+            Put(p, "props/vending_dancheong", null, 0f, 74f, Y0, OProp);
         }
         // spill lights (were AddLamps on the old images): the lanterns warm, the vending machines vermilion
-        if (!rail) { Glow(12.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(28.5f, lamp - 1f, LampWarm, 4f); Glow(4.5f, Y0 + 1.3f, LampRed, 3f); }
-        else { Glow(33f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(11.5f, Y0 + 1.3f, LampRed, 3f); Glow(38f, Y0 + 1.3f, LampTeal, 3f); }
+        if (!rail)
+        {
+            Glow(12.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(28.5f, lamp - 1f, LampWarm, 4f); Glow(4.5f, Y0 + 1.3f, LampRed, 3f);
+            Glow(36f, Y0 + 1.3f, LampTeal, 3f); Glow(44.5f, lamp - 1f, LampWarm, 4f); Glow(60.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(67f, Y0 + 1.3f, LampRed, 3f);
+        }
+        else
+        {
+            Glow(33f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(11.5f, Y0 + 1.3f, LampRed, 3f); Glow(38f, Y0 + 1.3f, LampTeal, 3f);
+            Glow(51f, lamp - 1f, LampWarm, 4f); Glow(57f, Y0 + 1.3f, LampRed, 3f); Glow(69.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(74f, Y0 + 1.3f, LampTeal, 3f);
+        }
         Finish();
     }
 
@@ -95,6 +116,12 @@ public static class PartsBackdropKit
             Put(p, "props/robot_arm", null, 0f, 31f, Y0, OProp);
             Put(p, "props/server_cabinet", "props/server_cabinet_lights_4f", 3f, 38f, Y0, OProp);
             Put(p, "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 44f, Y0, OProp);
+            // segment end (x 46..76) was bare
+            Row(p, belt, Y0, 49f, 56f, OProp);
+            Put(p, "props/robot_arm", null, 0f, 60f, Y0, OProp);
+            Put(p, "props/cable_bundle", null, 0f, 64f, cable, OProp);
+            Put(p, "props/crates_neon", null, 0f, 67f, Y0, OProp);
+            Put(p, "props/server_cabinet", "props/server_cabinet_lights_4f", 3f, 73f, Y0, OProp);
         }
         else
         {
@@ -105,10 +132,24 @@ public static class PartsBackdropKit
             Put(p, "props/crates_neon", null, 0f, 33f, Y0, OProp);
             Put(p, "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 40f, Y0, OProp);
             Put(p, "props/robot_arm", null, 0f, 44f, Y0, OProp);
+            // segment end (x 46..76) was bare
+            Put(p, "props/server_cabinet", "props/server_cabinet_lights_4f", 3f, 50f, Y0, OProp);
+            Row(p, belt, Y0, 54f, 61f, OProp);
+            Put(p, "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 65f, Y0, OProp);
+            Put(p, "props/cable_bundle", null, 0f, 68.5f, cable, OProp);
+            Put(p, "props/robot_arm", null, 0f, 72f, Y0, OProp);
         }
         // spill lights: the scanner gates teal, the robot arms' hazard plates vermilion
-        if (!hall) { Glow(14f, Y0 + 1.5f, LampRed, 4f); Glow(31f, Y0 + 1.5f, LampRed, 4f); Glow(44f, Y0 + 1.3f, LampTeal, 5f, 0.15f); }
-        else { Glow(27f, Y0 + 1.3f, LampTeal, 5f, 0.15f); Glow(40f, Y0 + 1.3f, LampTeal, 5f); Glow(44f, Y0 + 1.5f, LampRed, 4f); }
+        if (!hall)
+        {
+            Glow(14f, Y0 + 1.5f, LampRed, 4f); Glow(31f, Y0 + 1.5f, LampRed, 4f); Glow(44f, Y0 + 1.3f, LampTeal, 5f, 0.15f);
+            Glow(60f, Y0 + 1.5f, LampRed, 4f); Glow(73f, Y0 + 1.2f, LampTeal, 3f);
+        }
+        else
+        {
+            Glow(27f, Y0 + 1.3f, LampTeal, 5f, 0.15f); Glow(40f, Y0 + 1.3f, LampTeal, 5f); Glow(44f, Y0 + 1.5f, LampRed, 4f);
+            Glow(65f, Y0 + 1.3f, LampTeal, 5f); Glow(72f, Y0 + 1.5f, LampRed, 4f);
+        }
         Finish();
     }
 
