@@ -13,7 +13,8 @@ public static class DraftSprites
 
     static Sprite[] hero, heroRun, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
         heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
-        bug, bugWalk, bugFlyer, bugFlyerAttack, heroGrapple;
+        bug, bugWalk, bugFlyer, bugFlyerAttack, heroGrapple, sniperAim, sniperStunned, sniperWalk,
+        bulletSniper, bulletAndroid, bulletCitizen, bulletBug;
     public static Sprite[] Hero => hero ??= Load("hero_walk_6f", 6);
     public static Sprite[] HeroRun => heroRun ??= Load("hero_run_6f", 6);                   // test strip (Codex); null = walk
     public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_4f", 4);
@@ -36,6 +37,15 @@ public static class DraftSprites
     public static Sprite[] BugWalk => bugWalk ??= Load("bug_walk_4f", 4);
     public static Sprite[] BugFlyer => bugFlyer ??= Load("bug_flyer_4f", 4);                 // ranged bug: flap loop (hovers, body ~1.1u above the pivot)
     public static Sprite[] BugFlyerAttack => bugFlyerAttack ??= Load("bug_flyer_attack_5f", 5); // 0 charge, 2 fire, 4 recover
+
+    public static Sprite[] SniperAim => sniperAim ??= Load("sniper_aim_5f", 5);              // 0 stand, 1 raise, 2 aim, 3 charge (locked), 4 fire
+    public static Sprite[] SniperStunned => sniperStunned ??= Load("sniper_stunned_1f", 1);
+    public static Sprite[] SniperWalk => sniperWalk ??= Load("sniper_walk_4f", 4);
+    // Enemy shots: 16x16 2-frame loops, pivot centre (EnemyProjectile rotates +x along the velocity).
+    public static Sprite[] BulletSniper => bulletSniper ??= Load("bullet_sniper_2f", 2);
+    public static Sprite[] BulletAndroid => bulletAndroid ??= Load("bullet_android_2f", 2);
+    public static Sprite[] BulletCitizen => bulletCitizen ??= Load("bullet_citizen_2f", 2);
+    public static Sprite[] BulletBug => bulletBug ??= Load("bullet_bug_2f", 2);
 
     static Sprite[] Load(string name, int count)
     {

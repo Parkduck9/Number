@@ -13,6 +13,9 @@ public class EnemyProjectile : MonoBehaviour
     HitInfo info;
     float dieAt;
     bool passedPlayer;
+    Sprite[] frames; // null = placeholder square
+    SpriteRenderer sr;
+    const float FrameFps = 12f;
 
     // Live shots, for the LMB parry merge (PlayerController.FaceParryThreat).
     public static readonly System.Collections.Generic.List<EnemyProjectile> Active = new System.Collections.Generic.List<EnemyProjectile>();
@@ -24,12 +27,13 @@ public class EnemyProjectile : MonoBehaviour
     void OnEnable() => Active.Add(this);
     void OnDisable() => Active.Remove(this);
 
-    public static void Spawn(Vector2 position, int dir, float speed, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color)
+    // frames (optional, 2-frame loop pointing +x): art instead of the coloured square; `color` is the fallback when null.
+    public static void Spawn(Vector2 position, int dir, float speed, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color, Sprite[] frames = null)
     {
-        Spawn(position, new Vector2(dir * speed, 0f), playerMask, groundMask, info, color);
+        Spawn(position, new Vector2(dir * speed, 0f), playerMask, groundMask, info, color, frames);
     }
 
-    public static void Spawn(Vector2 position, Vector2 velocity, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color)
+    public static void Spawn(Vector2 position, Vector2 velocity, LayerMask playerMask, LayerMask groundMask, HitInfo info, Color color, Sprite[] frames = null)
     {
         GameObject go = new GameObject("EnemyProjectile");
         go.transform.position = position;
@@ -39,6 +43,14 @@ public class EnemyProjectile : MonoBehaviour
         sr.color = color;
         sr.sortingOrder = 50;
         EnemyProjectile p = go.AddComponent<EnemyProjectile>();
+        if (frames != null && frames.Length > 0)
+        {
+            p.frames = frames;
+            sr.sprite = frames[0];
+            sr.color = Color.white;
+            go.transform.localScale = Vector3.one;
+            p.AlignToVelocity(velocity);
+        }
         p.velocity = velocity;
         p.playerMask = playerMask;
         p.groundMask = groundMask;
@@ -50,6 +62,7 @@ public class EnemyProjectile : MonoBehaviour
     {
         if (GameFlow.InputLocked) { dieAt += Time.deltaTime; return; }
         if (Time.time >= dieAt) { Destroy(gameObject); return; }
+        if (frames != null) Rend.sprite = frames[Mathf.FloorToInt(Time.time * FrameFps) % frames.Length];
         Vector2 prev = transform.position;
         transform.position += (Vector3)(velocity * Time.deltaTime);
         Vector2 pos = transform.position;
@@ -82,6 +95,19 @@ public class EnemyProjectile : MonoBehaviour
         velocity = -velocity * Juice.ReflectSpeedMul;
         passedPlayer = true;
         dieAt = Time.time + Juice.ReflectLife;
-        GetComponent<SpriteRenderer>().color = Color.white;
+        if (frames != null)
+        {
+            AlignToVelocity(velocity);
+            Rend.color = new Color(1f, 1f, 1f, 0.85f); // pale: still reads as reflected
+        }
+        else Rend.color = Color.white;
+    }
+
+    SpriteRenderer Rend => sr != null ? sr : sr = GetComponent<SpriteRenderer>();
+
+    // Art points +x: rotate it along the flight direction.
+    void AlignToVelocity(Vector2 v)
+    {
+        transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg);
     }
 }

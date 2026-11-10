@@ -83,6 +83,7 @@ public class TestEnemy : MonoBehaviour
     Color baseColor = Color.white;
     bool draftSprite; // DraftSprites: attack frames (citizen / ranged citizen / android) instead of the placeholder square
     Sprite[] draftFrames, draftWalk, draftStunned; // attack 3f, walk 2f, stunned 1f (walk / stunned may be null = fall back to the attack strip)
+    bool sniperArt; // sniper_aim strip in use (own 5-frame mapping in DraftFrame)
     bool flyer; // ranged bug with draft frames: flaps all the time and bobs 1 px (visual only; collider unchanged)
     Color flashColor;
     float flashUntil;
@@ -119,12 +120,13 @@ public class TestEnemy : MonoBehaviour
         // hooded ranged-citizen frames (DECISIONS 14). Bugs have no stunned frame: the recover frame, tipped over.
         if (kind == Kind.Sniper) ranged = true; // a sniper is a ranged citizen that never walks (ranged rules: no NUM-3 pin, no rush, no melee parry)
         bool bug = kind == Kind.Bug;
-        draftFrames = kind == Kind.Android ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
+        sniperArt = kind == Kind.Sniper && DraftSprites.SniperAim != null; // missing art: ranged-citizen frames + tint
+        draftFrames = sniperArt ? DraftSprites.SniperAim : kind == Kind.Android ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
         draftSprite = DraftSprites.Setup(visual, draftFrames);
-        draftWalk = kind == Kind.Android ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
-        draftStunned = kind == Kind.Android ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
+        draftWalk = sniperArt ? DraftSprites.SniperWalk : kind == Kind.Android ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
+        draftStunned = sniperArt ? DraftSprites.SniperStunned : kind == Kind.Android ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
         flyer = bug && ranged && draftSprite;
-        if (visual != null) baseColor = kind == Kind.Sniper ? SniperTint : visual.color; // white after the draft sprite swap
+        if (visual != null) baseColor = kind == Kind.Sniper && !draftSprite ? SniperTint : visual.color; // white after the draft sprite swap
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
         hp = maxHp;
@@ -367,7 +369,7 @@ public class TestEnemy : MonoBehaviour
         {
             float angle = (i - (count - 1) * 0.5f) * BroadcastRules.AndroidFanSpreadDeg;
             Vector2 dir = Quaternion.Euler(0f, 0f, angle) * new Vector2(facing, 0f);
-            EnemyProjectile.Spawn(muzzle, dir * BroadcastRules.AndroidFanSpeed, playerMask, groundMask, hit, projectileColor);
+            EnemyProjectile.Spawn(muzzle, dir * BroadcastRules.AndroidFanSpeed, playerMask, groundMask, hit, projectileColor, DraftSprites.BulletAndroid);
         }
     }
 
@@ -442,11 +444,12 @@ public class TestEnemy : MonoBehaviour
             if (kind == Kind.Sniper)
             {
                 Vector2 shot = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
-                EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor);
+                EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor, DraftSprites.BulletSniper);
                 MomentFx.SniperMuzzle(Muzzle, shot);
             }
             else
-                EnemyProjectile.Spawn(Muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor);
+                EnemyProjectile.Spawn(Muzzle, facing, projectileSpeed, playerMask, groundMask, hit, projectileColor,
+                    kind == Kind.Bug ? DraftSprites.BulletBug : DraftSprites.BulletCitizen);
         }
         else
         {
@@ -668,6 +671,14 @@ public class TestEnemy : MonoBehaviour
         // 5-frame attack strips: keys 0 windup / 2 strike / 4 recover, 1 = last 0.1 s of the windup, 3 = first half of the recover.
         if (draftFrames.Length < 5) return draftFrames[state == State.Windup || state == State.Special || state == State.RushWindup ? 0 : state == State.Strike ? 1 : 2];
         float el = Time.time - stateEnteredAt;
+        if (sniperArt)
+        {
+            // Sniper: 1 raise, 2 aim (tracking), 3 charge (locked), 4 fire / recoil, then back to 1; any other state stands (0, no muzzle flash).
+            if (state == State.Windup) return draftFrames[sniperLocked ? 3 : el < 0.12f ? 1 : 2];
+            if (state == State.Strike) return draftFrames[4];
+            if (state == State.Recover) return draftFrames[el < recoverTime * TimeMul * 0.5f ? 4 : 1];
+            return draftFrames[0];
+        }
         if (state == State.Windup) return draftFrames[WindupWait() - el <= 0.1f ? 1 : 0];
         if (state == State.Special || state == State.RushWindup) return draftFrames[0];
         if (state == State.Strike) return draftFrames[2];
