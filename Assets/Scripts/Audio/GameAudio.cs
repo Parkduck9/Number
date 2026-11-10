@@ -15,6 +15,7 @@ using UnityEngine.InputSystem.Utilities;
 public static class Sfx
 {
     public static void Play(SfxId id, float volume = 1f) => GameAudio.Hub?.PlaySfx(id, volume);
+    public static void Play(SfxId id, float volume, float pitch) => GameAudio.Hub?.PlaySfx(id, volume, pitch); // pitch > 0: exact, no jitter (EliteDuel clang steps)
 }
 
 public static class Bgm
@@ -105,7 +106,7 @@ public class GameAudio : MonoBehaviour
         return s;
     }
 
-    public void PlaySfx(SfxId id, float volume)
+    public void PlaySfx(SfxId id, float volume, float pitch = 0f)
     {
         int i = (int)id;
         AudioClip clip = sfxClips[i];
@@ -116,7 +117,7 @@ public class GameAudio : MonoBehaviour
 
         AudioSource v = voices[nextVoice];
         nextVoice = (nextVoice + 1) % Voices;
-        v.pitch = IsCombat(id) ? 1f + Random.Range(-PitchJitter, PitchJitter) : 1f;
+        v.pitch = pitch > 0f ? pitch : IsCombat(id) ? 1f + Random.Range(-PitchJitter, PitchJitter) : 1f;
         v.PlayOneShot(clip, volume * SfxVolume);
     }
 

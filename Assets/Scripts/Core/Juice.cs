@@ -49,7 +49,7 @@ public static class Juice
     // Look-ahead (CameraFollow2D): the camera leads the player's movement; a dash (speed above the threshold) leads further.
     public const float LookAhead = 1.75f, LookAheadDash = 3f; // world units
     public const float LookAheadSmooth = 0.3f;                // s
-    public const float DashSpeedThreshold = 14f;              // units/s (walk ~8, dash 24)
+    public const float DashSpeedThreshold = 14f;              // units/s (walk ~10, dash 24)
     public const float LookAheadFlipSpeed = 1.5f;             // units/s: slower than this never flips the lead (no jitter on stops / turns)
     // Vertical follow (CameraFollow2D): airborne, the camera holds the last ground height, so hops don't bob the view.
     public const float CamJumpHold = 2.5f;                    // units the player can rise above the last ground before the view rises too

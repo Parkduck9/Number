@@ -246,7 +246,7 @@ MonoBehaviour:
   enemyMask:
     serializedVersion: 2
     m_Bits: 256
-  moveSpeed: 8
+  moveSpeed: 10
   gravityScale: 4
   jumpSpeed: 14
   coyoteTime: 0.1

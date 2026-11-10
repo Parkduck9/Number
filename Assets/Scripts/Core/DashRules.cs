@@ -32,10 +32,10 @@ public static class DashRules
     public const float ShiftStepDy = 0.5f;      // feet-level gap the dash may climb/drop onto the target's ground; larger stays horizontal
     public const float ShiftCooldown = 3.5f;    // s (was 2.0); bullet-dodge invulnerability is the dash itself, unchanged
 
-    // ---- RMB neon grapple rope (DECISIONS 16, PlayerController.TryGrapple / UpdateGrapple, GrappleRope visual) ----
+    // ---- RMB talisman throw + pull (DECISIONS 16 / 22, PlayerController.TryGrapple / UpdateGrapple / TalismanPathKill, GrappleRope visual) ----
     public const float GrappleRange = 9f;        // u, from the hand toward the mouse; ground, walls, ceilings and one-way platforms anchor, enemies don't
-    public const float GrappleExtendTime = 0.06f; // s: rope flies out (the body hangs still meanwhile), then the pull starts
-    public const float GrappleRetractTime = 0.1f; // s: a missed rope snaps back
+    public const float GrappleExtendTime = 0.06f; // s: the talisman flies out (the body hangs still meanwhile), then the pull starts
+    public const float TalismanPathWidth = 0.5f;  // u: humans whose body crosses the throw path (this thick) die when the talisman arrives
     public const float GrapplePullSpeed = 22f;   // u/s toward the anchor, gravity off
     public const float GrappleReleaseDist = 0.8f; // release this close (u, body centre to anchor)
     public const float GrappleMaxPull = 0.6f;    // s: the pull never lasts longer

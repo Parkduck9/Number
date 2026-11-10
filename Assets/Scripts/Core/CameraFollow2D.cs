@@ -72,6 +72,27 @@ public class CameraFollow2D : MonoBehaviour
     }
     Vector2 shakeDir;
 
+    // Elite clash duel (EliteDuel): the view jumps in ONE PPU step to `ppuMul` x base on `point` (pixel-snapped, inside the bounds),
+    // holds there, and DuelUnfocus eases position + PPU back to the follow over `ease` s, real time. The follow keeps running underneath.
+    float focusW, focusEase, focusMul = 1f;
+    bool focusIn;
+    Vector2 focusPoint;
+    public static void DuelFocus(Vector2 point, float ppuMul)
+    {
+        if (active == null) return;
+        active.focusPoint = point;
+        active.focusMul = ppuMul;
+        active.focusW = 1f;
+        active.focusIn = true;
+    }
+    public static void DuelUnfocus(float ease)
+    {
+        if (active == null) return;
+        active.focusIn = false;
+        active.focusEase = ease;
+    }
+    float FocusK => focusW * focusW * (3f - 2f * focusW); // smoothstep of the ease-out
+
     void OnEnable() => active = this;
     void OnDisable() { if (active == this) active = null; }
 
@@ -104,6 +125,8 @@ public class CameraFollow2D : MonoBehaviour
         shakeOffset = Vector2.zero;
         shakeLeft = 0f;
         punchLeft = 0f;
+        focusW = 0f;
+        focusIn = false;
         ApplyZoom(0f);
         followPos = Clamp((Vector2)target.position + offset);
         ApplyTransform();
@@ -122,7 +145,8 @@ public class CameraFollow2D : MonoBehaviour
     void ApplyTransform()
     {
         float ppu = ppc != null && ppc.assetsPPU > 0 ? ppc.assetsPPU : (basePpu > 0f ? basePpu : 32f);
-        Vector2 p = new Vector2(Mathf.Round(followPos.x * ppu), Mathf.Round(followPos.y * ppu)) / ppu + shakeOffset;
+        Vector2 f = focusW > 0f ? Vector2.Lerp(followPos, Clamp(focusPoint, basePpu * focusMul), FocusK) : followPos;
+        Vector2 p = new Vector2(Mathf.Round(f.x * ppu), Mathf.Round(f.y * ppu)) / ppu + shakeOffset;
         transform.position = new Vector3(p.x, p.y, transform.position.z);
     }
 
@@ -132,8 +156,9 @@ public class CameraFollow2D : MonoBehaviour
     {
         if (PauseMenu.IsOpen) return;
         punchLeft = Mathf.Max(0f, punchLeft - Time.unscaledDeltaTime);
+        if (!focusIn && focusW > 0f) focusW = focusEase > 0f ? Mathf.Max(0f, focusW - Time.unscaledDeltaTime / focusEase) : 0f;
         float k = punchLeft / Juice.PunchTime;
-        ApplyZoom(punchStrength * k * k); // ease-out back to 1
+        ApplyZoom(Mathf.Max(punchStrength * k * k, (focusMul - 1f) * FocusK)); // ease-out back to 1; a duel focus wins over a smaller punch
     }
 
     void ApplyZoom(float amount)
@@ -195,7 +220,8 @@ public class CameraFollow2D : MonoBehaviour
         followPos = clamped;
     }
 
-    Vector2 Clamp(Vector2 p)
+    // ppu = 0: the base view; else the view at that PPU (duel focus, smaller).
+    Vector2 Clamp(Vector2 p, float ppu = 0f)
     {
         if (!useBounds) return p;
         // With Pixel Perfect Camera (upscale RT + stretch fill) the view is always the reference size, whatever the window aspect.
@@ -203,8 +229,9 @@ public class CameraFollow2D : MonoBehaviour
         float halfW = halfH * cam.aspect;
         if (ppc != null && basePpu > 0)
         {
-            halfW = ppc.refResolutionX * 0.5f / basePpu;
-            halfH = ppc.refResolutionY * 0.5f / basePpu;
+            if (ppu <= 0f) ppu = basePpu;
+            halfW = ppc.refResolutionX * 0.5f / ppu;
+            halfH = ppc.refResolutionY * 0.5f / ppu;
         }
         p.x = ClampAxis(p.x, levelBounds.xMin + halfW, levelBounds.xMax - halfW);
         p.y = ClampAxis(p.y, levelBounds.yMin + halfH, levelBounds.yMax - halfH);

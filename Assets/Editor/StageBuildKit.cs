@@ -53,9 +53,10 @@ public static class StageBuildKit
     public struct Foe
     {
         // sniper = DECISIONS 15 sniper (TestEnemy.Kind.Sniper): ranged gold 1, stands still, 19u line-of-sight laser; place on high ledges facing a climb.
-        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug, sniper;
-        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false, bool sniper = false)
-        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; }
+        // elite = TestEnemy.Kind.Elite: number 3~9, its attack is the clash duel (EliteDuel), 6 normal hits otherwise.
+        public string id; public int seg; public float x, y; public int fixedNumber; public float progress, detect; public bool android, ranged; public int cap; public bool bug, sniper, elite;
+        public Foe(string id, int seg, float x, float y, int fixedNumber, float progress, float detect, bool android = false, bool ranged = false, int cap = 0, bool bug = false, bool sniper = false, bool elite = false)
+        { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; this.elite = elite; }
     }
 
     // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
@@ -312,7 +313,7 @@ public static class StageBuildKit
     public static GameObject BuildEnemy(Transform root, Foe f)
     {
         var go = (GameObject)PrefabUtility.InstantiatePrefab(Enemy);
-        go.name = f.android ? f.id + " (ANDROID)" : f.id;
+        go.name = f.android ? f.id + " (ANDROID)" : f.elite ? f.id + " (ELITE)" : f.id;
         go.transform.SetParent(root, false);
         go.transform.localPosition = new Vector3(f.x, f.y + 1f, 0f);
 
@@ -347,6 +348,13 @@ public static class StageBuildKit
             SetInt(te, "unparryableNumber", 7);
             SetInt(te, "maxHp", 5);
             if (f.fixedNumber <= 0) { SetInt(number, "minValue", 1); SetInt(number, "maxValue", 7); } // fixed-number androids keep the pin set above
+        }
+        if (f.elite)
+        {
+            SetInt(te, "kind", 4); // TestEnemy.Kind.Elite (android art 1.25x, crimson, set at runtime)
+            SetInt(te, "maxHp", 6);
+            SetInt(number, "minValue", 3);
+            SetInt(number, "maxValue", 9);
         }
         return go;
     }

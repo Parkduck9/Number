@@ -27,7 +27,7 @@ public class TestEnemy : MonoBehaviour
     [SerializeField] float chargeSpeed = 14f;
     [SerializeField] float chargeMaxTime = 0.6f;
 
-    public enum Kind { Citizen, Bug, Android, Sniper } // new kinds go last (serialized as int)
+    public enum Kind { Citizen, Bug, Android, Sniper, Elite } // new kinds go last (serialized as int)
 
     // ---- Sniper (DECISIONS 15): stands still, laser tracks the player, locks, fires one fast parryable shot along the locked line ----
     const float SniperRange = 19f;       // (T) u from the muzzle, needs a clear line (groundMask): about a whole screen
@@ -36,6 +36,11 @@ public class TestEnemy : MonoBehaviour
     const float SniperShotSpeed = 14f;   // (T) u/s; LMB parry window = (DashRules.ParryShotRange 3 - contact 0.7) / this = 0.16 s (22 gave 0.1 s: too tight, Fable review)
     const float SniperReaimDelay = 0.3f; // (T) s after losing sight before aiming again (no tell flicker at the range / ledge edge)
     static readonly Color SniperTint = new Color(0.72f, 0.8f, 1f); // steel-blue tint on the ranged-citizen frames
+
+    // ---- Elite (user 11-10): never strikes on its own, its attack is the clash duel (EliteDuel). Normal hits work (maxHp hits). ----
+    static readonly Color EliteTint = new Color(0.95f, 0.42f, 0.36f); // deep crimson on the android frames until real art exists
+    const float EliteScale = 1.25f;
+    const float EliteDuelCooldown = 1.5f; // (T) s after a lost duel before it can start another
 
     // ---- Android guard (DECISIONS 15): frontal hits are blocked; from behind or above it dies in one hit ----
     const float AndroidTurnGrace = 0.35f; // (T) s: a hit this soon after it turned around during a player dash still counts as from behind (Shift dash-behind)
@@ -72,7 +77,11 @@ public class TestEnemy : MonoBehaviour
     public static readonly List<TestEnemy> All = new List<TestEnemy>();
     public bool IsDown => state == State.Stunned || !isActiveAndEnabled;
     public bool IsBossWave { get; set; } // set by BossFight: dice skills skip it
+    public bool IsHuman => kind == Kind.Citizen || kind == Kind.Sniper; // DECISIONS 22: the RMB talisman path kills these (not bugs / androids / elite)
     public Collider2D BodyCollider { get; private set; }
+    public bool InDuel { get; set; } // EliteDuel drives it (AI, hold and visuals skipped here; it poses through DuelPose)
+    public SpriteRenderer Visual => visual;
+    public int Facing => facing;
     // player lunge stops in front instead of passing through (frontal approach to a guarding Android only)
     public bool BlocksHits => kind == Kind.Android && state != State.Overload && !(player != null && AndroidExposedTo(player.transform.position));
 
@@ -104,6 +113,7 @@ public class TestEnemy : MonoBehaviour
     float nextRushAt;         // no new rush tell before this
     bool aggro;               // melee: spotted the player once -> stays active (DashRules.MeleeDetectMin)
     float facingChangedAt = -10f; // Android guard: last turn-around (AndroidTurnGrace)
+    float nextDuelAt;         // elite: no new duel before this
     SniperSight sight;
     ParryRing ring;           // melee parry timing tell (built on first strike)
     float ringTotal = -1f;    // eta when the current ring started (-1 = not started; reset by EnterState except into Strike)
@@ -120,7 +130,7 @@ public class TestEnemy : MonoBehaviour
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
     static float Num7Cycle => BroadcastRules.Num7DopeSeconds + BroadcastRules.Num7ExhaustSeconds;
     bool Doped => broadcast == 7 && zoneBoard != null && Num7Phase % Num7Cycle < BroadcastRules.Num7DopeSeconds;
-    bool Normal => kind != Kind.Android;
+    bool Normal => kind != Kind.Android && kind != Kind.Elite;
     float TimeMul => Normal ? Juice.NormalTimeMul : 1f; // Citizen/Bug act faster since they die in one hit
     float Speed => moveSpeed * (Normal ? Juice.NormalSpeedMul : 1f) * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
 
@@ -135,13 +145,19 @@ public class TestEnemy : MonoBehaviour
         // hooded ranged-citizen frames (DECISIONS 14). Bugs have no stunned frame: the recover frame, tipped over.
         if (kind == Kind.Sniper) ranged = true; // a sniper is a ranged citizen that never walks (ranged rules: no NUM-3 pin, no rush, no melee parry)
         bool bug = kind == Kind.Bug;
+        bool androidArt = kind == Kind.Android || kind == Kind.Elite;
         sniperArt = kind == Kind.Sniper && DraftSprites.SniperAim != null; // missing art: ranged-citizen frames + tint
-        draftFrames = sniperArt ? DraftSprites.SniperAim : kind == Kind.Android ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
+        draftFrames = sniperArt ? DraftSprites.SniperAim : androidArt ? DraftSprites.Android : bug ? (ranged ? DraftSprites.BugFlyerAttack : DraftSprites.Bug) : ranged ? DraftSprites.CitizenRanged : DraftSprites.Citizen;
         draftSprite = DraftSprites.Setup(visual, draftFrames);
-        draftWalk = sniperArt ? DraftSprites.SniperWalk : kind == Kind.Android ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
-        draftStunned = sniperArt ? DraftSprites.SniperStunned : kind == Kind.Android ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
+        draftWalk = sniperArt ? DraftSprites.SniperWalk : androidArt ? DraftSprites.AndroidWalk : bug ? (ranged ? DraftSprites.BugFlyer : DraftSprites.BugWalk) : ranged ? DraftSprites.CitizenRangedWalk : DraftSprites.CitizenWalk;
+        draftStunned = sniperArt ? DraftSprites.SniperStunned : androidArt ? DraftSprites.AndroidStunned : bug ? null : DraftSprites.CitizenStunned;
         flyer = bug && ranged && draftSprite;
         if (visual != null) baseColor = kind == Kind.Sniper && !draftSprite ? SniperTint : visual.color; // white after the draft sprite swap
+        if (kind == Kind.Elite && visual != null)
+        {
+            baseColor = EliteTint;
+            visual.transform.localScale *= EliteScale; // feet pivot: grows upward
+        }
         rb.gravityScale = 4f;
         rb.freezeRotation = true;
         hp = maxHp;
@@ -176,6 +192,7 @@ public class TestEnemy : MonoBehaviour
 
     void Update()
     {
+        if (InDuel) return; // EliteDuel holds everyone else and poses this one
         if (GameFlow.EnemiesHeld) // dice hold: same freeze as the dialogue lock (Stunned vanish timer included), visuals still update
         {
             stateEnteredAt += Time.deltaTime;
@@ -336,6 +353,11 @@ public class TestEnemy : MonoBehaviour
                 }
                 if (!IsActive()) break; // idle until the player comes close
                 FacePlayer();
+                if (kind == Kind.Elite) // its attack is the duel; EliteDuel checks range, height and the player's state
+                {
+                    if (Time.time >= nextDuelAt) EliteDuel.TryBegin(this, player);
+                    break;
+                }
                 Vector2 d = player.transform.position - transform.position;
                 if (Mathf.Abs(d.x) <= attackRangeX && Mathf.Abs(d.y) <= attackRangeY && !(ranged && IsBackingOff()))
                     EnterState(State.Windup);
@@ -717,8 +739,9 @@ public class TestEnemy : MonoBehaviour
             Sfx.Play(SfxId.Parry, 0.5f);
             return false;
         }
-        // Citizen/Bug/Sniper in any state; Android overloaded, or hit from behind / above: one hit knocks it down.
+        // Citizen/Bug/Sniper in any state; Android overloaded, or hit from behind / above: one hit knocks it down. Elite: maxHp hits.
         Flash(Color.red);
+        if (kind == Kind.Elite && --hp > 0) return true;
         hp = 0;
         EnterState(State.Stunned);
         if (ring != null) ring.Hide(); // killed under InputLocked (dice skill 6): Update won't run to hide them
@@ -737,6 +760,7 @@ public class TestEnemy : MonoBehaviour
 
     void PlayVanishSpark()
     {
+        if (!visual.enabled) return; // shattered elite: nothing left to spark
         SpriteFx.Play("hit-spark", (Vector2)transform.position - new Vector2(12f, 16f) / SpriteFx.Ppu);
     }
 
@@ -843,6 +867,35 @@ public class TestEnemy : MonoBehaviour
         }
         EnterState(State.Frozen);
         frozenUntil = Mathf.Max(frozenUntil, Time.time + seconds);
+    }
+
+    // ---- Elite clash duel (EliteDuel) ----
+    // One frame of the attack strip (0 windup, 1 late windup, 2 strike, 3 recover) with the parry flash; called every duel frame.
+    public void DuelPose(int frame, bool flash)
+    {
+        if (visual == null) return;
+        visual.flipX = facing < 0;
+        if (draftSprite) visual.sprite = draftFrames[Mathf.Clamp(frame, 0, draftFrames.Length - 1)];
+        SpriteFlash.Apply(visual, baseColor, flash, Color.white, Juice.ParryEnemyTint);
+    }
+
+    // Lost duel: back to the normal AI with the same number (no reroll), a new duel only after the cooldown.
+    public void EndDuel()
+    {
+        InDuel = false;
+        nextDuelAt = Time.time + EliteDuelCooldown;
+        EnterState(State.Approach);
+    }
+
+    // Won duel: a kill through the normal down state (StageClear / pointer count it), the body is already shattered (ShatterFx).
+    public void DuelFinish()
+    {
+        InDuel = false;
+        hp = 0;
+        EnterState(State.Stunned);
+        if (held) heldVelocity = Vector2.zero; // don't slide the hidden body on release
+        if (ring != null) ring.Hide();
+        if (visual != null) visual.enabled = false;
     }
 
     // Dice skill 5: show a countdown value in another digit sheet over the enemy's own number.

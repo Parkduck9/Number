@@ -5,14 +5,14 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(PlayerInputReader), typeof(PlayerHealth))]
 public class PlayerController : MonoBehaviour
 {
-    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Grapple } // Grapple: RMB rope pull (DECISIONS 16)
+    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Grapple } // Grapple: RMB talisman throw + pull (DECISIONS 16, 22)
 
     [Header("Masks")]
     [SerializeField] LayerMask groundMask;
     [SerializeField] LayerMask enemyMask;
 
     [Header("Movement (T)")]
-    [SerializeField] float moveSpeed = 8f;
+    [SerializeField] float moveSpeed = 10f; // DECISIONS 22: 8 -> 10
     [SerializeField] float gravityScale = 4f;
     [SerializeField] float jumpSpeed = 14f;
     [SerializeField] float coyoteTime = 0.10f;
@@ -162,7 +162,8 @@ public class PlayerController : MonoBehaviour
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
         if (GetComponent<LuckyDice>() == null) gameObject.AddComponent<LuckyDice>(); // DECISIONS 18 (Space); players are built by scripts, so add at runtime
         MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like LuckyDice)
-        rope = GrappleRope.Create(this); // DECISIONS 16
+        rope = GrappleRope.Create(this); // DECISIONS 16 / 22 (talisman throw)
+        if (GetComponent<AimLine>() == null) gameObject.AddComponent<AimLine>(); // DECISIONS 22 aim line
     }
 
     void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); if (rope != null) rope.Hide(); }
@@ -170,13 +171,31 @@ public class PlayerController : MonoBehaviour
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
     bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
 
-    void StartHitStop(float seconds, bool countsForGap = true)
+    void StartHitStop(float seconds, bool countsForGap = true, bool evenLocked = false)
     {
-        if (seconds <= 0f || GameFlow.InputLocked || PauseMenu.IsOpen) return;
+        if (seconds <= 0f || (GameFlow.InputLocked && !evenLocked) || PauseMenu.IsOpen) return;
         hitStopCountsForGap = (hitStopEndsAt >= 0f && hitStopCountsForGap) || countsForGap;
         hitStopEndsAt = Mathf.Max(hitStopEndsAt, Time.unscaledTime + seconds);
         Time.timeScale = 0f;
     }
+
+    // Elite clash duel (EliteDuel): input is locked, so the duel judges LMB itself. Begin drops any parry / guard / lunge (a missed duel
+    // strike must land as a hit) and faces the elite; Clash shows one clang pose (parry, or the hero's own counter swing) + the parry flash.
+    Sprite duelPose;
+    float duelPoseUntil = -1f, duelFlashUntil = -1f;
+    public void DuelBegin(int face)
+    {
+        if (state != State.Locomotion) EnterState(State.Locomotion);
+        Facing = face;
+        parryGuardUntil = parryFlashUntil = -999f;
+    }
+    public void DuelClash(bool counter)
+    {
+        duelPose = counter ? DraftSprites.Pick(DraftSprites.HeroAttack, 2, DraftSprites.Hero) : DraftSprites.Pick(DraftSprites.HeroParry, 0, DraftSprites.HeroAttack ?? DraftSprites.Hero);
+        duelPoseUntil = Time.time + 0.15f;
+        if (!counter) duelFlashUntil = Time.time + parryFlashTime;
+    }
+    public void DuelHitStop(float seconds) => StartHitStop(seconds, false, true); // finisher: runs although the duel still holds the input lock
 
     void EndHitStop()
     {
@@ -665,8 +684,9 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
     }
 
-    // DECISIONS 16: RMB fires the rope at the mouse. Hit (ground / wall / ceiling / one-way platform within GrappleRange) -> Grapple state;
-    // miss -> the rope shoots out and snaps back, short cooldown. One attached rope per airtime.
+    // DECISIONS 16 / 22: RMB throws a talisman at the mouse. Hit (ground / wall / ceiling / one-way platform within GrappleRange) -> Grapple
+    // state (pulled to it); miss -> the talisman flies out and burns away, short cooldown. One attached throw per airtime.
+    // Humans on the throw path die when the talisman arrives (GrappleRope -> TalismanPathKill).
     bool TryGrapple(float now)
     {
         if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt || grappleUsed) return false;
@@ -682,7 +702,7 @@ public class PlayerController : MonoBehaviour
             if (grappleHits[i].distance > 0.01f && (best.collider == null || grappleHits[i].distance < best.distance)) best = grappleHits[i];
         if (best.collider == null)
         {
-            rope.Shoot(hand + aim * DashRules.GrappleRange, false);
+            rope.Shoot(hand, hand + aim * DashRules.GrappleRange, false);
             grappleReadyAt = now + DashRules.GrappleMissCooldown;
             Sfx.Play(SfxId.Swing, 0.5f);
             return false; // a miss does not interrupt movement
@@ -699,7 +719,7 @@ public class PlayerController : MonoBehaviour
         }
         grappleUsed = true;
         EnterState(State.Grapple);
-        rope.Shoot(grappleAnchor, true);
+        rope.Shoot(hand, grappleAnchor, true);
         Sfx.Play(SfxId.Dash);
         return true;
     }
@@ -952,6 +972,24 @@ public class PlayerController : MonoBehaviour
         return swingDamaged > 0;
     }
 
+    // DECISIONS 22: the thrown talisman kills, in one blow, every human (citizen melee / ranged, sniper) whose body collider crosses the
+    // path hand -> end point (TalismanPathWidth thick). Androids, bugs, the elite and boss-wave enemies are untouched. Called by
+    // GrappleRope when the talisman reaches its end point (hit or miss).
+    public void TalismanPathKill(Vector2 from, Vector2 to)
+    {
+        Vector2 d = to - from;
+        float len = d.magnitude;
+        if (state == State.Dead || len < 0.01f) return;
+        int n = Physics2D.OverlapBox((from + to) * 0.5f, new Vector2(len, DashRules.TalismanPathWidth), Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, enemyFilter, enemyHits);
+        for (int i = 0; i < n; i++)
+        {
+            TestEnemy e = enemyHits[i].GetComponentInParent<TestEnemy>();
+            if (e == null || !e.IsHuman || e.IsBossWave || e.IsDown || enemyHits[i] != e.BodyCollider) continue;
+            if (state == State.Attack) HitEnemy(e, enemyHits[i], from, false, true); // share the live swing's hit set / hit-stop cap
+            else StrikeEnemy(e, enemyHits[i], from, true);
+        }
+    }
+
     // DECISIONS 18 skill 1 / 6: teleport to a free spot just behind e (the far side from the player, else the near side), on its
     // feet level, facing it. Cancels dash / lunge / rope. false = dead player, no enemy collider, or both spots blocked by walls.
     public bool TryBlinkBehind(TestEnemy e)
@@ -1045,7 +1083,7 @@ public class PlayerController : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = Facing < 0;
-        if (draftSprite) visual.sprite = DraftFrame(now);
+        if (draftSprite) visual.sprite = now < duelPoseUntil ? duelPose : DraftFrame(now);
         Color c = draftSprite ? Color.white : BaseColor;
         if (state == State.Dash || lunging) c = Color.white;
         else if (ParryActive) c = new Color(0.4f, 1f, 0.5f);
@@ -1053,7 +1091,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Dead) c = Color.clear; // the player-glitch-death FX takes the body away (MomentFx)
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.HurtInvulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
-        SpriteFlash.Apply(visual, c, now < parryFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
+        SpriteFlash.Apply(visual, c, now < parryFlashUntil || now < duelFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
     }
 
     // DraftSprites: one hero frame per state (walk strip is the fallback when another strip is missing). Art faces right; flipX handles left.

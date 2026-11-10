@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // DRAFT control hints: a strip of key / mouse icons (Assets/Resources/DraftUi, key letters drawn with the game font) near the bottom of
-// STG00 (move, jump, dash) and STG01 (left click = attack / parry, right click = grapple), shown once per run for a few seconds of play. Self-bootstrapping, no scene setup.
+// STG00 (move, jump, dash) and STG01 (left click = attack / parry, right click = talisman throw), shown once per run for a few seconds of play. Self-bootstrapping, no scene setup.
 // No icon art (or DraftSprites.Use = false) = nothing is shown; the Title / Pause "Controls" panel still lists every key.
 public class ControlHints : MonoBehaviour
 {
@@ -27,7 +27,7 @@ public class ControlHints : MonoBehaviour
         { "STG01", new[]
         {
             new[] { "ctrl_mouse_left", "", "Attack · Parry", "공격 · 패링" },
-            new[] { "ctrl_mouse_right", "", "Grapple", "갈고리" },
+            new[] { "ctrl_mouse_right", "", "Talisman throw", "부적 던지기" },
         } },
         { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {

@@ -17,6 +17,7 @@ public class PlayerInputReader : MonoBehaviour
     public bool DashPressed { get; private set; }
     public bool DicePressed { get; private set; }
     public bool GrapplePressed { get; private set; }
+    public bool AttackPressedRaw => attack.WasPressedThisFrame(); // ignores GameFlow.InputLocked: EliteDuel reads LMB through its lock
 
     void Awake()
     {
