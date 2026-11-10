@@ -86,6 +86,9 @@ public class BossFight : MonoBehaviour
     readonly Vector2[] bugOff = new Vector2[Waves * BugsPerWave];
 
     SpriteRenderer zoneFloor, zoneLane, white;
+    readonly SpriteRenderer[] zoneEdge = new SpriteRenderer[2];           // FX: blinking side lines of the danger lane
+    readonly SpriteRenderer[] gapMark = new SpriteRenderer[Waves * 2];    // FX: bright bars at each wall's gap (bottom, top)
+    static readonly int FlashId = Shader.PropertyToID("_Flash");
     readonly SpriteRenderer[] aimDots = new SpriteRenderer[14];
     bool aimOn;
     readonly SpriteRenderer[] props = new SpriteRenderer[6];
@@ -118,13 +121,30 @@ public class BossFight : MonoBehaviour
         bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest, Res("boss_bug_arm_lit"));
         blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest, Res("boss_blade_arm_lit"));
 
-        for (int i = 0; i < bugs.Length; i++) { bugs[i] = Make("Bug", BossArt.Bug, "FX", 40, Vector2.zero); bugs[i].enabled = false; }
+        for (int i = 0; i < bugs.Length; i++)
+        {
+            bugs[i] = Make("Bug", BossArt.Bug, "FX", 40, Vector2.zero);
+            bugs[i].transform.localScale = new Vector3(2f, 2f, 1f); // FX: 1-px bugs read as rain on the big boss; 2x pixels
+            bugs[i].enabled = false;
+        }
         zoneLane = Make("DangerLane", ParryFx.Square, "World", 4, Vector2.zero);
         zoneFloor = Make("DangerZone", ParryFx.Square, "World", 5, Vector2.zero);
         zoneLane.transform.localScale = new Vector3(ZoneHalf * 2f, 8f, 1f);
         zoneFloor.transform.localScale = new Vector3(ZoneHalf * 2f, 0.25f, 1f);
         zoneLane.color = new Color(1f, 0.23f, 0.23f, 0.12f);
         zoneLane.enabled = zoneFloor.enabled = false;
+        for (int i = 0; i < zoneEdge.Length; i++)
+        {
+            zoneEdge[i] = Make("DangerEdge", ParryFx.Square, "World", 6, Vector2.zero);
+            zoneEdge[i].transform.localScale = new Vector3(Px, 8f, 1f);
+            zoneEdge[i].enabled = false;
+        }
+        for (int i = 0; i < gapMark.Length; i++)
+        {
+            gapMark[i] = Make("GapMark", ParryFx.Square, "FX", 41, Vector2.zero);
+            gapMark[i].transform.localScale = new Vector3(2f * WaveHalfW + 0.5f, 2f * Px, 1f);
+            gapMark[i].enabled = false;
+        }
         for (int i = 0; i < aimDots.Length; i++)
         {
             aimDots[i] = Make("AimDot", ParryFx.Square, "FX", 30, Vector2.zero);
@@ -174,6 +194,8 @@ public class BossFight : MonoBehaviour
     {
         var p = new Part { V = art != null ? new[] { art, artLit != null ? artLit : art, art } : v, Pos = pos };
         p.Sr = Make(name, p.V[BossArt.Normal], "Background", order, pos);
+        Shader flash = art != null ? Shader.Find("Number/SpriteSolidFlash") : null; // override art: solid white hit flash
+        if (flash != null) { var m = new Material(flash); ownMats.Add(m); p.Sr.sharedMaterial = m; }
         return p;
     }
 
@@ -244,6 +266,8 @@ public class BossFight : MonoBehaviour
         crack1.enabled = ph >= 2;
         crack2.enabled = ph >= 3;
         body.FlashUntil = Time.time + 0.12f;
+        for (int i = 0; i < 4; i++) // parts burst off the body
+            SpriteFx.Play("kill-burst", BodyAt + new Vector2(Random.Range(4f, 20f), Random.Range(5f, 12f)), Random.value < 0.5f, 90);
         Sfx.Play(SfxId.Stunned);
         Juice.Shake(Juice.ShakeKillAmp, 0.45f);
         yield return Wait(1f);
@@ -287,6 +311,7 @@ public class BossFight : MonoBehaviour
             bugs[i].enabled = true;
         }
         Sfx.Play(SfxId.EnemyTell, 0.6f);
+        SpriteFx.Play("enemy-warp-in", bugArm.Pos + new Vector2(0f, 1f), false, 101); // the swarm bursts out of the palm
     }
 
     void UpdateWaves(float dt)
@@ -301,6 +326,7 @@ public class BossFight : MonoBehaviour
             {
                 waveOn[w] = false;
                 for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++) bugs[i].enabled = false;
+                gapMark[w * 2].enabled = gapMark[w * 2 + 1].enabled = false;
                 continue;
             }
             if (!waveHit[w] && dt > 0f && Mathf.Abs(pp.x - waveX[w]) < WaveHalfW + 0.35f)
@@ -309,6 +335,14 @@ public class BossFight : MonoBehaviour
                 if (feet < WaveTop && (feet < gapLo[w] || top > gapLo[w] + GapH) &&
                     player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(waveX[w] - 1f, pp.y), Unparryable = true }) == HitResult.Hit)
                     waveHit[w] = true; // one hit per wall (a dash / i-frames pass through)
+            }
+            bool on = (flutter & 1) == 0 || waveX[w] < 0f;
+            for (int m = 0; m < 2; m++)
+            {
+                SpriteRenderer g = gapMark[w * 2 + m];
+                g.enabled = true;
+                g.transform.position = new Vector3(Snap(waveX[w]), Snap(gapLo[w] + m * GapH) + (m == 0 ? -Px : Px), 0f);
+                g.color = new Color(Cyan.r, Cyan.g, Cyan.b, on ? 0.95f : 0.55f); // "through here"
             }
             for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++)
             {
@@ -356,6 +390,9 @@ public class BossFight : MonoBehaviour
                 Juice.Shake(Juice.ShakeHurtAmp, 0.18f, Vector2.down);
                 Sfx.Play(SfxId.Hit, 0.7f, 0.6f);
                 SpriteFx.Play("impact-ring", new Vector2(zx, Floor), false, 101);
+                SpriteFx.Play("land-dust", new Vector2(zx - 0.9f, Floor), true, 101);
+                SpriteFx.Play("land-dust", new Vector2(zx + 0.9f, Floor), false, 101);
+                if (last) { SpriteFx.Play("kill-burst", new Vector2(zx, Floor + 0.3f), false, 102); Juice.Shake(Juice.ShakeKillAmp, 0.3f, Vector2.down); }
             }
             if (struck && (parried || tt > s + WindowLate))
             {
@@ -414,6 +451,11 @@ public class BossFight : MonoBehaviour
         zoneFloor.enabled = zoneLane.enabled = on;
         zoneFloor.transform.position = new Vector3(zx, Floor + 0.125f, 0f);
         zoneLane.transform.position = new Vector3(zx, Floor + 4f, 0f);
+        for (int i = 0; i < zoneEdge.Length; i++)
+        {
+            zoneEdge[i].enabled = on;
+            zoneEdge[i].transform.position = new Vector3(zx + (i == 0 ? -ZoneHalf : ZoneHalf), Floor + 4f, 0f);
+        }
     }
 
     // EliteDuel callbacks (BossBladeFoe)
@@ -447,6 +489,7 @@ public class BossFight : MonoBehaviour
             p.ReflectLife = ShotReflectLife;
             p.ReflectTarget = HatchAt; // reflected = a weakened lob that drops back into the hatch
             Sfx.Play(SfxId.EnemyTell, 0.5f, 1.5f);
+            SpriteFx.Play("sniper-muzzle", HatchAt, d.x < 0f, 102);
             yield return Wait(every);
         }
         aimOn = false;
@@ -507,6 +550,7 @@ public class BossFight : MonoBehaviour
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
+        for (int i = 0; i < gapMark.Length; i++) gapMark[i].enabled = false;
         var shots = EnemyProjectile.Active;
         for (int i = shots.Count - 1; i >= 0; i--) { GameObject g = shots[i].gameObject; g.SetActive(false); Destroy(g); }
         ShatterFx.Play(holo, Vector2.down, HoloAt, Cyan); // the number breaks
@@ -602,7 +646,11 @@ public class BossFight : MonoBehaviour
             holo.transform.position = new Vector3(Snap(HoloAt.x) + (glitch ? (Random.value < 0.5f ? -2f : 2f) * Px : 0f), Snap(HoloAt.y), 0f);
             holo.color = new Color(1f, 1f, 1f, !started ? 0.35f : glitch && Random.value < 0.5f ? 0.45f : 1f);
         }
-        if (zoneFloor.enabled) zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
+        if (zoneFloor.enabled)
+        {
+            zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
+            zoneEdge[0].color = zoneEdge[1].color = new Color(1f, 0.23f, 0.23f, blink ? 0.9f : 0.4f);
+        }
         Vector2 aimTo = player.transform.position;
         for (int i = 0; i < aimDots.Length; i++)
         {
@@ -624,7 +672,10 @@ public class BossFight : MonoBehaviour
         p.Sr.sprite = p.V[v];
         bool noVariants = p.V[BossArt.Normal] == p.V[BossArt.Flash]; // override art: no baked white flash
         bool noLit = p.V[BossArt.Normal] == p.V[BossArt.Lit];
-        p.Sr.color = noVariants && flash ? Color.white : noLit && v == BossArt.Lit ? new Color(1f, 0.55f, 0.45f) : tint;
+        Material m = p.Sr.sharedMaterial;
+        bool solid = noVariants && m.HasProperty(FlashId);
+        if (solid) m.SetFloat(FlashId, flash ? 0.85f : 0f);
+        p.Sr.color = noVariants && flash && !solid ? Color.white : noLit && v == BossArt.Lit ? new Color(1f, 0.55f, 0.45f) : tint;
         p.Sr.transform.position = new Vector3(Snap(p.Pos.x), Snap(p.Pos.y + dy - sink), 0f);
     }
 
