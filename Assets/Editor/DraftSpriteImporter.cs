@@ -9,7 +9,7 @@ using UnityEngine;
 public class DraftSpriteImporter : AssetPostprocessor
 {
     const float StripFeetGap = 2f; // px: every 64x64 strip has its feet on row 61, two empty rows below
-    public override uint GetVersion() => 4; // 4: UI kit 9-slice borders, crosshair pivots, dialogue_next_2f frames
+    public override uint GetVersion() => 5; // 4: UI kit 9-slice borders, crosshair pivots, dialogue_next_2f frames; 5: bullet_*_2f 16x16 center
 
     // UI kit 9-slice borders (docs/design/concept/ui_kit/borders.json: left, right, top, bottom in source px) as Unity spriteBorder (x=left, y=bottom, z=right, w=top).
     static readonly System.Collections.Generic.Dictionary<string, Vector4> NineSlice = new System.Collections.Generic.Dictionary<string, Vector4>
@@ -70,7 +70,7 @@ public class DraftSpriteImporter : AssetPostprocessor
         {
             string tail = name.Substring(name.LastIndexOf('_') + 1); // "3f"
             count = int.TryParse(tail.TrimEnd('f'), out int n) ? n : 1;
-            w = h = 64f; step = 64f;
+            w = h = step = name.StartsWith("bullet_") ? 16f : 64f; // enemy shots: 16x16 frames, pivot center (below)
         }
         else if (arcs) // left + right wave, 11x16 each, 1px gap
         {
@@ -82,14 +82,15 @@ public class DraftSpriteImporter : AssetPostprocessor
             bool broadcast = name.StartsWith("broadcast");
             w = broadcast ? 12f : 7f; h = broadcast ? 18f : 11f; step = w + 1f;
         }
+        bool feet = strip && !name.StartsWith("bullet_");
         var frames = new SpriteMetaData[count];
         for (int i = 0; i < count; i++)
             frames[i] = new SpriteMetaData
             {
                 name = name + "_" + i,
                 rect = new Rect(i * step, 0f, w, h),
-                alignment = (int)(strip ? SpriteAlignment.Custom : SpriteAlignment.Center),
-                pivot = strip ? new Vector2(0.5f, StripFeetGap / 64f) : new Vector2(0.5f, 0.5f) // strips: pivot on the feet line, not the frame bottom
+                alignment = (int)(feet ? SpriteAlignment.Custom : SpriteAlignment.Center),
+                pivot = feet ? new Vector2(0.5f, StripFeetGap / 64f) : new Vector2(0.5f, 0.5f) // strips: pivot on the feet line, not the frame bottom
             };
         ti.spriteImportMode = SpriteImportMode.Multiple;
 #pragma warning disable CS0618 // simple slicing API; fine for a draft
