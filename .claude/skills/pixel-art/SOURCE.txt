@@ -1,0 +1,1 @@
+Source: https://github.com/omer-metin/skills-for-antigravity (skills/pixel-art), Apache-2.0. Copied unmodified 2026-11-10.
