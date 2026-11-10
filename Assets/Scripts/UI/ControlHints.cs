@@ -21,12 +21,13 @@ public class ControlHints : MonoBehaviour
         {
             new[] { "ctrl_key_a", "A", "", "" },
             new[] { "ctrl_key_d", "D", "Move", "이동" },
-            new[] { "ctrl_key_w", "W", "Jump", "점프" },
+            new[] { "ctrl_key_w", "W", "", "" },
+            new[] { "ctrl_key_space", "SPACE", "Jump", "점프" },
             new[] { "ctrl_key_shift", "SHIFT", "Dodge + counter", "회피 + 반격" },
         } },
         { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {
-            new[] { "ctrl_key_space", "SPACE", "Lucky dice · 3 parries = 1 roll", "점괘 주사위 · 패링 3번 = 굴림 1번" },
+            new[] { "ctrl_key_e", "E", "Lucky dice · 3 parries = 1 roll", "점괘 주사위 · 패링 3번 = 굴림 1번" },
         } },
     };
 

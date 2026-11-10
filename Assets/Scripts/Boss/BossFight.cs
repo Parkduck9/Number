@@ -11,10 +11,13 @@ using UnityEngine;
 //   B' blade sweep (DECISIONS 29): N horizontal sweeps across the room, LOW (jump) or HIGH (stay down / dash); red warning band first.
 //   C chest hatch: hatch opens, yellow aim dots, N volleys of small shots in a fan (phase 3: fan / spiral arc alternate).
 //               A parried shot flies back; reaching the hatch hurts.
+//   Core (DECISIONS 31): in the rest after every attack the hatch opens and a glowing weak-point core drops on a cable to the bridge
+//               (pulses gold while it can be hit): LMB swings, RMB issen (PlayerController.IssenAlt) and the dice hurt it. Then it pulls back.
 // HP is never shown: phase 2 / 3 darken + crack the body. Phase 3 overlaps C with A / B. HP 0: the hologram shatters, the body stops,
-// the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice stay off (LuckyDice.BossActive).
+// the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice work here (DECISIONS 31):
+// LuckyDice.BossSkill -> SkillHit (DiceDamage by face); slam clangs and reflected shots charge them like parries.
 // Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (duel, dialogue).
-public class BossFight : MonoBehaviour
+public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 {
     [Header("Art overrides (empty = temporary code-drawn BossArt)")]
     [SerializeField] Sprite bodyArt;      // pivot bottom-left, placed at BodyAt (24 x 14 u)
@@ -26,10 +29,14 @@ public class BossFight : MonoBehaviour
     [SerializeField] TMP_FontAsset font;  // "smash the machines" hint
 
     // ---- numbers (T) ----
-    const int MaxHp = 30;                                   // phase 1 = 30..21, 2 = 20..11, 3 = 10..1
+    const int MaxHp = 45;                                   // phase 1 = 45..31, 2 = 30..16, 3 = 15..1 (30 before the core, DECISIONS 31)
     const int ArmHitDamage = 1, ReflectDamage = 1, DuelDamage = 6;
     const float StartX = 6.5f, StartAfter = 3f;             // fight starts when the player walks past x or after s
-    const float Rest = 0.9f;                                // s between attacks
+    // weak-point core (DECISIONS 31), replaces the 0.9 s rest between attacks: drop, open (hittable), pull back
+    const int CoreHitDamage = 1, CoreIssenDamage = 2;
+    const float CoreDrop = 0.3f, CoreOpen = 1.6f, CoreRetract = 0.3f;
+    const float CoreHitEvery = 0.1f, CoreHalf = 0.75f, CoreIssenPast = 1.6f; // s between LMB hits (safety only: Swung fires once per swing, swings are >= attackDuration 0.3 s apart minus one frame); u half size; u issen lands past it
+    public static int DiceDamage(int face) => (face + 1) / 2; // faces 1..6 -> 1, 1, 2, 2, 3, 3
     const float WaveSpeed = 9f, WaveEvery = 1.3f, WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
     static readonly float[] GapLows = { 2f, 3.8f };         // gap on the floor (stand) / at jump height
     const float ZoneHalf = 1.5f, StuckTime = 3f, FirstSlam = 0.5f;
@@ -49,6 +56,7 @@ public class BossFight : MonoBehaviour
     // ---- layout (room 30 x 16.875, floor top y 2) ----
     const float Floor = 2f, RoomW = 30f, Px = 1f / 32f;
     static readonly Vector2 BodyAt = new Vector2(3f, 2f), HoloAt = new Vector2(15f, 11.75f), HatchAt = new Vector2(15f, 7.5f);
+    static readonly Vector2 CoreLow = new Vector2(15f, Floor + 1.3f); // core centre when dropped: player body height on the bridge
     static readonly Vector2 BugRest = new Vector2(5.5f, 6.5f), BugSlump = new Vector2(6.5f, 1.75f), BladeRest = new Vector2(24.5f, 6.5f);
     const float BladeHigh = 7.5f, BladeStuckY = 1.4f;
     static readonly float[] PropX = { 2f, 7f, 11f, 19f, 23f, 27.8f };
@@ -75,9 +83,10 @@ public class BossFight : MonoBehaviour
 
     PlayerController player;
     PlayerInputReader input;
-    Part body, bugArm, blade, hatchL, hatchR;
-    SpriteRenderer crack1, crack2, hatchInside, holo;
-    float hatchOpen, sink;
+    Part body, bugArm, blade, hatchL, hatchR, core;
+    SpriteRenderer crack1, crack2, hatchInside, holo, coreCable;
+    float hatchOpen, sink, coreHitAt;
+    bool coreOpen;
     int hp = MaxHp, shownPhase = 1, bladePoseY;
     bool started, dead, breakable, armVulnerable, sideRunning, duelWon, ownLock;
     int playerMask, groundMask;
@@ -85,6 +94,9 @@ public class BossFight : MonoBehaviour
     BossBladeFoe foe;
 
     public bool BladeStuck { get; private set; }
+    public Transform CoreTransform => core.Sr.transform; // dice talismans fly here
+    public bool CoreExposed => coreOpen;                 // dropped and hittable right now
+    public Vector2 CorePosition => core.Pos;
     int Phase => hp * 3 > MaxHp * 2 ? 1 : hp * 3 > MaxHp ? 2 : 3;
     static float Dt => GameFlow.InputLocked ? 0f : Time.deltaTime;
 
@@ -131,6 +143,10 @@ public class BossFight : MonoBehaviour
         holo = Make("Hologram", BossArt.Holo, "Background", -103, HoloAt);
         bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest, Res("boss_bug_arm_lit"));
         blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest, Res("boss_blade_arm_lit"));
+        Sprite coreArt = hatchCore != null ? hatchCore : BossArt.HatchInside;
+        core = MakePart("WeakCore", new[] { coreArt, coreArt, coreArt }, coreArt, -99, HatchAt); // hidden while inside the hatch
+        coreCable = Make("CoreCable", ParryFx.Square, "Background", -100, HatchAt);
+        core.Sr.enabled = coreCable.enabled = false;
 
         for (int i = 0; i < bugs.Length; i++)
         {
@@ -229,8 +245,12 @@ public class BossFight : MonoBehaviour
         StartCoroutine(Director());
     }
 
-    void OnEnable() => PlayerController.Swung += OnSwing;
-    void OnDisable() => PlayerController.Swung -= OnSwing;
+    void OnEnable() { PlayerController.Swung += OnSwing; PlayerController.IssenAlt = this; }
+    void OnDisable()
+    {
+        PlayerController.Swung -= OnSwing;
+        if (ReferenceEquals(PlayerController.IssenAlt, this)) PlayerController.IssenAlt = null;
+    }
 
     void OnDestroy()
     {
@@ -275,7 +295,7 @@ public class BossFight : MonoBehaviour
             yield return atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : AttackC(n, tell, false);
             BossArt.DrawHolo(-1, -1);
             while (sideRunning) yield return null;
-            yield return Wait(Rest);
+            yield return CoreWindow();
         }
     }
 
@@ -294,6 +314,53 @@ public class BossFight : MonoBehaviour
         Juice.Shake(Juice.ShakeKillAmp, 0.45f);
         yield return Wait(1f);
     }
+
+    // ---- Core (DECISIONS 31): the rest between attacks. Hatch opens, the core drops to the bridge, stays CoreOpen, pulls back ----
+    IEnumerator CoreWindow()
+    {
+        Sfx.Play(SfxId.EnemyTell, 0.6f, 0.7f);
+        for (float t = 0f; t < CoreDrop; t += Dt)
+        {
+            float u = Smooth(t / CoreDrop);
+            hatchOpen = Mathf.Max(hatchOpen, u);
+            core.Pos = Vector2.Lerp(HatchAt, CoreLow, u);
+            yield return null;
+        }
+        core.Pos = CoreLow;
+        hatchOpen = 1f;
+        Juice.Shake(Juice.ShakeHurtAmp, 0.15f, Vector2.down);
+        coreOpen = true;
+        yield return Wait(CoreOpen);
+        coreOpen = false;
+        for (float t = 0f; t < CoreRetract; t += Dt)
+        {
+            float u = Smooth(t / CoreRetract);
+            core.Pos = Vector2.Lerp(CoreLow, HatchAt, u);
+            hatchOpen = 1f - u;
+            yield return null;
+        }
+        core.Pos = HatchAt;
+        hatchOpen = 0f;
+    }
+
+    // RMB issen (PlayerController.IIssenTarget): the open core near the mouse and within issen range; land just past it on the bridge
+    public bool PlanIssen(Vector2 mouse, Vector2 from, out Vector2 at, out Vector2 spot)
+    {
+        at = core.Pos;
+        spot = default;
+        float aim = DashRules.IssenMouseRadius + CoreHalf;
+        if (dead || !coreOpen || (mouse - at).sqrMagnitude > aim * aim || Vector2.Distance(from, at) > DashRules.IssenRange) return false;
+        float side = from.x <= at.x ? 1f : -1f, x = at.x + side * CoreIssenPast;
+        if (x < 1.5f || x > RoomW - 1.5f) x = at.x - side * CoreIssenPast; // room edge: stop in front instead
+        spot = new Vector2(x, Floor + 1.02f); // player centre = feet + 1
+        return true;
+    }
+
+    public void IssenHit(Vector2 at) => Damage(CoreIssenDamage, core, at);
+
+    // The one entry point for skill damage (dice: LuckyDice.BossSkill with DiceDamage(face)). Hits whether or not the core is out;
+    // the core flashes when it is out, else the whole body does. fxAt = where the hit spark / ring plays.
+    public void SkillHit(int dmg, Vector2 fxAt) => Damage(dmg, core.Sr.enabled ? core : body, fxAt);
 
     // ---- A: bug swarm walls, then the arm slumps (opening) ----
     IEnumerator AttackA(int n, float tell)
@@ -476,6 +543,7 @@ public class BossFight : MonoBehaviour
         int face = player.transform.position.x >= zx ? 1 : -1;
         Vector2 c = new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y + ParryRing.Offset(h));
         player.DuelClash(false, h);
+        PlayerController.ParryCount++; // dice charge, like EliteDuel's clangs (DECISIONS 31)
         ring.Flash();
         SpriteFx.Play("parry_talisman", c, face > 0, 102); // blade on the player's left (face > 0): flipped
         Sfx.Play(SfxId.Parry);
@@ -628,6 +696,14 @@ public class BossFight : MonoBehaviour
     void OnSwing(Vector2 centre, Vector2 size)
     {
         if (dead) { if (breakable) BreakNear(centre, size); return; }
+        if (coreOpen && Time.time >= coreHitAt &&
+            Mathf.Abs(centre.x - core.Pos.x) <= size.x * 0.5f + CoreHalf && Mathf.Abs(centre.y - core.Pos.y) <= size.y * 0.5f + CoreHalf)
+        {
+            coreHitAt = Time.time + CoreHitEvery;
+            Damage(CoreHitDamage, core, core.Pos + Vector2.ClampMagnitude(centre - core.Pos, CoreHalf));
+            player.DuelHitStop(Juice.HitStopHit);
+            return;
+        }
         if (!armVulnerable) return;
         var arm = new Rect(bugArm.Pos.x - 1.5f, bugArm.Pos.y, 3f, 5.5f); // the slumped palm + lower arm
         if (Mathf.Abs(centre.x - arm.center.x) > (size.x + arm.width) * 0.5f || Mathf.Abs(centre.y - arm.center.y) > (size.y + arm.height) * 0.5f) return;
@@ -652,7 +728,8 @@ public class BossFight : MonoBehaviour
     {
         dead = true;
         StopAllCoroutines();
-        armVulnerable = BladeStuck = aimOn = sideRunning = false;
+        armVulnerable = BladeStuck = aimOn = sideRunning = coreOpen = false;
+        core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
         ShowZone(0f, false);
         sweepFill.enabled = sweepLine.enabled = sweepHead.enabled = sweepTrail.enabled = false;
@@ -750,6 +827,17 @@ public class BossFight : MonoBehaviour
         hatchR.Pos = HatchAt + new Vector2(1f + open, 0f);
         Show(hatchL, tint, now, blink, 0f);
         Show(hatchR, tint, now, blink, 0f);
+        core.Sr.enabled = coreCable.enabled = !dead && core.Pos.y < HatchAt.y - 0.05f;
+        if (core.Sr.enabled)
+        {
+            bool beat = coreOpen && Mathf.FloorToInt(now * 4f) % 2 == 0; // 2 Hz pulse while it can be hit: one step bigger + gold
+            Show(core, beat ? GoldShot : Color.white, now, blink, 0f);
+            core.Sr.transform.localScale = beat ? new Vector3(1.125f, 1.125f, 1f) : Vector3.one;
+            float top = HatchAt.y - sink, bottom = core.Pos.y - sink;
+            coreCable.transform.position = new Vector3(Snap(core.Pos.x), (top + bottom) * 0.5f, 0f);
+            coreCable.transform.localScale = new Vector3(2f * Px, top - bottom, 1f);
+            coreCable.color = new Color(Cyan.r, Cyan.g, Cyan.b, coreOpen && blink ? 0.95f : 0.6f);
+        }
         if (!dead)
         {
             bool glitch = shownPhase == 3 && Random.value < 0.12f; // phase 3: the hologram jitters

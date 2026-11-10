@@ -123,10 +123,15 @@ public class PlayerController : MonoBehaviour
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
     public static int ParryTries, ParryCount, ParryFailHits;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; } // Domain Reload is off
+    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; IssenAlt = null; } // Domain Reload is off
 
     // In-place LMB swing landed its hit box (centre, size): BossFight hits boss parts / machine props with it (they are not TestEnemies).
     public static event System.Action<Vector2, Vector2> Swung;
+
+    // DECISIONS 31: RMB issen at something that is not a TestEnemy (the boss core). Tried when no enemy is aimed. Plan: mouse and player
+    // centre in, the struck point and the landing spot (player centre) out; false = nothing to cut. Hit: the blow landed.
+    public interface IIssenTarget { bool PlanIssen(Vector2 mouse, Vector2 from, out Vector2 at, out Vector2 spot); void IssenHit(Vector2 at); }
+    public static IIssenTarget IssenAlt;
 
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
@@ -161,7 +166,7 @@ public class PlayerController : MonoBehaviour
         }
         enemyFilter.SetLayerMask(enemyMask);
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
-        if (GetComponent<LuckyDice>() == null) gameObject.AddComponent<LuckyDice>(); // DECISIONS 18 (Space); players are built by scripts, so add at runtime
+        if (GetComponent<LuckyDice>() == null) gameObject.AddComponent<LuckyDice>(); // DECISIONS 18 / 31 (E); players are built by scripts, so add at runtime
         MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like LuckyDice)
         if (GetComponent<AimLine>() == null) gameObject.AddComponent<AimLine>(); // DECISIONS 22 aim line
     }
@@ -716,12 +721,20 @@ public class PlayerController : MonoBehaviour
         issenBufferedUntil = -999f;
         if (now < issenReadyAt) return false;
         Collider2D col = null;
-        TestEnemy target = MouseCrosshair.MouseWorld(out Vector2 mouse) ? FindIssenTarget(mouse, out col) : null;
-        if (target == null || !PlanIssen(target, col, out Vector2 spot))
+        bool aimed = MouseCrosshair.MouseWorld(out Vector2 mouse);
+        TestEnemy target = aimed ? FindIssenTarget(mouse, out col) : null;
+        Vector2 spot = default, at = default;
+        bool alt = false;
+        if (target == null || !PlanIssen(target, col, out spot))
         {
-            Sfx.Play(SfxId.Swing, 0.3f); // fail cue
-            return false;
+            alt = aimed && IssenAlt != null && IssenAlt.PlanIssen(mouse, rb.position, out at, out spot);
+            if (!alt)
+            {
+                Sfx.Play(SfxId.Swing, 0.3f); // fail cue
+                return false;
+            }
         }
+        else at = target.transform.position;
         issenReadyAt = now + DashRules.IssenCooldown;
         Vector2 from = rb.position, path = spot - from;
         int travel = Mathf.Abs(path.x) > 0.01f ? (path.x > 0f ? 1 : -1) : Facing;
@@ -742,12 +755,12 @@ public class PlayerController : MonoBehaviour
         }
         rb.position = spot;
         transform.position = spot; // same-frame queries (HitInfo.SourcePosition) see the new spot
-        float dx = target.transform.position.x - spot.x;
+        float dx = at.x - spot.x;
         Facing = Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : -travel; // ends facing the enemy
         Sfx.Play(SfxId.Dash);
-        ParryFx.Slash(target.transform.position, null, travel);
-        bool killed = target.IsHuman && StrikeEnemy(target, col, from, true);
-        if (!killed) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
+        ParryFx.Slash(at, null, travel);
+        if (alt) IssenAlt.IssenHit(at);
+        else if (!(target.IsHuman && StrikeEnemy(target, col, from, true))) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
         StartHitStop(DashRules.IssenHitStop); // only extends a kill's longer stop
         Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, path);
         return true;

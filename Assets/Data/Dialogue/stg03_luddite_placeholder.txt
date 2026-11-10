@@ -4,5 +4,5 @@
 helper | 살아 있었군. 방송을 듣고도 움직이는 사람은 드문데. | You're alive. Few people still move after the broadcast.
 yudo | 난 숫자를 믿지 않아요. 운은 읽는 거지, 사는 게 아니니까. | I don't trust their numbers. Luck is read, not bought.
 helper | 그럼 이걸 써. 회사 숫자 말고, 네가 직접 굴리는 숫자야. | Then take these. Not the company's number: one you roll yourself.
-helper | 패링이나 반격을 세 번 성공하면 주사위가 차. 스페이스로 굴려. | Three parries or counters charge the dice. Press SPACE to roll.
+helper | 패링이나 반격을 세 번 성공하면 주사위가 차. E로 굴려. | Three parries or counters charge the dice. Press E to roll.
 helper | 나온 눈이 곧 네 도술이야. 높을수록 운이 좋지. | The face you roll is the spell you cast. The higher, the luckier.

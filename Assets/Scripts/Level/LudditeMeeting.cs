@@ -26,7 +26,7 @@ public class LudditeMeeting : MonoBehaviour
         yield return null; // let the talk box lock input
         while (GameFlow.InputLocked) yield return null;
         LuckyDice.SetUnlocked(true);
-        ControlHints.Show("LuckyDice"); // Space icon + what it does, a few playable seconds
+        ControlHints.Show("LuckyDice"); // E icon + what it does, a few playable seconds
         if (exit != null) exit.SetActive(true);
     }
 }

@@ -75,6 +75,7 @@ public class BroadcastHackUi : MonoBehaviour
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) Open(near);
         }
         promptRoot.SetActive(dialBoard == null && near != null && !GameFlow.InputLocked && !PlayerDead());
+        if (dialBoard != null || promptRoot.activeSelf) GameFlow.InteractFrame = Time.frameCount; // E belongs to the hack, not the dice
         lockedLastFrame = GameFlow.InputLocked;
     }
 

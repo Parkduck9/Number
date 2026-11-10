@@ -4,8 +4,8 @@
 @mode radio
 
 #step 1
-#prompt A / D: move   W: jump | A / D: 이동   W: 점프
-helper | 일어났군. A, D로 걷고 W로 뛰어 봐. | Up already? Walk with A and D, jump with W. | 6
+#prompt A / D: move   W / Space: jump | A / D: 이동   W / Space: 점프
+helper | 일어났군. A, D로 걷고 W나 스페이스로 뛰어 봐. | Up already? Walk with A and D, jump with W or Space. | 6
 
 #step 2
 #prompt Left click: attack / lunge | 좌클릭: 공격 · 돌진

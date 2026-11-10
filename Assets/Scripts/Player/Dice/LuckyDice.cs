@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// DECISIONS 18: Space = lucky dice (replaces the 8-A shockwave slot). 3 successful parries / Shift counters charge one roll (max 1 stored).
-// Space throws a die (DiceRollView, ~0.7 s under GameFlow.InputLocked), the face 1..6 picks a dosa skill (SkillN.Run). Unlocked at STG-03
-// (the Luddite). Disabled during the STG-05 boss fight. Added at runtime by PlayerController.
+// DECISIONS 18 / 31: E = lucky dice (replaces the 8-A shockwave slot). 3 successful parries / Shift counters charge one roll (max 1 stored).
+// E throws a die (DiceRollView, ~0.7 s under GameFlow.InputLocked), the face 1..6 picks a dosa skill (SkillN.Run). Unlocked at STG-03
+// (the Luddite). Boss fight (DECISIONS 31): BossSkill instead (no TestEnemies there). Added at runtime by PlayerController.
 [RequireComponent(typeof(PlayerController), typeof(PlayerInputReader))]
 public class LuckyDice : MonoBehaviour
 {
@@ -41,7 +41,7 @@ public class LuckyDice : MonoBehaviour
     PlayerInputReader input;
     DiceRollView view;
     LuckyDiceHud hud;
-    bool pendingPress; // Space during a hit-stop: fired on the first unfrozen frame instead of being dropped
+    bool pendingPress; // E during a hit-stop: fired on the first unfrozen frame instead of being dropped
     bool rolling, lockedByRoll;
     IEnumerator skill; // running SkillN.Run enumerator (disposed on disable so its finally blocks restore flags)
     int lastParryCount;
@@ -107,7 +107,7 @@ public class LuckyDice : MonoBehaviour
     }
 
     bool CanRoll() =>
-        Unlocked && Charges >= ChargesPerRoll && !Busy && !BossActive && !GameFlow.InputLocked &&
+        Unlocked && Charges >= ChargesPerRoll && !Busy && !GameFlow.InputLocked &&
         !GameFlow.IsPlayerDead(Player) && Player.CurrentState != PlayerController.State.Hurt;
 
     // Test hook (Sandbox scene): charges the dice and rolls `face` (1..6) right now through the normal Roll path. False if a roll is not allowed.
@@ -140,7 +140,7 @@ public class LuckyDice : MonoBehaviour
             rolling = false;
         }
         if (GameFlow.IsPlayerDead(Player)) yield break;
-        skill = SkillFor(face);
+        skill = BossActive ? BossSkill(face) : SkillFor(face);
         while (skill != null)
         {
             bool next;
@@ -163,6 +163,39 @@ public class LuckyDice : MonoBehaviour
             case 5: return Skill5Marks.Run(this);
             default: return Skill6Path.Run(this);
         }
+    }
+
+    // Boss fight (DECISIONS 31): face 2 (rope whirl) plays as usual; the others need TestEnemies and would only fizzle, so their
+    // caption shows and `face` talismans fly into the boss core instead. Then every face hurts the boss (BossFight.SkillHit, DiceDamage).
+    static readonly string[] BossCapEn = { "SHRINK EARTH", "BINDING ROPE", "PARALYSIS TALISMAN", "TIME HOLD", "FIVE TALISMANS", "DIVINATION PATH" };
+    static readonly string[] BossCapKo = { "축지법", "오랏줄", "부적 마비", "부동술", "부적 다섯 장", "점괘 길" };
+    const float BossFly = 0.2f, BossStagger = 0.05f; // (T) s: first talisman lands / gap between talismans
+
+    IEnumerator BossSkill(int face)
+    {
+        if (face == 2)
+        {
+            IEnumerator s = SkillFor(face);
+            try { while (s.MoveNext()) yield return s.Current; }
+            finally { (s as IDisposable)?.Dispose(); } // disabled mid-skill: the inner finally blocks still restore their flags
+        }
+        else
+        {
+            DiceSkillKit.Caption(BossCapEn[face - 1], BossCapKo[face - 1], face == 6 ? DiceSkillKit.Cyan : DiceSkillKit.Yellow);
+            Sfx.Play(SfxId.HackOk);
+            Vector2 hand = Player.HandPosition;
+            for (int i = 0; i < face; i++)
+            {
+                DiceSkillKit.Fade tal = DiceSkillKit.Talisman(hand, BossFly + i * BossStagger + 0.3f);
+                tal.follow = boss.CoreTransform;
+                tal.flyFrom = hand;
+                tal.flyTime = BossFly + i * BossStagger;
+                tal.fadeAt = tal.flyTime;
+            }
+            yield return DiceSkillKit.Wait(BossFly + (face - 1) * BossStagger);
+        }
+        while (GameFlow.InputLocked) yield return null; // a blade duel that began while the talismans flew: a kill now would stop the fight under it
+        if (!DiceSkillKit.PlayerGone(this) && boss != null) boss.SkillHit(BossFight.DiceDamage(face), boss.CorePosition);
     }
 
     // Active, standing, non-boss-wave enemies whose body center is inside the camera view (+ margin).

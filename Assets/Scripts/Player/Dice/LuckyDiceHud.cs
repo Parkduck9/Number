@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Lucky dice HUD (DECISIONS 18), bottom-left in the old shockwave icon slot: 24 px die at 2x (48 reference px) + 3 charge pips (8 px at 2x).
-// dice_off while uncharged / busy / boss fight, dice_face_6 lit when a roll is ready (one talisman-yellow pulse when it becomes ready).
+// dice_off while uncharged / busy, dice_face_6 lit when a roll is ready (one talisman-yellow pulse when it becomes ready).
 // Hidden until unlocked (STG-03), like the shockwave HUD was.
 public class LuckyDiceHud : MonoBehaviour
 {
@@ -25,7 +25,7 @@ public class LuckyDiceHud : MonoBehaviour
 
     public static LuckyDiceHud Create(LuckyDice owner)
     {
-        if (!DiceArt.Ready) return null; // no art: no HUD (the controls panel still explains Space)
+        if (!DiceArt.Ready) return null; // no art: no HUD (the controls panel still explains E)
         var hud = new GameObject("LuckyDiceHud").AddComponent<LuckyDiceHud>();
         hud.dice = owner;
         hud.Build();
@@ -65,7 +65,7 @@ public class LuckyDiceHud : MonoBehaviour
         if (!show) { wasReady = false; return; }
 
         int charges = Mathf.Clamp(LuckyDice.Charges, 0, LuckyDice.ChargesPerRoll);
-        bool ready = charges >= LuckyDice.ChargesPerRoll && !dice.Busy && !LuckyDice.BossActive;
+        bool ready = charges >= LuckyDice.ChargesPerRoll && !dice.Busy;
         if (ready && !wasReady) pulseT = 0f;
         wasReady = ready;
 

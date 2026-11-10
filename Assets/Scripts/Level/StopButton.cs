@@ -58,6 +58,7 @@ public class StopButton : MonoBehaviour
                 bool near = player != null && !GameFlow.IsPlayerDead(player) && !GameFlow.InputLocked &&
                             Vector2.Distance(player.transform.position, transform.position) <= interactRange;
                 SetPrompt(near);
+                if (near) GameFlow.InteractFrame = Time.frameCount; // E presses the button, not the dice
                 // !lockedLastFrame: the E that closes a talk scene must not also open this menu
                 if (near && !lockedLastFrame && kb.eKey.wasPressedThisFrame) OpenChoice();
                 break;

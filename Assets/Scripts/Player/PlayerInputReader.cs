@@ -26,7 +26,7 @@ public class PlayerInputReader : MonoBehaviour
         jump = map.FindAction("Jump", true);
         attack = map.FindAction("Attack", true);
         dash = map.FindAction("Dash", true);
-        dice = new InputAction("Dice", InputActionType.Button, "<Keyboard>/space");
+        dice = new InputAction("Dice", InputActionType.Button, "<Keyboard>/e"); // DECISIONS 31: E, shared with interact (Space = jump)
         dice.AddBinding("<Gamepad>/buttonEast");
         issen = new InputAction("Issen", InputActionType.Button, "<Mouse>/rightButton");
     }
@@ -47,7 +47,7 @@ public class PlayerInputReader : MonoBehaviour
         JumpHeld = jump.IsPressed();
         AttackPressed = attack.WasPressedThisFrame();
         DashPressed = dash.WasPressedThisFrame();
-        DicePressed = dice.WasPressedThisFrame();
+        DicePressed = dice.WasPressedThisFrame() && !GameFlow.InteractNear; // E near a board / button = interact only
         IssenPressed = issen.WasPressedThisFrame();
     }
 }
