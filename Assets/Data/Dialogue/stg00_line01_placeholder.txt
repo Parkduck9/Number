@@ -1,3 +1,3 @@
-# PLACEHOLDER — the user writes the real dialogue. Keep the format.
+# DRAFT (Claude 2026-11-10, the user may rewrite). Keep the format. File name kept: scenes reference it.
 @mode radio
-broadcast | [임시] 오늘의 행운의 숫자는… 0입니다. | [PLACEHOLDER] Today's lucky number is... zero. | 3.5
+broadcast | 엠벡터가 알려 드립니다. 오늘의 행운의 숫자는… 0입니다. | Embector announces: today's lucky number is... zero. | 3.5

@@ -1,6 +1,6 @@
 # STG-01 tutorial, DRAFT lines (the user may rewrite them). Read by Stg01Tutorial, played as radio, one step at a time.
 # "#step N" starts a step, "#prompt English | Korean" is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds).
-# Each step waits until the player does it (or its timeout), Esc skips all. Step 5 only explains.
+# Each step waits until the player does it (or its timeout), Esc skips all. Step 5 only explains (the dice are taught in STG-03, where they unlock).
 @mode radio
 
 #step 1
@@ -20,5 +20,5 @@ helper | 적이 칠 때 두 고리가 겹치면 좌클릭. | When the two rings 
 helper | 우클릭은 부적. 던지면 그 자리로 날아가. | Right click throws a talisman. You fly to where it lands. | 6
 
 #step 5
-#prompt Space: lucky dice (3 charges = 1 roll) | 스페이스: 점괘 주사위 (3칸 = 1회)
-helper | 패링과 반격이 주사위를 채워. 셋이면 굴려. | Parries and counters fill the dice. At three charges, roll. | 7
+#prompt Shift: dodge + counter | Shift: 회피 + 반격
+helper | 막기 힘들면 Shift. 적 뒤로 빠져서 바로 반격해. | Can't block it? Shift slips behind the enemy and strikes back. | 7

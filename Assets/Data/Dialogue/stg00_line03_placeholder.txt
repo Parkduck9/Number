@@ -1,4 +1,4 @@
-# PLACEHOLDER — the user writes the real dialogue. Keep the format.
+# DRAFT (Claude 2026-11-10, the user may rewrite). Keep the format. File name kept: scenes reference it.
 @mode radio
-broadcast | [임시] (도시 전체가 숨을 멈춘다) | [PLACEHOLDER] (The whole city stops breathing.) | 3
-yudo | [임시] …뭐야? 달려! (대시: Shift) | [PLACEHOLDER] ...What? Run! (Dash: Shift) | 3
+broadcast | (도시 전체가 숨을 멈춘다) | (The whole city holds its breath.) | 3
+yudo | …점괘에도 없던 일이야. 달려! (대시: Shift) | ...This was in no fortune I read. Run! (Dash: Shift) | 3
