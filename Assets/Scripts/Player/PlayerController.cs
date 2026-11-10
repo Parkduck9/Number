@@ -94,6 +94,8 @@ public class PlayerController : MonoBehaviour
     bool attackHitDone;
     bool lunging;                       // DECISIONS 12 lunge attack in progress (part of an Attack)
     Vector2 lungeStart, lungeEnd, lungeDir;
+    TestEnemy lungeTarget;              // the locked target (HitLungeTargetInReach when a corner holds the body up)
+    Collider2D lungeTargetCol;
     int swingHitStops;                  // hit-stops already played by this swing / lunge (capped at DashRules.LungeMaxHitStops)
     ContactFilter2D enemyFilter;
     readonly Collider2D[] enemyHits = new Collider2D[32];
@@ -484,7 +486,7 @@ public class PlayerController : MonoBehaviour
             Vector2 d = (Vector2)enemy.transform.position - pos;
             float dist = d.magnitude;
             if (dist > range || dist >= bestDist || (dist > 0.001f && Vector2.Dot(d / dist, aim) < minDot)) continue;
-            if (!ClearLine(pos, enemy.transform.position)) continue; // behind a wall / under a roof: the lunge would only hit the wall
+            if (!ReachLine(pos, enemy.transform.position)) continue; // behind a wall / under a roof: the lunge would only hit the wall
             bestDist = dist;
             best = enemy;
             hit = col;
@@ -503,6 +505,18 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < n; i++)
             if (!losHits[i].collider.usedByEffector) return false;
         return true;
+    }
+
+    // Reachable: the centre line, or a parallel line 0.4 to either side (inside both bodies), is clear. A corner or step edge clips
+    // only one side of the path and the lunge slides past it (playtest 11-10 "diagonal attacks get blocked at walls").
+    // A wall fully between the two still blocks all three lines.
+    bool ReachLine(Vector2 from, Vector2 to)
+    {
+        if (ClearLine(from, to)) return true;
+        Vector2 d = to - from;
+        if (d.sqrMagnitude < 0.0001f) return false;
+        Vector2 side = new Vector2(-d.y, d.x).normalized * 0.4f;
+        return ClearLine(from + side, to + side) || ClearLine(from - side, to - side);
     }
 
     // One-way platforms a downward lunge passes through (collision with the body off until the body is clear of them again).
@@ -549,7 +563,8 @@ public class PlayerController : MonoBehaviour
         // the platform the target stands on and solid ground still stop the lunge.
         float passAbove = dir.y < -0.01f ? targetCol.bounds.min.y + 0.05f : float.PositiveInfinity;
         lungePass.Clear();
-        float wall = WallDistance(pos, dir, tDist + DashRules.LungeBehind, passAbove, lungePass);
+        // Corners before the target do not stop it (the body slides past); the target's own floor / a wall at it still does.
+        float wall = WallDistance(pos, dir, tDist + DashRules.LungeBehind, passAbove, lungePass, tDist - DashRules.LungeBehind);
         float len = Mathf.Min(target.BlocksHits ? tDist - DashRules.LungeStopInFront : tDist + DashRules.LungeBehind, wall);
         if (grounded && !GroundBelow(pos + dir * len))
         {
@@ -564,6 +579,8 @@ public class PlayerController : MonoBehaviour
         lungeStart = pos;
         lungeDir = dir;
         lungeEnd = pos + dir * len;
+        lungeTarget = target;
+        lungeTargetCol = targetCol;
         foreach (RaycastHit2D h in lungePass)
             if (h.distance < len && !passedPlatforms.Contains(h.collider)) { SetPlatformPass(h.collider, true); passedPlatforms.Add(h.collider); }
         attackHitDone = true; // the sweep replaces the in-place hit box
@@ -580,8 +597,10 @@ public class PlayerController : MonoBehaviour
     // (the target's own platform) count like ground.
     // A floor under a shallow down-slanted lunge (or a ceiling over a shallow up-slanted one) is not a wall: the body slides along it,
     // so it must not cut the lunge short (playtest 11-09 "the attack stops at walls when an enemy is there").
+    // Hits closer than slideBefore that the body can slide along (a slanted hit, not head-on) are skipped too: a corner or step
+    // edge on a diagonal lunge, or the wall the player leans on (playtest 11-10). UpdateLunge ends it if the slide really sticks.
     float WallDistance(Vector2 pos, Vector2 dir, float maxLen, float passAbove = float.PositiveInfinity,
-        System.Collections.Generic.List<RaycastHit2D> pass = null)
+        System.Collections.Generic.List<RaycastHit2D> pass = null, float slideBefore = 0f)
     {
         float best = maxLen;
         foreach (RaycastHit2D h in Physics2D.BoxCastAll(pos, new Vector2(0.8f, 1.8f), 0f, dir, maxLen, groundMask))
@@ -589,6 +608,7 @@ public class PlayerController : MonoBehaviour
             if (h.collider.usedByEffector && dir.y >= -0.01f) continue;
             if (h.collider.usedByEffector && h.collider.bounds.max.y > passAbove) { pass?.Add(h); continue; }
             if ((h.normal.y > 0.7f && dir.y > -0.5f) || (h.normal.y < -0.7f && dir.y < 0.5f)) continue; // slide along floor / ceiling
+            if (h.distance < slideBefore && Mathf.Abs(Vector2.Dot(h.normal, dir)) < 0.9f) continue; // slide past a corner (keeps >= 19% of the speed)
             if (h.distance < best) best = h.distance;
         }
         return Mathf.Min(maxLen, best - 0.05f);
@@ -602,9 +622,20 @@ public class PlayerController : MonoBehaviour
         float remain = Vector2.Dot(lungeEnd - rb.position, lungeDir);
         // Held up by geometry the cast did not predict (a corner, a step): end where the body stands instead of pushing until LungeMaxTime.
         // Compared with the speed FixedUpdate asked for (it slows down near the end), so the last steps never count as blocked.
+        // 0.15: a slide past a corner (WallDistance lets |normal . dir| < 0.9 through) keeps at least 0.19 of it.
         bool blocked = elapsed > 2f * Time.fixedDeltaTime &&
-            Vector2.Dot(rb.linearVelocity, lungeDir) < 0.25f * Mathf.Min(DashRules.LungeSpeed, remain / Time.fixedDeltaTime);
-        if (remain <= 0.05f || blocked || elapsed >= DashRules.LungeMaxTime) EndLunge();
+            Vector2.Dot(rb.linearVelocity, lungeDir) < 0.15f * Mathf.Min(DashRules.LungeSpeed, remain / Time.fixedDeltaTime);
+        if (remain <= 0.05f || blocked || elapsed >= DashRules.LungeMaxTime) { HitLungeTargetInReach(); EndLunge(); } // no-op once the sweep hit it
+    }
+
+    // Lunge held up short of the target (a corner the slide could not pass): the locked target still takes the blow when it is
+    // within the sweep's reach (LungeTolerance ahead + half its width, to the collider) with a clear line.
+    void HitLungeTargetInReach()
+    {
+        if (lungeTarget == null || lungeTargetCol == null || swingHits.Contains(lungeTarget)) return;
+        Vector2 pos = rb.position;
+        if (Vector2.Distance(lungeTargetCol.ClosestPoint(pos), pos) > DashRules.LungeTolerance + 0.5f * DashRules.LungeSweepWidth) return;
+        if (ReachLine(pos, lungeTarget.transform.position)) HitEnemy(lungeTarget, lungeTargetCol, pos, true);
     }
 
     // Kill sweep: everything between the lunge start and LungeTolerance ahead of the body. A blocking enemy (Android) stops the lunge.
