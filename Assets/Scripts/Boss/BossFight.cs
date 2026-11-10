@@ -27,7 +27,7 @@ public class BossFight : MonoBehaviour
 
     // ---- numbers (T) ----
     const int MaxHp = 30;                                   // phase 1 = 30..21, 2 = 20..11, 3 = 10..1
-    const int ArmHitDamage = 1, ReflectDamage = 2, DuelDamage = 6;
+    const int ArmHitDamage = 1, ReflectDamage = 1, DuelDamage = 6;
     const float StartX = 6.5f, StartAfter = 3f;             // fight starts when the player walks past x or after s
     const float Rest = 0.9f;                                // s between attacks
     const float WaveSpeed = 9f, WaveEvery = 1.3f, WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
