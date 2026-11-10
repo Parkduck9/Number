@@ -1,0 +1,1000 @@
+{
+  "frameSize": [
+    64,
+    64
+  ],
+  "sharedPalette": [
+    "080b14",
+    "2d3050",
+    "1a1d33",
+    "3f4a6e",
+    "d7b4a0",
+    "a37b70",
+    "efd0b6",
+    "7a3a3c",
+    "d6d7d0",
+    "b8bec8",
+    "62677d",
+    "42a9bd",
+    "858a9b",
+    "96363c",
+    "f2c94c",
+    "7f1a22",
+    "226076"
+  ],
+  "animation": {
+    "frames": 60,
+    "dimensions": [
+      928,
+      592
+    ],
+    "fps": 10,
+    "loop": 0,
+    "palette": 18,
+    "rgbaSha256": [
+      "60c6ac3b10e7245f696a21f7d7a05978761c2d851236b1a8d7d461ec7d45a99b",
+      "73a4b820c7d708da42b8f00101fa4de8540b1004b0026f6a639be909ce7b7c42",
+      "7d3b5f14e6f0250c2cc87f59a6398d6fde50c262625d0b8c19ca4e601ebd272d",
+      "fe1c5d057d9a02f3fee721db5e0ff912fb3e54653f7e3f37c6393a626947b27c",
+      "347ffa60b19f399f14c0711283aabb406d5325d1ce3e8ebd9a68d846a2fa2128",
+      "d82342a1cac1332fedf2dbd33e36eabab68dfba9c20e439feeb81976de711137",
+      "517be270ea5667c9d1467caaed54ceb71f8e6ca8e77eb3a4592bde1fce5cdf8a",
+      "bdfef8d819d7b5f33943ba74dbdd0f15ebb6b4d77503301ed281f623201a90eb",
+      "cb1cbce4b940662f12fe518b53705e46758f586e35143cc00205024950dca315",
+      "73c226c068bfffcf88ab37f847cbad023bfe7dedc686651817a16fb960fb693c",
+      "3612b9fee8db005d0612edae3147ec2e9e432dcd6975f523c2b53e94443f4319",
+      "e780edcad96fe044ae0e9e6143bc6a4c6ab7d9dfaa667a55b5848ec39d388a10",
+      "f70f844379a466fd3adc97d0a1997da8d2e361b071b0f0196e32873bfdcb9b83",
+      "e862961f1e056a8692b3e98a144d5f778cef39077873b4d0c2c35c91d0471dc2",
+      "59f07a557b2c761a3ebc22e5c98d7ae9c21a6b31a2a193b4acb8683addf126d8",
+      "3dbde2c6139394457d9a7fc0f28e7eaa928801204efeabf4d6be39e90a08c612",
+      "2f025f1ca95b9215cb57735839818c46a62ed95ba3c4b9b80e00faba3cb44c8a",
+      "bccdcd30613ee49b0d253b96b40f94eed6ef41f0e6f3007f04c2729c37798283",
+      "28d64ffa6fb1698b92b9a583620197d658cc8f979292a10f7502a111a0aaeef2",
+      "b56eec38b93e3590e2d9fec5e849dbfe218a171eb4ebf0b33a289ff61481ac1e",
+      "d04a58673b042b8a8c459ba68907315927863352ac7b139011d5fa0fe0939eb5",
+      "38c2a5e5ce73d3dba4c999ab4b6f960f48f3eab877a62a0fe90912ab98528e03",
+      "2694872f9691d18d95ab997d0e4ac44898b54523cb351296160787d3f1b1da11",
+      "3a871a1935ca900e4b394b8fcc078758b5a850fb29b8a51ebe93056ef8b792bf",
+      "4d9bc52067d67adb6481d80de66a857784ff5482ed3f2e515459deb99815a8d2",
+      "6172b1fdbe0c7339bb4cc4c0ac2813556a7dcdb5f2c234ab44a35d37bd40dd48",
+      "935dcaeb01e331012f4d2101374ebf4333ceb27c963d0f9dcbe1c0f15f19d45d",
+      "5effe2495ea619421da0b121da33de641379d51c643c3346bb4e859bd7970141",
+      "bf4eb77c19eb7b4330fb73d050ddb8636fce75766b2024c141fbf35fbbaae24f",
+      "a75e92f5c0e2d0139dda63bebe9251bd1ba8349d2eee65f881e240a0ba9fd6b5",
+      "194d3361411e4827e51d0d76b53a746b73447922451fe174370a1ae8ae13223f",
+      "caffecf4d258373c980f05065b8353a7ea1de8ed8d2f5102893f928993dbf5e3",
+      "0a709bdd6a0632ac32af6667f74e1a69ee9d98efd9ab795aebf09050078a6e36",
+      "eed1c823d9928067a0ce614c23245290e01ec7c820d472b0b8f092e083c74ce0",
+      "e3b635aa9b30906c1c622d376484c394566c78c371bb7f2304ca14df6d6110a6",
+      "832022e718777b654e38d25c497811fee2fa524c5ca0c3d7edcf8960c382e3ef",
+      "13154298ebb95b1308e74639378717f5c912ca1ff0e4dba9b121ce02f46c9e21",
+      "d4d9003d290212ab5fc7819a07cd5fb8769712f287a5b8f036fab4d830b487c8",
+      "0673bdebca05da717fd871bdd6c18687e537137e43f49e21140c4efb51c2a73e",
+      "2737b03cb018312488c7d78d3ea4c102f93ddf9708b86de472cf21ee6646f3a1",
+      "6f114d3acc036d2834dc352cc986784f414737b32e30d3e00af19120ecd5358f",
+      "56b20bc3ab6fb66578617557e8da4641a44c4d7ad1bc5a0584dc9368ba4cceb3",
+      "4e08b8b0204bdef74e3c10310cdb05d68a721dd41e9c20549612e81dcc86e01d",
+      "1bedeadd8e384ddd9706971e7fc0d86367b90d2e8ebdb264dff97cfd5fb2ee19",
+      "7ae52ced1560c4c4b3fa3c991ad7753af3a6eb9f9b8d23512aa4fbe40c255b1f",
+      "0b904a3a3628422fa153d0c6d9bd588788290d0b014909a275969402711027db",
+      "e1412b565aebc37c575fca91fda8cc4d6ba1aa83faf52ad8af156c0c0409d758",
+      "8e661860e14b6c5144ed90d1ca018d9d983dde667e00a018ad4dda19e316d46d",
+      "50f12b2142bfa92342d05868749c05362c3c7142227b730183687697e9983bf1",
+      "8745bb937b247363d42a88afb988d69bba78b0ce3c8800ccbc9beb38f726573a",
+      "5f90ff9c63c337df580504f3c9c59767de4917b907582a2bbe61996232de750a",
+      "7506ce8308bed8fc56f1942fd494110fe2e80c814ab3c36a02a28b08463d0d58",
+      "dedd18535b0c7bfb7797dd55462bd0fc03986fa22ea717f3ba477398d0f12edd",
+      "541f73c7af2d4871ec0caf20c1a9e134f889d2cd8a1647c0d19d56e5728b6ec8",
+      "672fdcf337b2774e4eda73b3c24be56573b1f16b6966451f29ddb9d7105aaa9a",
+      "062830fd72cf7b70b31542abba56007d6e30019731fde6271b9031ee29082ba7",
+      "e0f17bcb5b9024fbe83a6ae8a9f3e5defe11924d2366b7bcc594fe8a957ec6c4",
+      "c7fdf10dbb65af67cc2488ed85966d6204a212163325578adaf6ede5473f850f",
+      "fc8f525fb3574d3b2279128815a5e6123bb9ef7fdce03b1bb4092fe8c7b62b3a",
+      "7dc70451de726e87f729a1ac6f277a6cf06f09c9dd03851246515d39ba0dc37f"
+    ]
+  },
+  "strips": [
+    {
+      "filename": "hero_idle_4f.png",
+      "dimensions": [
+        256,
+        64
+      ],
+      "sourceSha256": "64bfd6e85768e666ac2b5437aea18ce4ab8d7146d5f50c771444316534b73643",
+      "outputSha256": "d61b21548238e048668e25e598e35d9f0a273cca3ea046a708da5137516a500c",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 79,
+          "editBounds": [
+            26,
+            32,
+            37,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 79,
+          "editBounds": [
+            26,
+            32,
+            37,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 2,
+          "changedPixels": 79,
+          "editBounds": [
+            26,
+            32,
+            37,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 3,
+          "changedPixels": 79,
+          "editBounds": [
+            26,
+            32,
+            37,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_walk_6f.png",
+      "dimensions": [
+        384,
+        64
+      ],
+      "sourceSha256": "5a8958fcf2c958fb1806ea933eb702f0c7a37797214fb1a20a789f532f3f33fd",
+      "outputSha256": "7e2fb563c489d5a800d5332c53ec3dca14995022a355ed0e1dfec0c5afe101a7",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 79,
+          "editBounds": [
+            25,
+            35,
+            39,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            17,
+            4,
+            46,
+            62
+          ],
+          "outputBounds": [
+            17,
+            4,
+            46,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 76,
+          "editBounds": [
+            25,
+            35,
+            38,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            20,
+            4,
+            44,
+            62
+          ],
+          "outputBounds": [
+            20,
+            4,
+            44,
+            62
+          ],
+          "flutter": -1
+        },
+        {
+          "frame": 2,
+          "changedPixels": 76,
+          "editBounds": [
+            25,
+            33,
+            36,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            20,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            20,
+            3,
+            43,
+            62
+          ],
+          "flutter": -1
+        },
+        {
+          "frame": 3,
+          "changedPixels": 77,
+          "editBounds": [
+            25,
+            37,
+            36,
+            49
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            19,
+            4,
+            44,
+            62
+          ],
+          "outputBounds": [
+            19,
+            4,
+            44,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 4,
+          "changedPixels": 80,
+          "editBounds": [
+            25,
+            37,
+            37,
+            49
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            16,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            16,
+            4,
+            47,
+            62
+          ],
+          "flutter": 1
+        },
+        {
+          "frame": 5,
+          "changedPixels": 70,
+          "editBounds": [
+            26,
+            33,
+            38,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            20,
+            3,
+            42,
+            62
+          ],
+          "outputBounds": [
+            20,
+            3,
+            42,
+            62
+          ],
+          "flutter": 1
+        }
+      ]
+    },
+    {
+      "filename": "hero_run_6f.png",
+      "dimensions": [
+        384,
+        64
+      ],
+      "sourceSha256": "8a7fb73111b4e8161ebeca7c8fc2c0e4d7fcac3c749df0a58b4ed99ddeef0bc3",
+      "outputSha256": "476afb525c4494d2d247676caa1ae3ff80b59e74f1ad5bd853ae68a4e606f422",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 61,
+          "editBounds": [
+            26,
+            38,
+            37,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "outputBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 56,
+          "editBounds": [
+            26,
+            39,
+            37,
+            47
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            14,
+            5,
+            50,
+            62
+          ],
+          "outputBounds": [
+            14,
+            5,
+            50,
+            62
+          ],
+          "flutter": -1
+        },
+        {
+          "frame": 2,
+          "changedPixels": 60,
+          "editBounds": [
+            27,
+            39,
+            38,
+            47
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "flutter": -1
+        },
+        {
+          "frame": 3,
+          "changedPixels": 60,
+          "editBounds": [
+            26,
+            36,
+            37,
+            44
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            14,
+            2,
+            51,
+            57
+          ],
+          "outputBounds": [
+            14,
+            2,
+            51,
+            57
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 4,
+          "changedPixels": 59,
+          "editBounds": [
+            26,
+            38,
+            38,
+            46
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "outputBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "flutter": 1
+        },
+        {
+          "frame": 5,
+          "changedPixels": 57,
+          "editBounds": [
+            27,
+            40,
+            39,
+            47
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "flutter": 1
+        }
+      ]
+    },
+    {
+      "filename": "hero_attack_5f.png",
+      "dimensions": [
+        320,
+        64
+      ],
+      "sourceSha256": "509a54cb40ba2305afe899ad40319cd63553ac3b80e217dcb95115d40c06aaae",
+      "outputSha256": "b994210ca36c858cc210d209697373ae0f281fcb6000aa73d472fc2dead3e52f",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 80,
+          "editBounds": [
+            23,
+            36,
+            34,
+            49
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            16,
+            8,
+            47,
+            62
+          ],
+          "outputBounds": [
+            16,
+            8,
+            47,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 79,
+          "editBounds": [
+            23,
+            36,
+            34,
+            49
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            14,
+            8,
+            47,
+            62
+          ],
+          "outputBounds": [
+            14,
+            8,
+            47,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 2,
+          "changedPixels": 75,
+          "editBounds": [
+            24,
+            37,
+            35,
+            50
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            11,
+            8,
+            53,
+            62
+          ],
+          "outputBounds": [
+            11,
+            8,
+            53,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 3,
+          "changedPixels": 77,
+          "editBounds": [
+            24,
+            37,
+            35,
+            50
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "outputBounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 4,
+          "changedPixels": 76,
+          "editBounds": [
+            25,
+            35,
+            36,
+            48
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            18,
+            7,
+            46,
+            62
+          ],
+          "outputBounds": [
+            18,
+            7,
+            46,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_jump_4f.png",
+      "dimensions": [
+        256,
+        64
+      ],
+      "sourceSha256": "37554e7aa71e5baea1d58d7d40c4f75a61062529b8a239951730e66f5a707264",
+      "outputSha256": "c933fe98032a675af42f67de02808cec4b9acbc82ee74e686ad1d4ed8635e4ef",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 70,
+          "editBounds": [
+            25,
+            36,
+            36,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            16,
+            9,
+            47,
+            54
+          ],
+          "outputBounds": [
+            16,
+            9,
+            47,
+            54
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 71,
+          "editBounds": [
+            25,
+            36,
+            37,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            16,
+            7,
+            47,
+            55
+          ],
+          "outputBounds": [
+            16,
+            7,
+            47,
+            55
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 2,
+          "changedPixels": 77,
+          "editBounds": [
+            26,
+            31,
+            37,
+            41
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            13,
+            4,
+            51,
+            60
+          ],
+          "outputBounds": [
+            13,
+            4,
+            51,
+            60
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 3,
+          "changedPixels": 86,
+          "editBounds": [
+            26,
+            30,
+            37,
+            43
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            13,
+            2,
+            51,
+            62
+          ],
+          "outputBounds": [
+            13,
+            2,
+            51,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_dash_3f.png",
+      "dimensions": [
+        192,
+        64
+      ],
+      "sourceSha256": "2d269752abe3559ebe4a8dfbaa196cd780147484bc17088f60c3da2f72348a80",
+      "outputSha256": "c6b557b0c1d32ab23a0d9ddbd56f871378e37addc128ba8a0b94546143a6f453",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 68,
+          "editBounds": [
+            27,
+            40,
+            38,
+            51
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            8,
+            13,
+            56,
+            62
+          ],
+          "outputBounds": [
+            8,
+            13,
+            56,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 69,
+          "editBounds": [
+            27,
+            40,
+            38,
+            51
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            7,
+            15,
+            58,
+            62
+          ],
+          "outputBounds": [
+            7,
+            15,
+            58,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 2,
+          "changedPixels": 95,
+          "editBounds": [
+            10,
+            42,
+            34,
+            50
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            4,
+            18,
+            59,
+            62
+          ],
+          "outputBounds": [
+            4,
+            18,
+            59,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_parry_2f.png",
+      "dimensions": [
+        128,
+        64
+      ],
+      "sourceSha256": "1c2b82097f28995fb088ccf098e4098c492eaac1a5f705ec105a4daf1a3e9dfd",
+      "outputSha256": "c2c3f1fb84b80012e72917166db28e15bc72db5b12baf654b349c0fe0a3b7f94",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 70,
+          "editBounds": [
+            24,
+            34,
+            35,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            19,
+            3,
+            44,
+            62
+          ],
+          "outputBounds": [
+            19,
+            3,
+            44,
+            62
+          ],
+          "flutter": 0
+        },
+        {
+          "frame": 1,
+          "changedPixels": 69,
+          "editBounds": [
+            19,
+            33,
+            30,
+            45
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            13,
+            3,
+            50,
+            62
+          ],
+          "outputBounds": [
+            13,
+            3,
+            50,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_hurt_1f.png",
+      "dimensions": [
+        64,
+        64
+      ],
+      "sourceSha256": "786c3749b92cb125de7ce4539f018b414bd8a86214b078bc6a4bfd94f2fc9251",
+      "outputSha256": "9123782feed175ac2d6db7f05aecbac123fe9bde7c6e414ed4114d24f71f51a7",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 77,
+          "editBounds": [
+            27,
+            40,
+            38,
+            52
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            14,
+            11,
+            49,
+            62
+          ],
+          "outputBounds": [
+            14,
+            11,
+            49,
+            62
+          ],
+          "flutter": 0
+        }
+      ]
+    },
+    {
+      "filename": "hero_grapple_1f.png",
+      "dimensions": [
+        64,
+        64
+      ],
+      "sourceSha256": "f8363207e3d66b6ef885b2d81ebdb9597c96d09090baa029ccaf33c89e22b6c0",
+      "outputSha256": "d03266457d54aad9efc93b65c152fc7b3e31b217cf231df0f345187aec9e11a1",
+      "frames": [
+        {
+          "frame": 0,
+          "changedPixels": 82,
+          "editBounds": [
+            25,
+            36,
+            36,
+            48
+          ],
+          "alphaMismatch": 0,
+          "sourceBounds": [
+            15,
+            9,
+            60,
+            59
+          ],
+          "outputBounds": [
+            15,
+            9,
+            60,
+            59
+          ],
+          "flutter": 0
+        }
+      ]
+    }
+  ],
+  "independentValidation": {
+    "status": "pass",
+    "strips": 9,
+    "frames": 32,
+    "changedPixels": 2348,
+    "alphaMismatchPixels": 0,
+    "changedPixelsInFootRows56to63": 0,
+    "changesOutsideWaistHipSash": 0,
+    "sourceBottomRows": [
+      53,
+      54,
+      56,
+      58,
+      59,
+      61
+    ],
+    "originalPaletteColors": 15,
+    "outputPaletteColors": 17,
+    "addedColors": [
+      "#96363c",
+      "#f2c94c"
+    ],
+    "existingPngsPreserved": true,
+    "pngPreviewDimensions": [
+      1696,
+      1776
+    ],
+    "pngPreviewScale": "exact 4x nearest neighbor",
+    "gifDecodedFrames": 60,
+    "gifDecoder": "Windows System.Drawing/GDI+, all frames compared by SHA-256 against pre-encoding RGBA",
+    "gifFrameDelayMs": 100,
+    "gifLoop": 0,
+    "visualReview": "Reviewed original-size idle/run/attack comparison and 4x views of all 32 modified frames; two marked papers and gourd retained, 1px flutter in walk/run, no pose edits."
+  }
+}

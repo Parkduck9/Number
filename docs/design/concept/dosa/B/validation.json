@@ -1,0 +1,799 @@
+{
+  "frameSize": [
+    64,
+    64
+  ],
+  "idleHeightPixels": 59,
+  "groundedFootRow": 61,
+  "airbornePlacement": "Original per-frame height and vertical placement retained; run frame 3 remains airborne.",
+  "palette": [
+    "080b14",
+    "1a1d33",
+    "2d3050",
+    "3f4a6e",
+    "62677d",
+    "d6d7d0",
+    "a37b70",
+    "d7b4a0",
+    "efd0b6",
+    "226076",
+    "42a9bd",
+    "7f1a22",
+    "b94445",
+    "f2c94c",
+    "9b7043",
+    "c49a5c"
+  ],
+  "alpha": [
+    0,
+    255
+  ],
+  "animation": {
+    "frames": 60,
+    "dimensions": [
+      928,
+      592
+    ],
+    "fps": 10,
+    "delayMilliseconds": 100,
+    "loop": 0,
+    "seconds": 6,
+    "paletteColors": 20,
+    "decodedRgbaSha256": [
+      "9f3f206a96de32e35af8e514418024bff3ae57913ff1c2e213b6397ec3fa2cb4",
+      "7ac130fe3718fff94babfeda1ef970520d2888ba7a1e0946ff5a031c03f84aa2",
+      "ae5a393d1ce047ea72b9dca6860a63afd4f17e81fcc48bd51ba41a16cf30b194",
+      "7cf3c8df6add1779ca976559a50a7531f6de238c3cd9ee1c3e3cdd2e4d1645b2",
+      "5ce864409e509e40a1753a63835779877537d6233540e57641430a5966a1319f",
+      "f275270682ad4d32be86f4d7e8431762e1b55de18f8652293df59a6143ba8943",
+      "eb03f4973f2559f906f4701483b9a5f1558c6c5956a0b200820c50afe9d86b2d",
+      "c8b969bf3846ed52daf078e712c0e1c42c8b4d26a1b9435363eb3420c79fadf9",
+      "76a09d04783cc6f311bc855983e1782eb25b91af9f5a5dccae6a2ab922093be8",
+      "5b069a5421a626a2f939dfc91d299c70aadf677f7ee1140d202b7a6a951f5fba",
+      "005cda11066bab33080e8e6cd98cdf86eec1d9b020afc03d7bd7d32849953d82",
+      "c5708747edaea62191221265169773b1ba1ba3fb2524fe00420545e081fe21ab",
+      "a6f6421d33f12c16c758867af89eff9136dbcff3c89db021c27dd921524c8d07",
+      "e2589ca27855a4b386a2447eed213021d73b173b2349c4e0d6f2759a6b2449a5",
+      "c4a2ce178b78dfd274809750a49cf7f2f3e63d37ea4f49345bfd5b37b632c2cd",
+      "836781698cdaf550d378d4a7cd3e01d6b305ea0777f5a285b727f163894c5b02",
+      "d366b4cfc7d982bf0bd63b5362e374538ab9c96d744d01b7b027a19f77392047",
+      "785d5133e7f7b0b43ead092ff08adaf333328d7ddab854bd8d160273b253305c",
+      "2f84010fc3e3de8be3f370c323d0dce6c37f0d8007eb0ca05d5097c8892f6eaa",
+      "df032ea3101d6e007297e056c52f5d2b44773e36a09f9c0cbf9e34b5f33186d9",
+      "6ca3dcd1fd1a93c64c7779f5bf1c5be8b26d64ac4f79f061c94a86668712ba98",
+      "b4d8beb06a3f36c6d94d736b4a982642d0fb01992e833ee68efbe8dd90cb3499",
+      "1898f1e688d6570488981bcb80ec8b795560fb05dd2d317ee6925b9171909a6f",
+      "2df29b9bfd45f7c4d39ec7828759b692fbf4f2e06625f1af1f7d32aa397120a7",
+      "747980da5688b6c881048e76740e461c8a7a6e9da5511118d422757fb7fce13a",
+      "d5e5c3d9f15965ff41a8e0fb2ef14a789a28211be8b468ee95c7150768fed9f6",
+      "739d343ac5fa3b638c58cbe163bd74af8b5a02aa63ef6b3cc0568c117c2d8b37",
+      "71e92f698dac540213b6e3af43bc24c07384d6c2fb5c9b17ff004191d4e7b5d5",
+      "417ee393743e127a7e67b83c877efc74107ef7524189ace6df6bd4fddbe02970",
+      "dd91641d923c48139468d7e86814ff29805b5f491547736c431768cfc5649240",
+      "0405dbb3f614156724f83391c66a418587ad739f4fe6dc1faba02c2fc54de021",
+      "84a9571e4b493a2dd17c348f5a40a7c9c83efe2a0fc49bdc0a117f7ea7e212c6",
+      "e0004cfd442e8a396c1552448a843f0c98601bbcd188e66550b61ec9bebbf447",
+      "29361a087b783ab66df447d5a270a3eb8711c321466c1ccf45f61352480cd060",
+      "11a5a414f8b813004a758149dcc2b65107af7c15ac4dcea867a2780f7ac4381f",
+      "21e0988899b11ed0f487ea3083086d92290e86265e7db595deec0b905832f5a0",
+      "fd2d92a8b6acece35dc644beae6bc90a297e3f7e47ccc857c5d6ae2102cddf86",
+      "6be433f5dede2afe8766193373b23038f1a740ebe0bf72c950e3e7b01918f2e4",
+      "8e2c7e217671f4c3b7271fb91e2974e568dc453ab1b8407581e5000446e65e4a",
+      "b41b36ac9b143739ac811fad66175fde922747532043b63e6c52559b66397cb1",
+      "b09a4f4aad592b6afebaacad0e8511487742398a4d3545806d09012818693436",
+      "bf7a0fa138e6650499387d7b41c357232fdba943c8bdd4e9c39d19cd25652d34",
+      "0edf81f7806ed0588ea6f7904d7c403f6518cf339d0b8e6abeab59cb83df7abe",
+      "cd258c42a21c117e0fb7f53109dd7f37068d1006bc383717328467237175b4fa",
+      "ab4b2d89baf5b59a51b53eb76134f16fac062bcf58ce3031eeb8fd3a057d3dbe",
+      "5f97e1ce035af9b815d751aee3dd936f19009b7debf8d29e3e3afd05d33b4bfa",
+      "3f7dcf280ec38bfe7b125e9ab08facf14eee466f4491d0d374404f441eee5805",
+      "6e500be40100a4e74a524a42f86df6c3ecea1f155152d5c35185b25e661aab49",
+      "7e68d650d7fcd2656f433af0e5210f9651b9277565a8474d7269fea61f6ed295",
+      "6cc7ed8aeb3c14d229e9c3c23cc7769b428ebe834ebd4d4acceb14c6a6292d95",
+      "559d54b8ae25e418bb59d7d9ac42f371967a51e75e1df1b0a4990931cf65f2b2",
+      "f161288a41ce314c05e751cc401b57a39d9ae269ca177310ba73ce0c33577341",
+      "6e643b66a5b738685f1da62d8f20a42586805ae9ba78b8bc1cb20a157f31b803",
+      "57618b71b9a77b144826fe74cd6535e4f6db4a64b1c27d2e8c6b69afe0cfee40",
+      "08f87842588821a2a173c7c4d47e8fd1a8e8ca0ee723178d33ceda4538d51dee",
+      "776687ae4471c9a8b6c6bb5cee2c53bec1b9500e059108586965b8a4ad462711",
+      "9036838dffa9138ed689323b8ca96a49946194f08514bb4d0a29a11354ca80f3",
+      "1693bc3844de1a1b404c9e7641c90ae5ebc41dd3cfe50563cc3fc085b9856463",
+      "f0e21ff5acf4cd29713d74dbfa3591f023c5c1daf4450f1c4ffa31088112bdbc",
+      "1dd4e5cb8c10b7b238049c3c582eb62bb7fd4c8f8d5cf5aaed227bb857e48f6b"
+    ],
+    "independentDecoderVerification": {
+      "decoder": "Windows System.Drawing / GDI+",
+      "framesCompared": 60,
+      "allPixelsExact": true
+    }
+  },
+  "strips": [
+    {
+      "filename": "hero_idle_4f.png",
+      "method": "full redraw (resumed generated artwork, palette and grid cleanup)",
+      "sourceSha256": "64bfd6e85768e666ac2b5437aea18ce4ab8d7146d5f50c771444316534b73643",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "generatedBounds": [
+            161,
+            65,
+            381,
+            660
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "generatedBounds": [
+            704,
+            65,
+            926,
+            660
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "generatedBounds": [
+            1249,
+            65,
+            1468,
+            660
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            21,
+            3,
+            43,
+            62
+          ],
+          "generatedBounds": [
+            1789,
+            65,
+            2011,
+            660
+          ]
+        }
+      ],
+      "dimensions": [
+        256,
+        64
+      ],
+      "opaqueColors": 16,
+      "outputSha256": "f3f8cef0bc0a67eb09b32f040709f1438c4541c2a93c1abdf064ba1b0541c0c7"
+    },
+    {
+      "filename": "hero_run_6f.png",
+      "method": "full redraw (resumed generated artwork, palette and grid cleanup)",
+      "sourceSha256": "8a7fb73111b4e8161ebeca7c8fc2c0e4d7fcac3c749df0a58b4ed99ddeef0bc3",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "outputBounds": [
+            13,
+            4,
+            52,
+            62
+          ],
+          "generatedBounds": [
+            52,
+            157,
+            331,
+            568
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            14,
+            5,
+            50,
+            62
+          ],
+          "outputBounds": [
+            14,
+            5,
+            50,
+            62
+          ],
+          "generatedBounds": [
+            426,
+            160,
+            686,
+            568
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            22,
+            4,
+            48,
+            62
+          ],
+          "generatedBounds": [
+            820,
+            160,
+            1006,
+            568
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceBounds": [
+            14,
+            2,
+            51,
+            57
+          ],
+          "outputBounds": [
+            12,
+            2,
+            53,
+            57
+          ],
+          "generatedBounds": [
+            1124,
+            152,
+            1398,
+            519
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceBounds": [
+            15,
+            4,
+            49,
+            62
+          ],
+          "outputBounds": [
+            14,
+            4,
+            51,
+            62
+          ],
+          "generatedBounds": [
+            1495,
+            163,
+            1756,
+            568
+          ]
+        },
+        {
+          "frame": 5,
+          "sourceBounds": [
+            22,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            21,
+            4,
+            48,
+            62
+          ],
+          "generatedBounds": [
+            1907,
+            157,
+            2098,
+            568
+          ]
+        }
+      ],
+      "dimensions": [
+        384,
+        64
+      ],
+      "opaqueColors": 16,
+      "outputSha256": "d25135d2630b4abeca4c55c8ab47751b03ce041280c6979f202c892b01e7d5e4"
+    },
+    {
+      "filename": "hero_attack_5f.png",
+      "method": "full redraw (resumed generated artwork, palette and grid cleanup)",
+      "sourceSha256": "509a54cb40ba2305afe899ad40319cd63553ac3b80e217dcb95115d40c06aaae",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            16,
+            8,
+            47,
+            62
+          ],
+          "outputBounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "generatedBounds": [
+            64,
+            171,
+            336,
+            571
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            14,
+            8,
+            47,
+            62
+          ],
+          "outputBounds": [
+            13,
+            8,
+            49,
+            62
+          ],
+          "generatedBounds": [
+            498,
+            171,
+            763,
+            571
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            11,
+            8,
+            53,
+            62
+          ],
+          "outputBounds": [
+            10,
+            8,
+            54,
+            62
+          ],
+          "generatedBounds": [
+            908,
+            171,
+            1231,
+            571
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceBounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "outputBounds": [
+            12,
+            8,
+            52,
+            62
+          ],
+          "generatedBounds": [
+            1356,
+            171,
+            1652,
+            571
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceBounds": [
+            18,
+            7,
+            46,
+            62
+          ],
+          "outputBounds": [
+            17,
+            7,
+            48,
+            62
+          ],
+          "generatedBounds": [
+            1845,
+            156,
+            2082,
+            571
+          ]
+        }
+      ],
+      "dimensions": [
+        320,
+        64
+      ],
+      "opaqueColors": 16,
+      "outputSha256": "f02ffe7857935b53df2a5fdc31f6b9559c612e9900f8e0291038bd43d1232ec4"
+    },
+    {
+      "filename": "hero_walk_6f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "5a8958fcf2c958fb1806ea933eb702f0c7a37797214fb1a20a789f532f3f33fd",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            17,
+            4,
+            46,
+            62
+          ],
+          "outputBounds": [
+            17,
+            4,
+            46,
+            62
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            20,
+            4,
+            44,
+            62
+          ],
+          "outputBounds": [
+            18,
+            4,
+            44,
+            62
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            20,
+            3,
+            43,
+            62
+          ],
+          "outputBounds": [
+            18,
+            3,
+            43,
+            62
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceBounds": [
+            19,
+            4,
+            44,
+            62
+          ],
+          "outputBounds": [
+            18,
+            4,
+            44,
+            62
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceBounds": [
+            16,
+            4,
+            47,
+            62
+          ],
+          "outputBounds": [
+            16,
+            4,
+            47,
+            62
+          ]
+        },
+        {
+          "frame": 5,
+          "sourceBounds": [
+            20,
+            3,
+            42,
+            62
+          ],
+          "outputBounds": [
+            19,
+            3,
+            42,
+            62
+          ]
+        }
+      ],
+      "dimensions": [
+        384,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "73aa8cc6f58a4c919f73f21769e39a3f3ba4f6581336e8bc346630bf5974cb1c"
+    },
+    {
+      "filename": "hero_jump_4f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "37554e7aa71e5baea1d58d7d40c4f75a61062529b8a239951730e66f5a707264",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            16,
+            9,
+            47,
+            54
+          ],
+          "outputBounds": [
+            16,
+            9,
+            47,
+            54
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            16,
+            7,
+            47,
+            55
+          ],
+          "outputBounds": [
+            16,
+            7,
+            47,
+            55
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            13,
+            4,
+            51,
+            60
+          ],
+          "outputBounds": [
+            13,
+            4,
+            51,
+            60
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceBounds": [
+            13,
+            2,
+            51,
+            62
+          ],
+          "outputBounds": [
+            13,
+            2,
+            51,
+            62
+          ]
+        }
+      ],
+      "dimensions": [
+        256,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "3817d097c40e0abdd6d53ccfe962efc35cd22ff81a6b48f4482982bf2a9f0833"
+    },
+    {
+      "filename": "hero_dash_3f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "2d269752abe3559ebe4a8dfbaa196cd780147484bc17088f60c3da2f72348a80",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            8,
+            13,
+            56,
+            62
+          ],
+          "outputBounds": [
+            8,
+            13,
+            56,
+            62
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            7,
+            15,
+            58,
+            62
+          ],
+          "outputBounds": [
+            7,
+            15,
+            58,
+            62
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceBounds": [
+            4,
+            18,
+            59,
+            62
+          ],
+          "outputBounds": [
+            4,
+            18,
+            59,
+            62
+          ]
+        }
+      ],
+      "dimensions": [
+        192,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "8b45c1d4f0030758859766ddf715de7af9bf6868535090802edb8f08fa4cd322"
+    },
+    {
+      "filename": "hero_parry_2f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "1c2b82097f28995fb088ccf098e4098c492eaac1a5f705ec105a4daf1a3e9dfd",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            19,
+            3,
+            44,
+            62
+          ],
+          "outputBounds": [
+            17,
+            3,
+            44,
+            62
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceBounds": [
+            13,
+            3,
+            50,
+            62
+          ],
+          "outputBounds": [
+            12,
+            3,
+            50,
+            62
+          ]
+        }
+      ],
+      "dimensions": [
+        128,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "9a5ec694ef762789ad4c40ec79e664d8d84e6fe2f588968aef03189ae03ed21f"
+    },
+    {
+      "filename": "hero_hurt_1f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "786c3749b92cb125de7ce4539f018b414bd8a86214b078bc6a4bfd94f2fc9251",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            14,
+            11,
+            49,
+            62
+          ],
+          "outputBounds": [
+            14,
+            11,
+            49,
+            62
+          ]
+        }
+      ],
+      "dimensions": [
+        64,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "bc7bb0264dc969843e0d4ff781d3e8f3e2ad2d2784b2a2f45e30ac3a8b687260"
+    },
+    {
+      "filename": "hero_grapple_1f.png",
+      "method": "patched original (coat panels, sleeves, goggles/headband, belt props, sword/tassel)",
+      "sourceSha256": "f8363207e3d66b6ef885b2d81ebdb9597c96d09090baa029ccaf33c89e22b6c0",
+      "frames": [
+        {
+          "frame": 0,
+          "sourceBounds": [
+            15,
+            9,
+            60,
+            59
+          ],
+          "outputBounds": [
+            15,
+            9,
+            60,
+            59
+          ]
+        }
+      ],
+      "dimensions": [
+        64,
+        64
+      ],
+      "opaqueColors": 15,
+      "outputSha256": "93b8de5497f02845ed32dabf4b36c886c7e1466c20fbd1d416a89c90092dec9f"
+    }
+  ]
+}
