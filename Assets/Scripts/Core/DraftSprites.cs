@@ -9,14 +9,14 @@ public static class DraftSprites
     public const float WalkFps = 16f; // walk / flap strips are 2x frames (old 8 fps)
     public const float IdleFps = 4f;       // hero idle 4f (old 2 fps)
     public const float LudditeIdleFps = 2f; // luddite idle strip is still 2f
-    public const float RunFps = 12f; // hero run cycle (6 frames = 0.5 s per cycle)
 
     static Sprite[] hero, heroRun, heroIdle, heroAttack, heroDash, heroHurt, citizen, citizenRanged, android, luddite,
         heroJump, heroParry, citizenWalk, citizenStunned, citizenRangedWalk, androidWalk, androidStunned,
         bug, bugWalk, bugFlyer, bugFlyerAttack, heroGrapple, sniperAim, sniperStunned, sniperWalk,
         bulletSniper, bulletAndroid, bulletCitizen, bulletBug;
     public static Sprite[] Hero => hero ??= Load("hero_walk_6f", 6);
-    public static Sprite[] HeroRun => heroRun ??= Load("hero_run_6f", 6);                   // test strip (Codex); null = walk
+    public static Sprite[] HeroRun => heroRun ??= Load("hero_run_8f", 8) ?? Load("hero_run_6f", 6); // 8f strip first, 6f test strip (Codex); null = walk
+    public static float RunFps => HeroRun != null && HeroRun.Length == 8 ? 20f : 12f; // 0.4 s (8f) / 0.5 s (6f) per cycle
     public static Sprite[] HeroIdle => heroIdle ??= Load("hero_idle_4f", 4);
     public static Sprite[] HeroAttack => heroAttack ??= Load("hero_attack_5f", 5);
     public static Sprite[] HeroDash => heroDash ??= Load("hero_dash_3f", 3);

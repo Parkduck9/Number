@@ -60,8 +60,11 @@ public class PlayerController : MonoBehaviour
 
     [Header("Speed FX (T)")] // docs/design/impl/juice.md "속도감 FX"
     [SerializeField] float runFxSpeedFrac = 0.9f;     // |vx| >= this * moveSpeed on the ground counts as running
-    [SerializeField] float runDustInterval = 0.25f;
     [SerializeField] float speedLinesInterval = 0.15f;
+
+    // Run feel (presentation only, never touches the body): forward lean, step bob, footfall dust, start / skid lean.
+    const float RunLean = 7f, StartLean = 12f, SkidLean = 6f; // degrees
+    const float LeanTime = 0.08f, StartLeanTime = 0.1f, SkidTime = 0.08f; // s
 
     static readonly Color AfterimageColor = new Color(0.298f, 0.909f, 0.847f, 0.6f); // #4CE8D8
     static readonly Color BaseColor = new Color(0.298f, 0.878f, 1f);
@@ -91,7 +94,11 @@ public class PlayerController : MonoBehaviour
     float issenBufferedUntil = -999f;   // RMB pressed during another action: fires when it ends (like the LMB buffer)
     float dashCooldownUntil;
     float nextAfterimageAt;
-    float nextRunDustAt, nextSpeedLinesAt;
+    float nextSpeedLinesAt;
+    int runFrame = -1, lastFootFrame = -1; // run strip frame showing this tick (-1 = not playing) / frame of the last footfall check
+    float visualBaseY, leanAngle, startLeanUntil, skidUntil, prevVx; // visual's rest local Y; current lean (z deg)
+    int skidDir;
+    bool runWasOn;
     bool fxWasGrounded = true; // true at start: no spurious landing puff on the first unlocked frame (scene load / after the intro dialogue)
     int fxLastFacing;
     bool jumpCut;
@@ -153,6 +160,7 @@ public class PlayerController : MonoBehaviour
         health = GetComponent<PlayerHealth>();
         visual = GetComponentInChildren<SpriteRenderer>();
         draftSprite = DraftSprites.Setup(visual, DraftSprites.Hero);
+        if (visual != null) visualBaseY = visual.transform.localPosition.y;
         rb.gravityScale = gravityScale;
         bodyCols = GetComponents<Collider2D>();
         // Zero friction: velocity is written directly, so ground grip isn't needed, and walls must not hold the player up.
@@ -825,7 +833,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // Speed FX (all sheets face right; flipX for left). Only called on unfrozen, unlocked frames, so nothing new spawns during
-    // hit-stop / dialogue / pause. run-dust at the heel while running full speed (+ once on landing / turning);
+    // hit-stop / dialogue / pause. run-dust at the heel on each footfall (run frame 0 and N/2) while running full speed (+ once on landing / turning);
     // speed-lines on the body while running, dashing or lunging, rotated to a diagonal lunge.
     void UpdateSpeedFx(float now)
     {
@@ -836,11 +844,11 @@ public class PlayerController : MonoBehaviour
         fxWasGrounded = grounded;
         MomentFx.TrackLand(grounded && state != State.Dead, rb.position + feetOffset);
         fxLastFacing = Facing;
-        if (landed || turned || (running && now >= nextRunDustAt))
-        {
-            nextRunDustAt = now + runDustInterval;
+        int frame = running ? runFrame : -1; // runFrame is from the last UpdateVisual
+        bool footfall = frame >= 0 && frame != lastFootFrame && (frame == 0 || frame == DraftSprites.HeroRun.Length / 2);
+        lastFootFrame = frame;
+        if (landed || turned || footfall)
             SpriteFx.PlayBehind("run-dust", rb.position + feetOffset, Facing < 0, visual);
-        }
 
         if (!(running || state == State.Dash || lunging) || now < nextSpeedLinesAt) return;
         nextSpeedLinesAt = now + speedLinesInterval;
@@ -1120,6 +1128,7 @@ public class PlayerController : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = Facing < 0;
+        runFrame = -1; // DraftFrame sets it when the run strip is what shows
         if (state != State.Locomotion || lunging || now < duelPoseUntil) riposteAt = -999f; // anything else took over: the riposte is cancelled
         bool riposte = draftSprite && now >= riposteAt && now < riposteAt + RiposteTime && DraftSprites.HeroAttack != null;
         if (riposte && !riposteFxDone && now >= riposteAt + RiposteTime * RiposteFxAt)
@@ -1133,6 +1142,7 @@ public class PlayerController : MonoBehaviour
                 : now < duelPoseUntil ? duelPose
                 : now < parryPoseUntil && (parryPoseForced || state == State.Locomotion) ? DraftSprites.Pick(parryPose, now - parryPoseAt < ParryPoseKey ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero)
                 : DraftFrame(now);
+        UpdateRunFeel(now);
         Color c = draftSprite ? Color.white : BaseColor;
         bool hurtBlink = state == State.Hurt && Mathf.FloorToInt(now * HurtBlinkHz) % 2 == 0; // DECISIONS 26: solid red on alternate ticks
         if (state == State.Dash || lunging || state == State.Issen) c = Color.white;
@@ -1167,9 +1177,48 @@ public class PlayerController : MonoBehaviour
         if (Mathf.Abs(rb.linearVelocity.x) > 0.1f)
         {
             Sprite[] run = DraftSprites.HeroRun ?? DraftSprites.Hero; // DECISIONS 15: normal movement shows the run cycle (walk = fallback)
-            return run[Mathf.FloorToInt(now * (run == DraftSprites.Hero ? DraftSprites.WalkFps : DraftSprites.RunFps)) % run.Length];
+            int f = Mathf.FloorToInt(now * (run == DraftSprites.Hero ? DraftSprites.WalkFps : DraftSprites.RunFps)) % run.Length;
+            if (run != DraftSprites.Hero) runFrame = f;
+            return run[f];
         }
         return DraftSprites.Pick(DraftSprites.HeroIdle, Mathf.FloorToInt(now * DraftSprites.IdleFps) % (DraftSprites.HeroIdle?.Length ?? 1), DraftSprites.Hero);
+    }
+
+    // Run feel on the visual child only (local rotation = lean, local Y = step bob; local X stays with ParryFx's nudge). Lean: forward 7 deg
+    // while the run strip plays, 12 deg for the first 0.1 s from standstill, 6 deg backward for 0.08 s after a fast run is released / reversed
+    // (+ a dust puff on release). Everything eases back to rest whenever the run strip is not showing (pose override, air, dash, attack, death).
+    void UpdateRunFeel(float now)
+    {
+        float vx = rb.linearVelocity.x;
+        bool running = runFrame >= 0;
+        if (running && !runWasOn && Mathf.Abs(prevVx) < 0.1f) startLeanUntil = now + StartLeanTime;
+        runWasOn = running;
+        if (grounded && state == State.Locomotion && Mathf.Abs(prevVx) >= moveSpeed * runFxSpeedFrac && (Mathf.Abs(vx) < 0.1f || vx * prevVx < 0f))
+        {
+            skidUntil = now + SkidTime;
+            skidDir = prevVx > 0f ? 1 : -1;
+            if (Mathf.Abs(vx) < 0.1f) SpriteFx.PlayBehind("run-dust", rb.position + feetOffset, skidDir < 0, visual); // a reversal already puffs (turned)
+        }
+        prevVx = vx;
+
+        float target = 0f;
+        if (state == State.Dead) leanAngle = 0f;
+        else if (now < skidUntil && grounded && state == State.Locomotion) target = skidDir * SkidLean; // back = against the travel direction (+z = counter-clockwise)
+        else if (running) target = -Facing * (now < startLeanUntil ? StartLean : RunLean);
+        leanAngle = Mathf.Lerp(leanAngle, target, 1f - Mathf.Exp(-Time.deltaTime / LeanTime));
+
+        int bob = 0; // px: down on the contact frame, up through the flight frames
+        if (running && state != State.Dead)
+        {
+            int half = DraftSprites.HeroRun.Length / 2;
+            float u = (runFrame % half) / (float)half;
+            bob = u == 0f ? -1 : u < 0.6f ? 1 : 0;
+        }
+        Transform v = visual.transform;
+        v.localRotation = Quaternion.Euler(0f, 0f, leanAngle);
+        Vector3 p = v.localPosition;
+        p.y = visualBaseY + bob / SpriteFx.Ppu;
+        v.localPosition = p;
     }
 
     void OnDrawGizmosSelected()
