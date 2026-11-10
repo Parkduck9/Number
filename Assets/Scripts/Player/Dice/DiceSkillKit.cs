@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // Shared helpers for the lucky-dice skills (DECISIONS 18/19, Skill1Blink..Skill6Path):
-//  - flag ownership: EnemiesHeld / InputLocked / Player.SpeedMul / Health.SetInvulnerable are set through here and released only
+//  - flag ownership: EnemiesHeld / InputLocked / Health.SetInvulnerable are set through here and released only
 //    if a skill set them (finally blocks), and again on scene unload + play start (Domain Reload is off; a coroutine killed with
 //    its LuckyDice never runs its finally).
 //  - targets (on-camera, alive) and strikes (PlayerController.StrikeEnemy, pierce) so sparks / kill bursts / hit-stop come for free.
@@ -27,8 +27,6 @@ public static class DiceSkillKit
     // ---------------------------------------------------------------- flags
 
     static bool ownHeld, ownLock;
-    static PlayerController speedOwner;
-    static float speedPrev = 1f;
     static PlayerHealth invulnOwner;
     static Sprite[] cyanDigits;
     static int fxLayer = -1;
@@ -37,7 +35,6 @@ public static class DiceSkillKit
     static void ResetStatics()
     {
         ownHeld = ownLock = false;
-        speedOwner = null; speedPrev = 1f;
         invulnOwner = null;
         cyanDigits = null;
         fxLayer = -1;
@@ -47,7 +44,7 @@ public static class DiceSkillKit
 
     static void OnSceneUnloaded(Scene scene) => ReleaseAll();
 
-    public static void ReleaseAll() { ReleaseHold(); ReleaseLock(); ReleaseSpeed(); ReleaseInvulnerable(); }
+    public static void ReleaseAll() { ReleaseHold(); ReleaseLock(); ReleaseInvulnerable(); }
 
     public static void Hold()
     {
@@ -75,19 +72,6 @@ public static class DiceSkillKit
         if (!ownLock) return;
         ownLock = false;
         GameFlow.InputLocked = false;
-    }
-
-    public static void SetSpeed(PlayerController p, float mul)
-    {
-        if (p == null) return;
-        if (speedOwner == null) { speedOwner = p; speedPrev = p.SpeedMul; }
-        p.SpeedMul = mul;
-    }
-
-    public static void ReleaseSpeed()
-    {
-        if (speedOwner != null) speedOwner.SpeedMul = speedPrev;
-        speedOwner = null;
     }
 
     // Hard invulnerability (PlayerHealth.SetInvulnerable). Only the dice skills use the hard flag, so owning = we turned it on.
@@ -397,8 +381,8 @@ public static class DiceSkillKit
         }
     }
 
-    // Screen overlay for the skills (one per scene, built on demand): colour flash, glitch bars, a skill-name caption, a big
-    // number (skill 4 countdown). Real time, frozen while the pause menu is open. Canvas 31: under the control
+    // Screen overlay for the skills (one per scene, built on demand): colour flash, glitch bars, a skill-name caption.
+    // Real time, frozen while the pause menu is open. Canvas 31: under the control
     // hints (35) and the HUDs.
     public class Overlay : MonoBehaviour
     {
@@ -407,7 +391,7 @@ public static class DiceSkillKit
         Canvas canvas;
         Image flash;
         Image[] bars;
-        TMP_Text caption, captionShadow, big, bigShadow;
+        TMP_Text caption, captionShadow;
         Color flashColor;
         float flashLeft, flashTime, glitchLeft, glitchTick, captionLeft, captionTime;
 
@@ -429,10 +413,7 @@ public static class DiceSkillKit
             }
             captionShadow = UiKit.Label("CaptionShadow", canvas.transform, new Vector2(0.5f, 1f), new Vector2(2f, -122f), new Vector2(640f, 48f), "", "", 36, Ink);
             caption = UiKit.Label("Caption", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(640f, 48f), "", "", 36, Yellow);
-            bigShadow = UiKit.Label("BigShadow", canvas.transform, new Vector2(0.5f, 1f), new Vector2(3f, -201f), new Vector2(240f, 96f), "", "", 72, Ink);
-            big = UiKit.Label("Big", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0f, -198f), new Vector2(240f, 96f), "", "", 72, Color.white);
             caption.gameObject.SetActive(false); captionShadow.gameObject.SetActive(false);
-            big.gameObject.SetActive(false); bigShadow.gameObject.SetActive(false);
         }
 
         public void Flash(Color c, float alpha, float time)
@@ -452,16 +433,6 @@ public static class DiceSkillKit
             captionTime = captionLeft = time;
             ApplyCaption();
         }
-
-        public void Big(string text, Color c)
-        {
-            SetText(big, text, text); SetText(bigShadow, text, text);
-            big.color = c;
-            big.gameObject.SetActive(true); bigShadow.gameObject.SetActive(true);
-            big.rectTransform.localScale = bigShadow.rectTransform.localScale = Vector3.one * 1.3f; // pops back to 1 in Update
-        }
-
-        public void HideBig() { big.gameObject.SetActive(false); bigShadow.gameObject.SetActive(false); }
 
         void Update()
         {
@@ -499,12 +470,6 @@ public static class DiceSkillKit
                 captionLeft = Mathf.Max(0f, captionLeft - dt);
                 ApplyCaption();
                 if (captionLeft <= 0f) { caption.gameObject.SetActive(false); captionShadow.gameObject.SetActive(false); }
-            }
-
-            if (big.gameObject.activeSelf)
-            {
-                float s = Mathf.MoveTowards(big.rectTransform.localScale.x, 1f, dt * 3f);
-                big.rectTransform.localScale = bigShadow.rectTransform.localScale = Vector3.one * s;
             }
         }
 

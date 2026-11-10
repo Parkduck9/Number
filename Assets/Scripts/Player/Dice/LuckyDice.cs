@@ -29,7 +29,7 @@ public class LuckyDice : MonoBehaviour
     static void ResetStatics() { Unlocked = false; UnlockChanged = null; Charges = 0; boss = null; }
 
     static BossFight boss; // found per scene in Start
-    public static bool BossActive => boss != null && boss.isActiveAndEnabled;
+    public static bool BossActive => boss != null && boss.isActiveAndEnabled && !boss.Dead; // dead = the smash / collapse ending: field skills (they fizzle)
 
     public PlayerController Player;
     public PlayerHealth Health;
@@ -70,7 +70,7 @@ public class LuckyDice : MonoBehaviour
     void OnDisable()
     {
         if (Player != null) Player.CounterLanded -= OnCounterLanded;
-        if (skill is IDisposable d) d.Dispose(); // runs the skill's finally blocks (EnemiesHeld / InputLocked / SpeedMul restore)
+        if (skill is IDisposable d) d.Dispose(); // runs the skill's finally blocks (EnemiesHeld / InputLocked / invulnerability restore)
         skill = null;
         if (lockedByRoll) GameFlow.InputLocked = false;
         rolling = lockedByRoll = false;
@@ -165,37 +165,41 @@ public class LuckyDice : MonoBehaviour
         }
     }
 
-    // Boss fight (DECISIONS 31): face 2 (rope whirl) plays as usual; the others need TestEnemies and would only fizzle, so their
-    // caption shows and `face` talismans fly into the boss core instead. Then every face hurts the boss (BossFight.SkillHit, DiceDamage).
-    static readonly string[] BossCapEn = { "SHRINK EARTH", "BINDING ROPE", "PARALYSIS TALISMAN", "TIME HOLD", "FIVE TALISMANS", "DIVINATION PATH" };
-    static readonly string[] BossCapKo = { "축지법", "오랏줄", "부적 마비", "부동술", "부적 다섯 장", "점괘 길" };
+    // Boss fight (DECISIONS 31 / 32): face 2 (rope whirl) plays as usual; 3 (talisman lightning) and 4 (sheath cut) play their boss
+    // versions on the core; the others need TestEnemies and would only fizzle, so their caption shows and `face` talismans fly into
+    // the core instead. Then every face hurts the boss (BossFight.SkillHit, DiceDamage); 3 / 4 land with their bolt / click.
+    static readonly string[] BossCapEn = { "SHRINK EARTH", "BINDING ROPE", "TALISMAN LIGHTNING", "SHEATH CUT", "FIVE TALISMANS", "DIVINATION PATH" };
+    static readonly string[] BossCapKo = { "축지법", "오랏줄", "부적 낙뢰", "칼집 일섬", "부적 다섯 장", "점괘 길" };
     const float BossFly = 0.2f, BossStagger = 0.05f; // (T) s: first talisman lands / gap between talismans
 
     IEnumerator BossSkill(int face)
     {
-        if (face == 2)
-        {
-            IEnumerator s = SkillFor(face);
-            try { while (s.MoveNext()) yield return s.Current; }
-            finally { (s as IDisposable)?.Dispose(); } // disabled mid-skill: the inner finally blocks still restore their flags
-        }
-        else
-        {
-            DiceSkillKit.Caption(BossCapEn[face - 1], BossCapKo[face - 1], face == 6 ? DiceSkillKit.Cyan : DiceSkillKit.Yellow);
-            Sfx.Play(SfxId.HackOk);
-            Vector2 hand = Player.HandPosition;
-            for (int i = 0; i < face; i++)
-            {
-                DiceSkillKit.Fade tal = DiceSkillKit.Talisman(hand, BossFly + i * BossStagger + 0.3f);
-                tal.follow = boss.CoreTransform;
-                tal.flyFrom = hand;
-                tal.flyTime = BossFly + i * BossStagger;
-                tal.fadeAt = tal.flyTime;
-            }
-            yield return DiceSkillKit.Wait(BossFly + (face - 1) * BossStagger);
-        }
+        IEnumerator s = face == 2 ? SkillFor(face) : face == 3 ? Skill3Talisman.RunBoss(this, boss) : face == 4 ? Skill4Hold.RunBoss(this, boss) : BossTalismans(face);
+        try { while (s.MoveNext()) yield return s.Current; }
+        finally { (s as IDisposable)?.Dispose(); } // disabled mid-skill: the inner finally blocks still restore their flags
         while (GameFlow.InputLocked) yield return null; // a blade duel that began while the talismans flew: a kill now would stop the fight under it
-        if (!DiceSkillKit.PlayerGone(this) && boss != null) boss.SkillHit(BossFight.DiceDamage(face), boss.CorePosition);
+        if (DiceSkillKit.PlayerGone(this) || boss == null) yield break;
+        Vector2 at = boss.CorePosition;
+        if (face == 3) Skill3Talisman.Smite(new List<Vector2> { at }, Cam);
+        else if (face == 4) Skill4Hold.Click(Player);
+        boss.SkillHit(BossFight.DiceDamage(face), at);
+        if (face == 3 || face == 4) Player.DuelHitStop(Juice.HitStopKill);
+    }
+
+    IEnumerator BossTalismans(int face)
+    {
+        DiceSkillKit.Caption(BossCapEn[face - 1], BossCapKo[face - 1], face == 6 ? DiceSkillKit.Cyan : DiceSkillKit.Yellow);
+        Sfx.Play(SfxId.HackOk);
+        Vector2 hand = Player.HandPosition;
+        for (int i = 0; i < face; i++)
+        {
+            DiceSkillKit.Fade tal = DiceSkillKit.Talisman(hand, BossFly + i * BossStagger + 0.3f);
+            tal.follow = boss.CoreTransform;
+            tal.flyFrom = hand;
+            tal.flyTime = BossFly + i * BossStagger;
+            tal.fadeAt = tal.flyTime;
+        }
+        yield return DiceSkillKit.Wait(BossFly + (face - 1) * BossStagger);
     }
 
     // Active, standing, non-boss-wave enemies whose body center is inside the camera view (+ margin).

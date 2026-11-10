@@ -117,7 +117,6 @@ public class PlayerController : MonoBehaviour
 
     // DECISIONS 18 lucky dice hooks
     public event System.Action CounterLanded; // a Shift counter that damaged something (dice charge)
-    [System.NonSerialized] public float SpeedMul = 1f; // horizontal run speed multiplier (skill 4)
     public Rigidbody2D Body => rb;
 
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
@@ -230,6 +229,13 @@ public class PlayerController : MonoBehaviour
     float riposteAt = -999f;
     bool riposteFxDone;
     public void DuelHitStop(float seconds) => StartHitStop(seconds, false, true); // finisher: runs although the duel still holds the input lock
+    // DECISIONS 32 dice faces 3 / 4: show one hero frame for `time` s (visual only, scaled time; the duel pose slot).
+    public void HoldPose(Sprite pose, float time)
+    {
+        if (pose == null) return;
+        duelPose = pose;
+        duelPoseUntil = Time.time + time;
+    }
 
     void EndHitStop()
     {
@@ -459,7 +465,7 @@ public class PlayerController : MonoBehaviour
         switch (state)
         {
             case State.Locomotion:
-                float vx = input.MoveX * moveSpeed * SpeedMul;
+                float vx = input.MoveX * moveSpeed;
                 if (!grounded && vx != 0f && PushingIntoWall(vx > 0f ? 1 : -1)) vx = 0f; // airborne against a wall face: no push, so gravity slides us down
                 rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
                 break;
@@ -973,43 +979,15 @@ public class PlayerController : MonoBehaviour
     {
         if (enemy == null || !enemy.gameObject.activeInHierarchy || enemy.Current == TestEnemy.State.Stunned) return true; // already down / vanishing
         if (!swingHits.Add(enemy)) return true;
-        if (DeferredHits != null && DeferredHits.Exists(h => h.Enemy == enemy)) return true; // dice face 4: one stored blow per enemy for the whole hold
         // A lunge hit comes from where the lunge began (the sweep spans from there): the Android "from above / behind" test must not
         // depend on which frame the fast-moving body happened to be sampled at (Fable review 11-09).
         var info = new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false, Pierce = pierce };
         EnemyStruck?.Invoke(enemy);
-        if (DeferredHits != null) // DECISIONS 27 dice face 4: the blow is stored and lands when the hold ends
-        {
-            DeferredHits.Add(new DeferredHit { Enemy = enemy, Col = col, Info = info, From = from });
-            swingDamaged++;
-            Sfx.Play(SfxId.Hit, 0.5f);
-            PlayHitSpark(col.ClosestPoint(from), Facing);
-            return true;
-        }
         return LandHit(enemy, col, from, info);
     }
 
-    // DECISIONS 27 dice face 4: while non-null, player blows are recorded here instead of landing; ResolveDeferredHits lands them.
-    public struct DeferredHit { public TestEnemy Enemy; public Collider2D Col; public HitInfo Info; public Vector2 From; }
-    public System.Collections.Generic.List<DeferredHit> DeferredHits;
-    // Every blow that reaches an enemy (damaging, blocked or deferred). DECISIONS 27 dice face 5 listens; do not hit enemies from a handler.
+    // Every blow that reaches an enemy (damaging or blocked). DECISIONS 27 dice face 5 listens; do not hit enemies from a handler.
     public event System.Action<TestEnemy> EnemyStruck;
-
-    // All stored blows land now, one shared impact (the first ones get the hit-stop + shake, like a lunge). Enemies gone meanwhile are skipped.
-    public void ResolveDeferredHits()
-    {
-        System.Collections.Generic.List<DeferredHit> hits = DeferredHits;
-        DeferredHits = null;
-        if (hits == null) return;
-        swingHitStops = 0;
-        swingDamaged = 0;
-        foreach (DeferredHit h in hits)
-        {
-            TestEnemy e = h.Enemy;
-            if (e == null || !e.gameObject.activeInHierarchy || e.Current == TestEnemy.State.Stunned || h.Col == null) continue;
-            LandHit(e, h.Col, h.From, h.Info);
-        }
-    }
 
     bool LandHit(TestEnemy enemy, Collider2D col, Vector2 from, HitInfo info)
     {

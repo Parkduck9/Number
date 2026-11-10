@@ -67,10 +67,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     // Unlit Sprites/Default. Pooled renderers share one material per texture (squares, bugs); every other renderer owns one:
     // the 2D renderer drew neighbouring same-material runtime sprites with ONE texture (the hologram showed the body).
     static Material squareMat, bugMat;
+    static Sprite[] goldDigits; // skill damage number (DECISIONS 32), Resources/DraftHud/holo_digits_gold
     readonly System.Collections.Generic.List<Material> ownMats = new System.Collections.Generic.List<Material>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { squareMat = bugMat = null; } // Domain Reload is off
+    static void ResetStatics() { squareMat = bugMat = null; goldDigits = null; Held = false; } // Domain Reload is off
 
     sealed class Part
     {
@@ -96,9 +97,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     public bool BladeStuck { get; private set; }
     public Transform CoreTransform => core.Sr.transform; // dice talismans fly here
     public bool CoreExposed => coreOpen;                 // dropped and hittable right now
+    public bool Dead => dead;                            // ending (smash the machines): LuckyDice plays the field skills, not the boss ones
     public Vector2 CorePosition => core.Pos;
     int Phase => hp * 3 > MaxHp * 2 ? 1 : hp * 3 > MaxHp ? 2 : 3;
-    static float Dt => GameFlow.InputLocked ? 0f : Time.deltaTime;
+    // Dice face 4 (Skill4Hold.RunBoss, DECISIONS 32): the boss stops dead (timers and drawing). Set / cleared by that skill (finally), cleared on disable.
+    public static bool Held;
+    static float Dt => GameFlow.InputLocked || Held ? 0f : Time.deltaTime;
 
     // swarm pool: Waves walls x BugsPerWave bugs
     const int Waves = 3, BugsPerWave = 56;
@@ -113,6 +117,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     readonly SpriteRenderer[] gapMark = new SpriteRenderer[Waves * 2];    // FX: bright bars at each wall's gap (bottom, top)
     static readonly int FlashId = Shader.PropertyToID("_Flash");
     readonly SpriteRenderer[] aimDots = new SpriteRenderer[14];
+    readonly SpriteRenderer[] coreBracket = new SpriteRenderer[8]; // gold lock-on corners around the open core (DECISIONS 32)
+    float coreOpenedAt;
     bool aimOn;
     readonly SpriteRenderer[] props = new SpriteRenderer[6];
     readonly bool[] propBroken = new bool[6];
@@ -183,6 +189,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             aimDots[i].transform.localScale = new Vector3(2f * Px, 2f * Px, 1f);
             aimDots[i].enabled = false;
         }
+        for (int i = 0; i < coreBracket.Length; i++)
+        {
+            coreBracket[i] = Make("CoreBracket", ParryFx.Square, "FX", 44, Vector2.zero);
+            coreBracket[i].enabled = false;
+        }
         for (int i = 0; i < props.Length; i++) props[i] = Make("MachineProp", BossArt.Props[PropKind[i]], "World", -5, new Vector2(PropX[i], Floor));
         propsLeft = props.Length;
         white = Make("WhiteOut", ParryFx.Square, "FX", 900, new Vector2(15f, 8.4375f));
@@ -248,6 +259,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     void OnEnable() { PlayerController.Swung += OnSwing; PlayerController.IssenAlt = this; }
     void OnDisable()
     {
+        Held = false;
         PlayerController.Swung -= OnSwing;
         if (ReferenceEquals(PlayerController.IssenAlt, this)) PlayerController.IssenAlt = null;
     }
@@ -260,7 +272,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     void Update()
     {
-        if (player == null) return;
+        if (player == null || Held) return; // dice face 4: frozen in place, nothing redrawn
         UpdateWaves(Dt);
         if (!dead) CheckReflectedShots();
         Draw();
@@ -304,6 +316,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     IEnumerator PhaseShift(int ph)
     {
+        // DECISIONS 32: the core / chest bursts first (white flash, burst, gold debris, shake), then the cracks show
+        Vector2 c = core.Sr.enabled ? core.Pos : HatchAt;
+        body.FlashUntil = Time.time + 0.2f;
+        DiceSkillKit.Overlay.Get().Flash(Color.white, 0.7f, 0.25f);
+        SpriteFx.Play("kill-burst", c, false, 102, 2f);
+        CoreHitFx(3, c);
+        Sfx.Play(SfxId.Hit, 1f, 0.6f);
+        Juice.Shake(0.25f, 0.5f);
+        yield return Wait(0.35f);
         shownPhase = ph;
         crack1.enabled = ph >= 2;
         crack2.enabled = ph >= 3;
@@ -318,7 +339,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     // ---- Core (DECISIONS 31): the rest between attacks. Hatch opens, the core drops to the bridge, stays CoreOpen, pulls back ----
     IEnumerator CoreWindow()
     {
-        Sfx.Play(SfxId.EnemyTell, 0.6f, 0.7f);
+        // DECISIONS 32 tell: a gold ring bursts out of the hatch with a chime ("chance"); the lock-on corners snap on when it lands
+        Sfx.Play(SfxId.HackOk, 0.7f, 1.2f);
+        DiceSkillKit.Ring(HatchAt, 0.5f, 2f * Px, GoldShot, 0.35f, 3.5f, 97);
+        SpriteFx.Play("impact-ring", HatchAt, false, 101, 1.5f);
         for (float t = 0f; t < CoreDrop; t += Dt)
         {
             float u = Smooth(t / CoreDrop);
@@ -329,7 +353,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         core.Pos = CoreLow;
         hatchOpen = 1f;
         Juice.Shake(Juice.ShakeHurtAmp, 0.15f, Vector2.down);
+        SpriteFx.Play("impact-ring", CoreLow, false, 101);
         coreOpen = true;
+        coreOpenedAt = Time.time;
         yield return Wait(CoreOpen);
         coreOpen = false;
         for (float t = 0f; t < CoreRetract; t += Dt)
@@ -360,7 +386,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     // The one entry point for skill damage (dice: LuckyDice.BossSkill with DiceDamage(face)). Hits whether or not the core is out;
     // the core flashes when it is out, else the whole body does. fxAt = where the hit spark / ring plays.
-    public void SkillHit(int dmg, Vector2 fxAt) => Damage(dmg, core.Sr.enabled ? core : body, fxAt);
+    public void SkillHit(int dmg, Vector2 fxAt)
+    {
+        if (dead) return; // killed while the talismans flew (LMB on the core): no number over the corpse
+        Damage(dmg, core.Sr.enabled ? core : body, fxAt);
+        PopNumber(dmg, fxAt + new Vector2(0f, 1.4f)); // DECISIONS 32: the damage pops big over the core, then shatters
+    }
 
     // ---- A: bug swarm walls, then the arm slumps (opening) ----
     IEnumerator AttackA(int n, float tell)
@@ -718,10 +749,78 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         part.FlashUntil = Mathf.Max(part.FlashUntil, Time.time + 0.08f);
         if (part == hatchL) hatchR.FlashUntil = part.FlashUntil;
         Sfx.Play(SfxId.Hit);
-        SpriteFx.Play("impact-ring", at, false, 101);
+        if (part == core) CoreHitFx(amount, at); // DECISIONS 32: bigger ring + gold debris, scaled by the damage
+        else SpriteFx.Play("impact-ring", at, false, 101);
         SpriteFx.Play("hit-spark", at - new Vector2(12f, 16f) / SpriteFx.Ppu);
         Juice.Shake(Juice.ShakeKillAmp, Juice.ShakeKillTime);
         if (hp <= 0) Die();
+    }
+
+    // Core hit (DECISIONS 32): impact ring and a few gold bits flying off, both growing with the damage (1..3).
+    static void CoreHitFx(int amount, Vector2 at)
+    {
+        SpriteFx.Play("impact-ring", at, false, 101, 1f + 0.4f * (amount - 1));
+        for (int i = 0, n = 2 + 2 * amount; i < n; i++)
+        {
+            float a = Random.Range(0f, 2f * Mathf.PI), speed = Random.Range(2f, 3.5f) * (0.8f + 0.2f * amount);
+            var bit = new GameObject("CoreBit");
+            bit.transform.position = at;
+            DiceSkillKit.Quad(bit.transform, Vector2.zero, Vector2.one * ((amount >= 2 ? 3f : 2f) * Px), GoldShot, 103, 45f * (i % 2));
+            var f = bit.AddComponent<DiceSkillKit.Fade>();
+            f.life = 0.3f + 0.05f * amount;
+            f.fadeAt = 0.12f;
+            f.drift = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * speed;
+        }
+    }
+
+    // Skill damage number (DECISIONS 32): a gold holo digit pops in big, trembles, then shatters (ShatterFx). Own object: survives Die().
+    static void PopNumber(int n, Vector2 at)
+    {
+        if (goldDigits == null || goldDigits.Length != 10 || goldDigits[0] == null)
+        {
+            Sprite[] s = Resources.LoadAll<Sprite>("DraftHud/holo_digits_gold");
+            System.Array.Sort(s, (a, b) => string.CompareOrdinal(a.name, b.name));
+            goldDigits = s.Length == 10 ? s : null;
+        }
+        if (goldDigits == null) return;
+        var go = new GameObject("SkillDamageNumber");
+        go.transform.position = at;
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = goldDigits[Mathf.Clamp(n, 0, 9)];
+        sr.sortingLayerName = "FX";
+        sr.sortingOrder = 120;
+        go.AddComponent<NumberPop>().sr = sr;
+    }
+
+    sealed class NumberPop : MonoBehaviour
+    {
+        const float In = 0.1f, Hold = 0.4f, Shiver = 0.12f, Size = 5f; // (T) s pop-in / on screen / trembling before the break; x scale
+        public SpriteRenderer sr;
+        Vector3 home;
+        float t;
+
+        void Start() { home = transform.position; Apply(); }
+
+        void Update()
+        {
+            t += Time.deltaTime;
+            if (t >= In + Hold)
+            {
+                transform.position = home;
+                ShatterFx.Play(sr, Vector2.up, home, GoldShot);
+                Destroy(gameObject);
+                return;
+            }
+            Apply();
+        }
+
+        void Apply()
+        {
+            float s = t < In ? Mathf.Lerp(Size * 1.6f, Size, t / In) : Size;
+            transform.localScale = new Vector3(s, s, 1f);
+            bool shiver = t > In + Hold - Shiver; // cracking
+            transform.position = home + (shiver ? new Vector3((Time.frameCount % 2 == 0 ? 1f : -1f) * Px * Size * 0.5f, 0f, 0f) : Vector3.zero);
+        }
     }
 
     void Die()
@@ -838,6 +937,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             coreCable.transform.localScale = new Vector3(2f * Px, top - bottom, 1f);
             coreCable.color = new Color(Cyan.r, Cyan.g, Cyan.b, coreOpen && blink ? 0.95f : 0.6f);
         }
+        DrawBracket(now);
         if (!dead)
         {
             bool glitch = shownPhase == 3 && Random.value < 0.12f; // phase 3: the hologram jitters
@@ -870,6 +970,29 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         if (breakable)
             for (int i = 0; i < props.Length; i++)
                 if (!propBroken[i]) props[i].color = blink ? Color.white : new Color(0.65f, 0.95f, 1f); // "hit me"
+    }
+
+    // Gold lock-on corners around the open core (DECISIONS 32): snap in from wide when it lands, then a 2 Hz squeeze.
+    void DrawBracket(float now)
+    {
+        bool on = coreOpen && core.Sr.enabled && !dead;
+        const float Arm = 0.35f, W = 2f * Px;
+        float k = now - coreOpenedAt;
+        float r = CoreHalf + 0.2f + (k < 0.2f ? 1.2f * (1f - k / 0.2f) : 0.08f * (1f - Mathf.Repeat(now * 2f, 1f)));
+        Vector2 c = new Vector2(core.Pos.x, core.Pos.y - sink);
+        Color col = new Color(GoldShot.r, GoldShot.g, GoldShot.b, Mathf.FloorToInt(now * 8f) % 2 == 0 ? 1f : 0.7f);
+        for (int i = 0; i < 4; i++)
+        {
+            float sx = i % 2 == 0 ? -1f : 1f, sy = i < 2 ? -1f : 1f;
+            SpriteRenderer h = coreBracket[i * 2], v = coreBracket[i * 2 + 1];
+            h.enabled = v.enabled = on;
+            if (!on) continue;
+            h.transform.position = new Vector3(Snap(c.x + sx * (r - Arm * 0.5f)), Snap(c.y + sy * r), 0f);
+            h.transform.localScale = new Vector3(Arm, W, 1f);
+            v.transform.position = new Vector3(Snap(c.x + sx * r), Snap(c.y + sy * (r - Arm * 0.5f)), 0f);
+            v.transform.localScale = new Vector3(W, Arm, 1f);
+            h.color = v.color = col;
+        }
     }
 
     void Show(Part p, Color tint, float now, bool blink, float dy)
