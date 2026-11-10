@@ -1,0 +1,225 @@
+{
+  "round": 5,
+  "parts": {
+    "boss_body": {
+      "size": [
+        768,
+        448
+      ],
+      "opaqueColors": 8,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 266520,
+      "meanLuma": 0.0928,
+      "palette": [
+        "#080b14",
+        "#0b1026",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#42a9bd",
+        "#7f1a22"
+      ]
+    },
+    "boss_bug_arm": {
+      "size": [
+        160,
+        256
+      ],
+      "opaqueColors": 7,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 21907,
+      "meanLuma": 0.1241,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#7a3a3c",
+        "#7f1a22"
+      ]
+    },
+    "boss_bug_arm_lit": {
+      "size": [
+        160,
+        256
+      ],
+      "opaqueColors": 9,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 21907,
+      "meanLuma": 0.1335,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#7a3a3c",
+        "#7f1a22",
+        "#d6d7d0",
+        "#f21c2a"
+      ]
+    },
+    "boss_blade_arm": {
+      "size": [
+        160,
+        320
+      ],
+      "opaqueColors": 12,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 13041,
+      "meanLuma": 0.2324,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#42a9bd",
+        "#62677d",
+        "#7a3a3c",
+        "#7f1a22",
+        "#858a9b",
+        "#b8862e",
+        "#b8bec8"
+      ]
+    },
+    "boss_blade_arm_lit": {
+      "size": [
+        160,
+        320
+      ],
+      "opaqueColors": 13,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 13041,
+      "meanLuma": 0.2182,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#42a9bd",
+        "#62677d",
+        "#7a3a3c",
+        "#7f1a22",
+        "#858a9b",
+        "#b8862e",
+        "#d6d7d0",
+        "#f21c2a"
+      ]
+    },
+    "boss_hatch_half": {
+      "size": [
+        64,
+        96
+      ],
+      "opaqueColors": 7,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 5811,
+      "meanLuma": 0.1565,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#226076",
+        "#2d3050",
+        "#3f4a6e",
+        "#62677d",
+        "#858a9b"
+      ]
+    },
+    "boss_hatch_core": {
+      "size": [
+        48,
+        48
+      ],
+      "opaqueColors": 7,
+      "alpha": [
+        0,
+        255
+      ],
+      "opaquePixels": 1828,
+      "meanLuma": 0.2714,
+      "palette": [
+        "#080b14",
+        "#1a1d33",
+        "#2d3050",
+        "#62677d",
+        "#b8862e",
+        "#d6d7d0",
+        "#ffd43b"
+      ]
+    }
+  },
+  "palette": [
+    "#080b14",
+    "#0b1026",
+    "#1a1d33",
+    "#226076",
+    "#2d3050",
+    "#3f4a6e",
+    "#42a9bd",
+    "#62677d",
+    "#7a3a3c",
+    "#7f1a22",
+    "#858a9b",
+    "#b8862e",
+    "#b8bec8",
+    "#d6d7d0",
+    "#f21c2a",
+    "#ffd43b"
+  ],
+  "preview": {
+    "size": [
+      1920,
+      1080
+    ],
+    "background": "#0B0A14",
+    "nativeArena": [
+      960,
+      540
+    ],
+    "nearestNeighbour": 2,
+    "hero": {
+      "canvas": [
+        64,
+        64
+      ],
+      "visibleHeight": 59,
+      "source": "Assets/Resources/DraftSprites/hero_idle_4f.png, frame 0 alpha >=128, recolored as silhouette",
+      "topLeft": [
+        449,
+        403
+      ]
+    }
+  },
+  "checks": {
+    "rgbaPngRoundTrip": true,
+    "hardAlpha": true,
+    "allSpritesAtMost16Colors": true,
+    "total16Colors": true,
+    "baseAndLitSameAlpha": true,
+    "transparentHatch128x96": true,
+    "blankHologram144x88": true,
+    "nearestNeighbour2x": true
+  }
+}

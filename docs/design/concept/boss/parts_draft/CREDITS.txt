@@ -1,0 +1,23 @@
+DRAFT ASSET PROVENANCE - ready for transfer to project CREDITS.md on acceptance
+
+Final boss pixel parts: AI-assisted creation (OpenAI Codex). Codex authored a
+deterministic Node.js integer-pixel raster script and visually reviewed/refined
+five versions. No image-generation API was called and no paid assets were used.
+
+Composition reference: docs/design/concept/boss/boss_concept_4.png, supplied by
+the user and identified as Gemini concept art. Body/arm/chest arrangement only;
+no source concept pixels are copied. Face is omitted. Liquid marks are black
+oil and cyan coolant. Blade is straight; armor uses studded sleeve construction.
+
+Palette: docs/design/PALETTE.md (16 existing colors selected; no new sprite colors).
+Style references: existing Assets/Resources/DraftSprites hero, bug, and android
+sprites. Preview-only hero silhouette reuses alpha from frame 0 of
+Assets/Resources/DraftSprites/hero_idle_4f.png, thresholded to hard alpha.
+The existing project credit for that hero remains applicable.
+
+Guidance: .claude/skills/pixel-art and .claude/skills/pixel-art-sprites, including
+their patterns and validation references; project ANTI_SLOP.md and boss-v2.md.
+No additional external assets or asset licenses were introduced.
+
+This file is local because the task explicitly restricted every output to
+docs/design/concept/boss/parts_draft/. Root project credits were not edited.
