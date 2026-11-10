@@ -1,0 +1,310 @@
+{
+  "stage": 1,
+  "frameSize": [
+    64,
+    64
+  ],
+  "stripSize": [
+    128,
+    64
+  ],
+  "palette": [
+    "080b14",
+    "1a1d33",
+    "2d3050",
+    "3f4a6e",
+    "62677d",
+    "d6d7d0",
+    "a37b70",
+    "d7b4a0",
+    "efd0b6",
+    "226076",
+    "42a9bd",
+    "7f1a22",
+    "b94445",
+    "f2c94c",
+    "9b7043",
+    "c49a5c"
+  ],
+  "records": [
+    {
+      "file": "hero_parry_hi1_2f.png",
+      "sourceBounds": [
+        103,
+        94,
+        333,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            11,
+            7,
+            53,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            10,
+            8,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_hi2_2f.png",
+      "sourceBounds": [
+        500,
+        44,
+        741,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            10,
+            1,
+            52,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            9,
+            2,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_hi3_2f.png",
+      "sourceBounds": [
+        905,
+        80,
+        1124,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            12,
+            4,
+            52,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            11,
+            5,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_mid1_2f.png",
+      "sourceBounds": [
+        115,
+        482,
+        315,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            14,
+            7,
+            50,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_mid2_2f.png",
+      "sourceBounds": [
+        514,
+        493,
+        765,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            9,
+            8,
+            54,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            9,
+            9,
+            53,
+            62
+          ],
+          "colors": 15
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_mid3_2f.png",
+      "sourceBounds": [
+        889,
+        498,
+        1153,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            8,
+            9,
+            56,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            8,
+            10,
+            55,
+            62
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_lo1_2f.png",
+      "sourceBounds": [
+        104,
+        939,
+        403,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            5,
+            17,
+            59,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            5,
+            18,
+            59,
+            62
+          ],
+          "colors": 15
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_lo2_2f.png",
+      "sourceBounds": [
+        474,
+        942,
+        799,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            3,
+            17,
+            61,
+            63
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            3,
+            18,
+            61,
+            63
+          ],
+          "colors": 16
+        }
+      ]
+    },
+    {
+      "file": "hero_parry_lo3_2f.png",
+      "sourceBounds": [
+        902,
+        927,
+        1129,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            11,
+            15,
+            52,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            11,
+            16,
+            51,
+            62
+          ],
+          "colors": 15
+        }
+      ]
+    }
+  ]
+}

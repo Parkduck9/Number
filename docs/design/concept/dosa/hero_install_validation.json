@@ -1,0 +1,59 @@
+{
+  "missingPlanBCounterparts": [],
+  "records": [
+    {
+      "hero": "hero_attack_5f.png",
+      "helper": "helper_attack_5f.png",
+      "oldSha256": "509a54cb40ba2305afe899ad40319cd63553ac3b80e217dcb95115d40c06aaae",
+      "planBSha256": "f02ffe7857935b53df2a5fdc31f6b9559c612e9900f8e0291038bd43d1232ec4"
+    },
+    {
+      "hero": "hero_dash_3f.png",
+      "helper": "helper_dash_3f.png",
+      "oldSha256": "2d269752abe3559ebe4a8dfbaa196cd780147484bc17088f60c3da2f72348a80",
+      "planBSha256": "8b45c1d4f0030758859766ddf715de7af9bf6868535090802edb8f08fa4cd322"
+    },
+    {
+      "hero": "hero_grapple_1f.png",
+      "helper": "helper_grapple_1f.png",
+      "oldSha256": "f8363207e3d66b6ef885b2d81ebdb9597c96d09090baa029ccaf33c89e22b6c0",
+      "planBSha256": "93b8de5497f02845ed32dabf4b36c886c7e1466c20fbd1d416a89c90092dec9f"
+    },
+    {
+      "hero": "hero_hurt_1f.png",
+      "helper": "helper_hurt_1f.png",
+      "oldSha256": "786c3749b92cb125de7ce4539f018b414bd8a86214b078bc6a4bfd94f2fc9251",
+      "planBSha256": "bc7bb0264dc969843e0d4ff781d3e8f3e2ad2d2784b2a2f45e30ac3a8b687260"
+    },
+    {
+      "hero": "hero_idle_4f.png",
+      "helper": "helper_idle_4f.png",
+      "oldSha256": "64bfd6e85768e666ac2b5437aea18ce4ab8d7146d5f50c771444316534b73643",
+      "planBSha256": "f3f8cef0bc0a67eb09b32f040709f1438c4541c2a93c1abdf064ba1b0541c0c7"
+    },
+    {
+      "hero": "hero_jump_4f.png",
+      "helper": "helper_jump_4f.png",
+      "oldSha256": "37554e7aa71e5baea1d58d7d40c4f75a61062529b8a239951730e66f5a707264",
+      "planBSha256": "3817d097c40e0abdd6d53ccfe962efc35cd22ff81a6b48f4482982bf2a9f0833"
+    },
+    {
+      "hero": "hero_parry_2f.png",
+      "helper": "helper_parry_2f.png",
+      "oldSha256": "1c2b82097f28995fb088ccf098e4098c492eaac1a5f705ec105a4daf1a3e9dfd",
+      "planBSha256": "9a5ec694ef762789ad4c40ec79e664d8d84e6fe2f588968aef03189ae03ed21f"
+    },
+    {
+      "hero": "hero_run_6f.png",
+      "helper": "helper_run_6f.png",
+      "oldSha256": "8a7fb73111b4e8161ebeca7c8fc2c0e4d7fcac3c749df0a58b4ed99ddeef0bc3",
+      "planBSha256": "d25135d2630b4abeca4c55c8ab47751b03ce041280c6979f202c892b01e7d5e4"
+    },
+    {
+      "hero": "hero_walk_6f.png",
+      "helper": "helper_walk_6f.png",
+      "oldSha256": "5a8958fcf2c958fb1806ea933eb702f0c7a37797214fb1a20a789f532f3f33fd",
+      "planBSha256": "73aa8cc6f58a4c919f73f21769e39a3f3ba4f6581336e8bc346630bf5974cb1c"
+    }
+  ]
+}

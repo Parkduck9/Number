@@ -1,0 +1,323 @@
+{
+  "stage": 2,
+  "frameSize": [
+    64,
+    64
+  ],
+  "stripSize": [
+    128,
+    64
+  ],
+  "feetRow": 61,
+  "hardAlpha": true,
+  "background": "#0B0A14",
+  "reviewRounds": 2,
+  "palette": [
+    "080b14",
+    "1a1d33",
+    "2d3050",
+    "3f4a6e",
+    "62677d",
+    "d6d7d0",
+    "a37b70",
+    "d7b4a0",
+    "efd0b6",
+    "226076",
+    "42a9bd",
+    "7f1a22",
+    "b94445",
+    "f2c94c",
+    "9b7043",
+    "c49a5c"
+  ],
+  "records": [
+    {
+      "file": "hero_parry_hi1_2f.png",
+      "sourceBounds": [
+        103,
+        94,
+        333,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            11,
+            7,
+            53,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            10,
+            8,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "300772c143071c9d8666449937cd13500ac6e2207e552ec2cdccec7fa3edf419"
+    },
+    {
+      "file": "hero_parry_hi2_2f.png",
+      "sourceBounds": [
+        500,
+        44,
+        741,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            11,
+            1,
+            53,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            10,
+            2,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "22574a2970acb9c54a3bfd88fc0d44f38dac31a2ab8f906e3dc7f132d204603b"
+    },
+    {
+      "file": "hero_parry_hi3_2f.png",
+      "sourceBounds": [
+        905,
+        80,
+        1124,
+        409
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            12,
+            4,
+            52,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            11,
+            5,
+            52,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "ff884ae9d1449c7d0b1c959fd2633608647a31f216978e41596c60a357d98e88"
+    },
+    {
+      "file": "hero_parry_mid1_2f.png",
+      "sourceBounds": [
+        115,
+        482,
+        315,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            14,
+            7,
+            50,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            13,
+            8,
+            50,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "8112b55f9fa7c3cc188bc9871251af1eb4a39279569a94e27b426e4181e89624"
+    },
+    {
+      "file": "hero_parry_mid2_2f.png",
+      "sourceBounds": [
+        514,
+        493,
+        765,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            9,
+            8,
+            54,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            9,
+            9,
+            53,
+            62
+          ],
+          "colors": 15
+        }
+      ],
+      "sha256": "f2795088eb51c57ab0d9b62f549a34c02c4f0ac9234e08f025ed8e2fbbb58c69"
+    },
+    {
+      "file": "hero_parry_mid3_2f.png",
+      "sourceBounds": [
+        889,
+        498,
+        1153,
+        798
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            8,
+            9,
+            56,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            8,
+            10,
+            55,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "af10f295b57c7e5bfbc7a4c5b28f0cc97dc71b6e1f4e4201e6ee88ff30d1ca6c"
+    },
+    {
+      "file": "hero_parry_lo1_2f.png",
+      "sourceBounds": [
+        104,
+        939,
+        403,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            5,
+            17,
+            59,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            5,
+            18,
+            58,
+            62
+          ],
+          "colors": 15
+        }
+      ],
+      "sha256": "26887ce13a2c0ec2c53a6bcc1605c6fa16301ca06738b8963d39e2ced21463de"
+    },
+    {
+      "file": "hero_parry_lo2_2f.png",
+      "sourceBounds": [
+        474,
+        942,
+        799,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            3,
+            17,
+            61,
+            62
+          ],
+          "colors": 16
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            3,
+            18,
+            61,
+            62
+          ],
+          "colors": 16
+        }
+      ],
+      "sha256": "05b68b8a7a437849be0db65e2f69a6d0a2f925b33452ed38f0704126e1d9fdef"
+    },
+    {
+      "file": "hero_parry_lo3_2f.png",
+      "sourceBounds": [
+        902,
+        927,
+        1129,
+        1196
+      ],
+      "frames": [
+        {
+          "frame": 0,
+          "bounds": [
+            11,
+            15,
+            52,
+            62
+          ],
+          "colors": 15
+        },
+        {
+          "frame": 1,
+          "bounds": [
+            11,
+            16,
+            51,
+            62
+          ],
+          "colors": 15
+        }
+      ],
+      "sha256": "3184f50f001f3da9c5f1d6c3ac83c23c2cbd5793995736438f10a8691af5cc0f"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Hero redesign test — Plan B
 
-Concept staging only. The current `Assets/Resources/DraftSprites/` files are unchanged.
+Installed on 2026-11-10: all nine strips below now match `Assets/Resources/DraftSprites/hero_*.png` byte for byte. The previous in-game hero strips are preserved unchanged as `helper_*.png` for the Luddite helper NPC. New height-specific guards are documented in `../parry9_README.md`.
 
 | Files | Treatment | Frames |
 |---|---|---:|
@@ -22,7 +22,7 @@ The main redraws use the existing hero's navy, skin, white and teal color family
 - `../B_preview_4x.gif`: the same three actions side by side, original above new, nearest-neighbor 4×. Each cycle advances one frame every 100ms (10fps). The 60-frame, 6-second GIF loops indefinitely; each action completes a whole number of cycles.
 - `secondary_preview_4x.png` / `secondary_preview_1x.png`: old-above-new comparisons for the six patched strips.
 - `validation.json`: frame bounds, palette, source/output SHA-256 hashes and GIF verification results.
-- `build_B.cjs`: reproducible local export and outfit patching utility; uses the supplied `pixel_io.cjs` and Node standard library. Run from any directory with `node <path-to-this-folder>/build_B.cjs`.
+- `build_B.cjs`: historical local export and outfit patching utility; uses the supplied `pixel_io.cjs` and Node standard library. It reads current in-game hero strips as its original input, so do not rerun it against the installed Plan B files. The original input is now preserved as `helper_*.png`.
 
 References: `../dosa_concept_ab.png`, right-hand B figure (Google Gemini draft); each corresponding existing hero strip for pose order and proportions. The three generated PNGs from the previous run are retained unchanged. This continuation used local grid/palette cleanup and pixel patches; no new image-generation API call or external asset was used.
 
