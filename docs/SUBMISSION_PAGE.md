@@ -7,6 +7,7 @@
 ## 제출 전 체크 (사용자 메모)
 - [ ] `[TODO: team names/roles]` 채우기. 전원 만 19세 이상·최근 12개월 Unity 수상 없음 확인 (JAM_RULES 참가 자격). 제출은 Team Lead 계정으로.
 - [ ] CREDITS.md와 아래 Credits / AI 공개가 **최종 빌드에 실제로 들어간 것**과 같은지 대조. 드래프트 스프라이트·HUD 시안·UI 아이콘이 빌드에 들어갔으면 "DRAFT" 표현을 지우고, 빠졌으면 그 줄을 지운다.
+- [ ] 크레딧은 페이지 안에 전부 적는다. 저장소는 비공개라 투표자가 CREDITS.md를 볼 수 없으므로 저장소·외부 파일 링크로 대신하지 않는다 (2026-11-10 잼 페이지 재확인).
 - [ ] REVIEW 지적: TMP 기본 폰트(LiberationSans, EmojiOne)가 빌드에 남아 있으면 CREDITS.md에 추가하고 아래 Credits에도 한 줄 넣기 (이 문서는 CREDITS.md를 고치지 않는다).
 - [ ] itch 설정: Kind = HTML, "This file will be played in the browser" 체크, Viewport 960×540, Fullscreen button 켜기, Mobile friendly 끄기.
 - [ ] 스크린샷 3~5장 (오프닝 "숨 0번" 장면 포함), 커버 이미지 630×500.
@@ -77,18 +78,24 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 
 ## Credits
 
-Full list with versions and licenses: `CREDITS.md` in the project repository (summary below).
+Every asset in the build is listed here.
 
 **Third-party assets**
-- Galmuri pixel font — quiple, SIL OFL 1.1 — https://github.com/quiple/galmuri
-- Mulmaru pixel font — mushsooni, SIL OFL 1.1 — https://github.com/mushsooni/mulmaru
-- pixelfx v0.3.0 (sword slash, parry, hit spark effects, recolored; new effects built on it: number ember, run dust, speed lines, dash burst, kill burst, impact ring, parry clash) — Patch / Hugo Duprez, MIT — https://github.com/patch-gg/pixelfx
-- Liberation Sans (TextMesh Pro default font) — Red Hat / Ascender Corp., SIL OFL 1.1 — https://github.com/liberationfonts/liberation-fonts
-- EmojiOne (TextMesh Pro default emoji sprites) — EmojiOne, `[TODO: confirm license; or remove the TMP emoji sprite asset from the build]` — https://www.emojione.com/
+- Galmuri9 / Galmuri11 / Galmuri14 pixel fonts v2.40.4 — quiple — SIL OFL 1.1 — https://github.com/quiple/galmuri
+- Mulmaru pixel font v1.0 — mushsooni — SIL OFL 1.1 — https://github.com/mushsooni/mulmaru (also used for the NUMBER logo)
+- pixelfx v0.3.0 — Patch / Hugo Duprez — MIT — https://github.com/patch-gg/pixelfx — sword slash (recolored), parry and hit spark sprite sheets, and the base library for every new effect below (the number ember's flame code is adapted from Sprite Fusion fire, MIT, Hugo Duprez)
+- Liberation Sans (TextMesh Pro default font) — Red Hat, Inc. / Ascender Corp. — SIL OFL 1.1 — https://github.com/liberationfonts/liberation-fonts
+- EmojiOne (TextMesh Pro default emoji sprites) — EmojiOne — `[TODO: confirm license; or remove the TMP emoji sprite asset from the build]` — https://www.emojione.com/
 
-**Made by the team with generative AI tools** (see disclosure below)
-- Backgrounds, dialogue portraits, character sprites (the dosa hero, his 9 parry poses, the Luddite helper), HUD (face health, broadcast numbers, hologram window), the fused machine boss parts and UI icons, plus new combat and movement effects (number ember, run dust, speed lines, dash burst, kill burst, impact ring, parry clash, talisman parry) and code-drawn effects (parry ring, clash duel zoom and shatter, boss swarm, danger zones)
-- All sound effects and music (synthesized, released CC0 by the team)
+**Made by the team with generative AI tools** (tools and how they were used: see the disclosure below)
+- Characters: the dosa hero Yudo (idle, walk, run, jump, dash, attack, hurt, 9 parry poses), the Luddite helper, citizens (melee and ranged), androids, snipers, AI bugs (walking and flying), projectiles
+- The fused machine boss: server body, bug claw, blade arm, chest halves and gun core
+- Backgrounds: stage 1 layered hanok-street parts and props, stages 2-5 (rooftops, elevated rail, hideout, production line, inspection hall, boss room)
+- Dialogue portraits (Yudo, citizen, Luddite, broadcast, android, bug), the Embector broadcast screens
+- HUD and UI: face health set, broadcast and hologram numbers, lucky dice faces and charge pips, the UI kit (panels, buttons, dialogue box, cursors, lock brackets), control hints, NUMBER logo, app icon
+- Effects built on pixelfx: number ember, run dust, speed lines, dash burst, kill burst, impact ring, parry clash, talisman parry, land dust, enemy warp-in, sniper muzzle, checkpoint, glitch death, hack pulse, goal open, spawner break
+- Code-drawn effects: parry ring, clash duel zoom and shatter, boss swarm, danger zones, hit flash shader
+- All 12 sound effects and 2 music tracks: synthesized from scratch by a generator script (no samples), released CC0 by the team
 
 Made with Unity 6 (6000.3). No paid generation services were used.
 
