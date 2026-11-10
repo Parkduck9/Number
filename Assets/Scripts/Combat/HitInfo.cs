@@ -10,6 +10,7 @@ public struct HitInfo
     public bool IsSpecial; // last strike of the enemy chain (number 1 -> 0)
     public float TravelDirX; // projectiles: sign of horizontal travel; 0 = judge front/back by SourcePosition
     public bool Unparryable; // parry attempts count as a hit; only a dash dodges it
+    public bool Pierce; // player skill hits: ignore the Android front-block guard
 }
 
 public enum HitResult { Hit, Parried, Dodged }

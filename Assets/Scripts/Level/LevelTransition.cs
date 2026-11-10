@@ -76,6 +76,7 @@ public class LevelTransition : MonoBehaviour
         if (busy) return;
         PlayerController pc = other.GetComponentInParent<PlayerController>();
         if (pc == null || GameFlow.IsPlayerDead(pc)) return;
+        if (GameFlow.InputLocked) return; // a dice skill owns the lock and would release it mid-fade; OnTriggerStay retries after it ends
         if (mode == Mode.Goal && !StageClear.TryClear(transform.position, hint)) return; // DECISIONS 15: all enemies dead + spawners broken
         StartCoroutine(Run(pc));
     }

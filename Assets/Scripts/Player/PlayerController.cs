@@ -116,6 +116,12 @@ public class PlayerController : MonoBehaviour
     bool pendingGrapple;      // pressed during a hit-stop
     readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
+    int swingDamaged;                   // blows that did damage since the last reset (CounterLanded / StrikeEnemy)
+
+    // DECISIONS 18 lucky dice hooks
+    public event System.Action CounterLanded; // a Shift counter that damaged something (dice charge)
+    [System.NonSerialized] public float SpeedMul = 1f; // horizontal run speed multiplier (skill 4)
+    public Rigidbody2D Body => rb;
 
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
     public static int ParryTries, ParryCount, ParryFailHits;
@@ -154,8 +160,8 @@ public class PlayerController : MonoBehaviour
         }
         enemyFilter.SetLayerMask(enemyMask);
         enemyFilter.useTriggers = Physics2D.queriesHitTriggers; // same hits as the old OverlapBoxAll
-        if (GetComponent<Shockwave>() == null) gameObject.AddComponent<Shockwave>(); // upgrade 8-A; players are built by scripts, so add at runtime
-        MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like Shockwave)
+        if (GetComponent<LuckyDice>() == null) gameObject.AddComponent<LuckyDice>(); // DECISIONS 18 (Space); players are built by scripts, so add at runtime
+        MouseCrosshair.Create(this); // DECISIONS 12 aim cursor + lock-on brackets (separate object, runtime like LuckyDice)
         rope = GrappleRope.Create(this); // DECISIONS 16
     }
 
@@ -402,7 +408,7 @@ public class PlayerController : MonoBehaviour
         switch (state)
         {
             case State.Locomotion:
-                float vx = input.MoveX * moveSpeed;
+                float vx = input.MoveX * moveSpeed * SpeedMul;
                 if (Time.time < grappleCarryUntil && !grounded) // rope release: keep the swing, blend into air control
                     vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, DashRules.GrappleAirAccel * Time.fixedDeltaTime);
                 if (!grounded && vx != 0f && PushingIntoWall(vx > 0f ? 1 : -1)) vx = 0f; // airborne against a wall face: no push, so gravity slides us down
@@ -881,6 +887,7 @@ public class PlayerController : MonoBehaviour
         else Facing = -Facing;
         swingHits.Clear();
         swingHitStops = 0;
+        swingDamaged = 0;
         Sfx.Play(SfxId.Swing);
         ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
         if (target != null && dashTargetCol != null && !HitEnemy(target, dashTargetCol, rb.position, false)) Sfx.Play(SfxId.Parry, 0.5f); // blocked: clank
@@ -888,6 +895,7 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < n; i++)
             HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], AttackCenter(), false);
         dashTargetCol = null;
+        if (swingDamaged > 0) CounterLanded?.Invoke();
     }
 
     void DoAttackHit()
@@ -902,14 +910,15 @@ public class PlayerController : MonoBehaviour
 
     // One blow (in-place swing or lunge sweep). false = the enemy blocked it (Android not overloaded).
     // One hit per enemy per swing; hit-stop + shake only for the first LungeMaxHitStops blows.
-    bool HitEnemy(TestEnemy enemy, Collider2D col, Vector2 from, bool lunge)
+    bool HitEnemy(TestEnemy enemy, Collider2D col, Vector2 from, bool lunge, bool pierce = false)
     {
         if (enemy == null || !enemy.gameObject.activeInHierarchy || enemy.Current == TestEnemy.State.Stunned) return true; // already down / vanishing
         if (!swingHits.Add(enemy)) return true;
         // A lunge hit comes from where the lunge began (the sweep spans from there): the Android "from above / behind" test must not
         // depend on which frame the fast-moving body happened to be sampled at (Fable review 11-09).
-        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false });
+        bool damaged = enemy.ReceivePlayerHit(new HitInfo { Damage = attackDamage, SourcePosition = lunge ? lungeStart : (Vector2)transform.position, IsSpecial = false, Pierce = pierce });
         if (!damaged) return false;
+        swingDamaged++;
         Sfx.Play(SfxId.Hit);
         Vector2 contactPoint = col.ClosestPoint(from);
         PlayHitSpark(contactPoint, Facing);
@@ -932,6 +941,57 @@ public class PlayerController : MonoBehaviour
         return true;
     }
 
+    // DECISIONS 18 dice skills: one blow through the normal hit path (sparks, kill burst, capped hit-stop, shake).
+    // Its own hit set each call. pierce = ignore the Android front block. true = it did damage.
+    public bool StrikeEnemy(TestEnemy e, Collider2D col, Vector2 from, bool pierce)
+    {
+        swingHits.Clear();
+        swingHitStops = 0;
+        swingDamaged = 0;
+        HitEnemy(e, col, from, false, pierce);
+        return swingDamaged > 0;
+    }
+
+    // DECISIONS 18 skill 1 / 6: teleport to a free spot just behind e (the far side from the player, else the near side), on its
+    // feet level, facing it. Cancels dash / lunge / rope. false = dead player, no enemy collider, or both spots blocked by walls.
+    public bool TryBlinkBehind(TestEnemy e)
+    {
+        if (state == State.Dead || e == null || e.BodyCollider == null) return false;
+        Collider2D col = e.BodyCollider;
+        float dx = e.transform.position.x - rb.position.x;
+        int first = Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : Facing;
+        const float halfW = 0.45f, halfH = 1f; // player box 0.9 x 2 (same as PlanBehind)
+        for (int k = 0; k < 2; k++)
+        {
+            int side = k == 0 ? first : -first;
+            Vector2 spot = new Vector2(e.transform.position.x + side * (col.bounds.extents.x + halfW + dashBehindClearance),
+                                       col.bounds.min.y - feetOffset.y + 0.02f);
+            if (BlinkSpotBlocked(spot, new Vector2(halfW * 2f - 0.1f, halfH * 2f - 0.2f))) continue;
+            if (visual != null) SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife); // ghost where we left
+            if (state != State.Locomotion) EnterState(State.Locomotion); // ends lunge / dash / rope / parry
+            dashTarget = null;
+            dashTargetCol = null;
+            dashBehindActive = false;
+            grappleCarryUntil = 0f;
+            rb.linearVelocity = Vector2.zero;
+            rb.position = spot;
+            transform.position = spot; // same-frame queries (AttackCenter, HitInfo.SourcePosition) see the new spot
+            Facing = -side;
+            PlayDashBurst(side); // burst points the way we travelled
+            Sfx.Play(SfxId.Dash);
+            return true;
+        }
+        return false;
+    }
+
+    // Solid ground / walls in the box (one-way platforms do not count: the body can stand in one and drops or rises through).
+    bool BlinkSpotBlocked(Vector2 at, Vector2 size)
+    {
+        foreach (Collider2D c in Physics2D.OverlapBoxAll(at, size, 0f, groundMask))
+            if (!c.isTrigger && !c.usedByEffector) return true;
+        return false;
+    }
+
     // hit-spark's pivot is a feet point: shift so its core (+12,+16 px) lands on the contact point. dir = blow direction.
     static void PlayHitSpark(Vector2 point, float dir)
     {
@@ -952,7 +1012,8 @@ public class PlayerController : MonoBehaviour
         bool fromFront = !Mathf.Approximately(info.TravelDirX, 0f)
             ? Mathf.Sign(info.TravelDirX) == -Facing
             : Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
-        if ((ParryActive || Time.time < parryGuardUntil) && fromFront && !info.Unparryable)
+        // An LMB lunge parries what it runs into (playtest 11-10: a shot met on the way in counted as a hit). The lunge keeps going.
+        if ((ParryActive || Time.time < parryGuardUntil || lunging) && fromFront && !info.Unparryable)
         {
             // No knockback for either side. Hit-stop + flash + parry FX. A guard parry during an attack must not abort the swing.
             if (state == State.Parry) EnterState(State.Locomotion);
@@ -991,7 +1052,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Parry) c = new Color(0.2f, 0.5f, 0.35f);
         else if (state == State.Dead) c = Color.clear; // the player-glitch-death FX takes the body away (MomentFx)
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
-        else if (health.Invulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
+        else if (health.HurtInvulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
         SpriteFlash.Apply(visual, c, now < parryFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
     }
 

@@ -46,7 +46,7 @@ public class ShiftCooldownHud : MonoBehaviour
             whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
         }
 
-        // Bottom-left, stacked above the Shockwave HUD (icon 16..64 px); the face HUD is not in this corner.
+        // Bottom-left, stacked above the lucky dice HUD (die 16..64 px); the face HUD is not in this corner.
         var canvas = UiKit.CreateCanvas("ShiftCooldownCanvas", transform, 38);
         var t = UiTheme.Current;
         var root = UiKit.Rect("Shift", canvas.transform, Vector2.zero, new Vector2(16f + Size * 0.5f, 80f + Size * 0.5f), new Vector2(Size, Size));

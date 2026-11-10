@@ -12,7 +12,6 @@ public enum SfxId
     Stunned,    // enemy stunned / counter window opens
     Broadcast,  // SFX-01 billboard number changed (AI)
     HackOk,     // player hack confirmed
-    Shockwave,  // upgrade: Space shockwave
     UiSelect,
 }
 

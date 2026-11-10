@@ -29,9 +29,9 @@ public class ControlHints : MonoBehaviour
             new[] { "ctrl_mouse_left", "", "Attack · Parry", "공격 · 패링" },
             new[] { "ctrl_mouse_right", "", "Grapple", "갈고리" },
         } },
-        { "Shockwave", new[] // not a scene: shown by Show("Shockwave") when the Luddite unlocks it (STG03)
+        { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {
-            new[] { "ctrl_key_space", "SPACE", "Shockwave (stagger enemies in front)", "충격파 (앞쪽 적 경직)" },
+            new[] { "ctrl_key_space", "SPACE", "Lucky dice · 3 parries = 1 roll", "점괘 주사위 · 패링 3번 = 굴림 1번" },
         } },
     };
 
@@ -74,7 +74,7 @@ public class ControlHints : MonoBehaviour
         foreach (var e in entries)
             if (DraftHud.Ui(e[0]) == null) { Destroy(gameObject); return; } // missing art: skip the whole strip
 
-        var canvas = UiKit.CreateCanvas("HintCanvas", transform, 35); // below the shockwave HUD (40)
+        var canvas = UiKit.CreateCanvas("HintCanvas", transform, 35); // below the lucky dice HUD (40)
         root = canvas.gameObject;
         group = root.AddComponent<CanvasGroup>();
         var strip = UiKit.Rect("Strip", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, RestY - SlideDistance), Vector2.zero);

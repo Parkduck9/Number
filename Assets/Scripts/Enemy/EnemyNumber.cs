@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -58,6 +59,44 @@ public class EnemyNumber : MonoBehaviour
     int lastFace = 1;
     static Material beamMat;
 
+    // Dice override (skill 5 countdown): another value in another digit sheet over the enemy's own number. Hide() clears it.
+    bool overriding;
+    int overrideValue;
+    Sprite[] overrideSheet;
+    static Sprite[] cyanDigits;
+    static bool cyanLoaded;
+
+    // DraftHud/holo_digits_cyan (0..9, same layout as holo_digits_gold); null when missing.
+    public static Sprite[] CyanDigits
+    {
+        get
+        {
+            if (cyanLoaded) return cyanDigits;
+            cyanLoaded = true;
+            if (!DraftSprites.Use) return null;
+            Sprite[] s = Resources.LoadAll<Sprite>("DraftHud/holo_digits_cyan").OrderBy(x => x.name).ToArray();
+            cyanDigits = s.Length == 10 ? s : null;
+            return cyanDigits;
+        }
+    }
+
+    public void SetOverride(int value, Sprite[] digitSheet)
+    {
+        overriding = true;
+        overrideValue = value;
+        overrideSheet = digitSheet;
+        Refresh();
+    }
+
+    public void ClearOverride()
+    {
+        if (!overriding) return; // already cleared (Hide): do not bring back a hidden number
+        overriding = false;
+        overrideSheet = null;
+        lastErrShown = -1; // overload flicker resumes
+        Refresh();
+    }
+
     void Awake()
     {
         BuildHolo();
@@ -114,7 +153,8 @@ public class EnemyNumber : MonoBehaviour
     // Holo mode: digit sprite + tint instead of label text. flame = last-strike tint (redder), err = overload flicker frame.
     void ShowHolo(bool err)
     {
-        holoDigit.sprite = DraftHud.HoloDigits(holoGold)[Mathf.Clamp(Value, 0, 9)];
+        Sprite[] sheet = overriding && overrideSheet != null && overrideSheet.Length >= 10 ? overrideSheet : DraftHud.HoloDigits(holoGold);
+        holoDigit.sprite = sheet[Mathf.Clamp(overriding ? overrideValue : Value, 0, 9)];
         holoDigit.enabled = !err;
         holoTint = err ? Color.white : flameOn ? Color.Lerp(Color.white, Red, 0.6f) : Color.white;
         ApplyHoloColor(HoloAlpha);
@@ -185,7 +225,7 @@ public class EnemyNumber : MonoBehaviour
     void Update()
     {
         if (label == null) return;
-        if (broken)
+        if (broken && !overriding)
         {
             int errShown = Mathf.FloorToInt(Time.time * 12f) % 2 == 0 ? 1 : 0;
             if (errShown != lastErrShown) // assign only on flips: no per-frame string garbage
@@ -268,6 +308,8 @@ public class EnemyNumber : MonoBehaviour
 
     public void Hide()
     {
+        overriding = false;
+        overrideSheet = null;
         broken = false;
         pulsing = false;
         SetFlame(false);
@@ -335,7 +377,7 @@ public class EnemyNumber : MonoBehaviour
             holoRoot.gameObject.SetActive(true);
             ShowHolo(false);
         }
-        else label.text = Value.ToString();
+        else label.text = (overriding ? overrideValue : Value).ToString();
         label.color = flameOn ? Color.Lerp(numberColor, Red, 0.6f) : numberColor;
         if (!pulsing) label.transform.localScale = Vector3.one;
     }

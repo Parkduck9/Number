@@ -25,6 +25,7 @@ public class StageGoal : MonoBehaviour
     {
         var pc = other.GetComponentInParent<PlayerController>();
         if (loadAt >= 0f || pc == null || GameFlow.IsPlayerDead(pc)) return;
+        if (GameFlow.InputLocked) return; // a dice skill owns the lock and would release it mid-exit; OnTriggerStay retries after it ends
         if (!StageClear.TryClear(transform.position, hint)) return; // enemies left / spawner unbroken
         player = pc;
         GameFlow.InputLocked = true;

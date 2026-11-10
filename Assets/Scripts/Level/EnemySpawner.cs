@@ -88,10 +88,20 @@ public class EnemySpawner : MonoBehaviour
     void Update()
     {
         UpdateLook();
+        if (GameFlow.EnemiesHeld) { HoldTimers(); if (!Broken) UpdateHit(); return; } // dice hold: no respawn / grace progress
         UpdateGrace();
         if (Broken) return;
         UpdateHit();
         UpdateRespawns();
+    }
+
+    void HoldTimers()
+    {
+        foreach (var e in entries)
+        {
+            if (e.diedAt >= 0f) e.diedAt += Time.deltaTime;
+            if (e.spawned != null) e.graceUntil += Time.deltaTime;
+        }
     }
 
     // Respawned enemies act again after SpawnGrace (also when the device breaks during the grace).

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Test enemy (brainwashed citizen). See docs/design/PROTOTYPE_ARCH.md sections 3-4.
@@ -67,6 +68,11 @@ public class TestEnemy : MonoBehaviour
     public int Hp => hp;
     public EnemyNumber Number => number;
     public int StrikesLeft => strikesLeft;
+    // Lucky dice skills: active enemies (OnEnable/OnDisable), down = knocked out or gone.
+    public static readonly List<TestEnemy> All = new List<TestEnemy>();
+    public bool IsDown => state == State.Stunned || !isActiveAndEnabled;
+    public bool IsBossWave { get; set; } // set by BossFight: dice skills skip it
+    public Collider2D BodyCollider { get; private set; }
     // player lunge stops in front instead of passing through (frontal approach to a guarding Android only)
     public bool BlocksHits => kind == Kind.Android && state != State.Overload && !(player != null && AndroidExposedTo(player.transform.position));
 
@@ -99,9 +105,16 @@ public class TestEnemy : MonoBehaviour
     bool aggro;               // melee: spotted the player once -> stays active (DashRules.MeleeDetectMin)
     float facingChangedAt = -10f; // Android guard: last turn-around (AndroidTurnGrace)
     SniperSight sight;
+    ParryRing ring;           // melee parry timing tell (built on first strike)
+    float ringTotal = -1f;    // eta when the current ring started (-1 = not started; reset by EnterState except into Strike)
+    Vector2 ringContact;      // target ring centre, fixed for the windup
     Vector2 sniperDir;        // aim (unit), fixed once locked
     bool sniperLocked;
     float nextAimAt;          // sniper: no new aim before this (SniperReaimDelay)
+    float frozenUntil;        // dice Overload on a non-android: Frozen until this (0 = board freeze only)
+    bool held;                // GameFlow.EnemiesHeld: body parked (no gravity, velocity stored)
+    Vector2 heldVelocity;     // restored on release (kill knockback landed during the hold)
+    float heldGravity;
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -115,6 +128,8 @@ public class TestEnemy : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         number = GetComponent<EnemyNumber>();
+        BodyCollider = GetComponent<Collider2D>();
+        if (BodyCollider == null) BodyCollider = GetComponentInChildren<Collider2D>();
         if (visual == null) visual = GetComponentInChildren<SpriteRenderer>();
         // Bugs: spider (melee) / flyer (ranged) frames; without them BugSwarmVisual draws the dot swarm. Ranged citizens use the
         // hooded ranged-citizen frames (DECISIONS 14). Bugs have no stunned frame: the recover frame, tipped over.
@@ -145,6 +160,15 @@ public class TestEnemy : MonoBehaviour
         }
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => All.Clear(); // Domain Reload is off
+    void OnEnable() => All.Add(this);
+    void OnDisable()
+    {
+        All.Remove(this);
+        if (held) { held = false; rb.gravityScale = heldGravity; } // never leave a parked body without gravity
+    }
+
     void OnDestroy()
     {
         if (zoneBoard != null) zoneBoard.NumberChanged -= OnBroadcastChanged;
@@ -152,6 +176,20 @@ public class TestEnemy : MonoBehaviour
 
     void Update()
     {
+        if (GameFlow.EnemiesHeld) // dice hold: same freeze as the dialogue lock (Stunned vanish timer included), visuals still update
+        {
+            stateEnteredAt += Time.deltaTime;
+            if (backoffSince >= 0f) backoffSince += Time.deltaTime;
+            nextSpecialAt += Time.deltaTime;
+            nextSparkAt += Time.deltaTime;
+            nextRushAt += Time.deltaTime;
+            nextAimAt += Time.deltaTime;
+            if (frozenUntil > 0f) frozenUntil += Time.deltaTime;
+            if (sight != null && state != State.Windup) sight.Hide(); // knocked out / frozen while held: no laser
+            if (ring != null && (player == null || !MeleeStrikeEta(player.transform.position, out _))) ring.Hide(); // same for the parry rings (else they freeze)
+            ApplyVisual();
+            return;
+        }
         if (GameFlow.InputLocked) // blocking dialogue: freeze the AI and push its state timer forward
         {
             stateEnteredAt += Time.deltaTime;
@@ -160,8 +198,11 @@ public class TestEnemy : MonoBehaviour
             nextSpecialAt += Time.deltaTime;
             nextSparkAt += Time.deltaTime;
             nextRushAt += Time.deltaTime;
+            if (frozenUntil > 0f) frozenUntil += Time.deltaTime;
             return;
         }
+        // Dice Overload freeze ran out; a zone still on 0 keeps it frozen (the board releases it).
+        if (state == State.Frozen && frozenUntil > 0f && Time.time >= frozenUntil && broadcast != 0) { frozenUntil = 0f; FinishReset(); }
         if (state == State.Stunned && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
         {
             if (visual != null) PlayVanishSpark();
@@ -172,10 +213,18 @@ public class TestEnemy : MonoBehaviour
         if (player != null && state != State.Stunned) UpdateState();
         if (kind == Kind.Sniper) UpdateSight();
         ApplyVisual();
+        UpdateParryRing();
     }
 
     void FixedUpdate()
     {
+        if (GameFlow.EnemiesHeld) // park the body in place; the stored velocity (e.g. kill knockback) comes back on release
+        {
+            if (!held) { held = true; heldVelocity = rb.linearVelocity; heldGravity = rb.gravityScale; rb.gravityScale = 0f; }
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+        if (held) { held = false; rb.gravityScale = heldGravity; rb.linearVelocity = heldVelocity; }
         if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
         if (state == State.Stunned) return; // keep the kill knockback until the body vanishes
         float vx = 0f;
@@ -213,7 +262,7 @@ public class TestEnemy : MonoBehaviour
         if (n == 7) exhaustedCycle = -1;
         // NUM-0: citizens stop breathing; the number changing away releases them.
         if (n == 0 && (kind == Kind.Citizen || kind == Kind.Sniper)) EnterState(State.Frozen); // the sniper is a citizen too
-        else if (old == 0 && state == State.Frozen) FinishReset();
+        else if (old == 0 && state == State.Frozen && Time.time >= frozenUntil) { frozenUntil = 0f; FinishReset(); } // a dice freeze still running ends on its own timer
     }
 
     // NUM-7 timer (time-based, not a board poll).
@@ -454,7 +503,8 @@ public class TestEnemy : MonoBehaviour
         else
         {
             Vector2 center = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
-            ParryFx.Swing(center, attackSize, Color.red, visual != null ? visual.transform : null, facing);
+            ParryFx.NudgeVisual(visual != null ? visual.transform : null, facing); // the rings are the tell now (no red box)
+            if (ring != null) ring.Flash(); // rings merge here
             col = Physics2D.OverlapBox(center, attackSize, 0f, playerMask);
             if (col != null)
             {
@@ -512,6 +562,7 @@ public class TestEnemy : MonoBehaviour
         state = next;
         stateEnteredAt = Time.time;
         if (next != State.Charge) rushing = false;
+        if (next != State.Strike) ringTotal = -1f; // Windup/Charge -> Strike keeps the merged ring until DoStrike flashes it
         switch (next)
         {
             case State.Approach:
@@ -599,6 +650,16 @@ public class TestEnemy : MonoBehaviour
     // eta = seconds until the strike lands (0 in Strike).
     public bool MeleeThreatens(Vector2 playerPos, float imminentWindow, out float eta)
     {
+        if (!MeleeStrikeEta(playerPos, out eta) || eta > imminentWindow) return false;
+        if (state == State.Charge) return true;
+        Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
+        return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;
+    }
+
+    // A parryable melee strike is coming (Windup / Charge toward the player) or landing (Strike); eta = seconds until it lands.
+    // Shared by the LMB parry (MeleeThreatens) and the timing rings, so the picture and the parry window cannot disagree.
+    bool MeleeStrikeEta(Vector2 playerPos, out float eta)
+    {
         eta = 0f;
         if (ranged || (state != State.Windup && state != State.Strike && state != State.Charge) || !gameObject.activeInHierarchy) return false;
         if (strikesLeft == 1 && unparryableNumber > 0 && number.Value == unparryableNumber) return false; // unparryable last strike: dash it
@@ -611,19 +672,44 @@ public class TestEnemy : MonoBehaviour
             float ahead = (playerPos.x - transform.position.x) * facing;
             if (ahead < 0f || Mathf.Abs(playerPos.y - transform.position.y) > attackRangeY) return false;
             eta = Mathf.Max(0f, ahead - attackRangeX) / (rushing ? DashRules.RushSpeed : chargeSpeed);
-            return eta <= imminentWindow;
+            return true;
         }
         if (state == State.Windup) eta = Mathf.Max(0f, WindupWait() - (Time.time - stateEnteredAt));
-        if (eta > imminentWindow) return false;
+        return true;
+    }
+
+    // Melee parry timing rings (user 11-10): shown while MeleeStrikeEta holds, merged at eta 0, flashed by DoStrike.
+    // Not called while EnemiesHeld / InputLocked (Update returns early), and hit-stop stops Time.time: the rings freeze there.
+    void UpdateParryRing()
+    {
+        if (ranged || (ring != null && ring.Flashing)) return;
+        if (player == null || !MeleeStrikeEta(player.transform.position, out float eta))
+        {
+            if (ring != null) ring.Hide(); // stunned / frozen / staggered / killed / recovered / unparryable: gone
+            ringTotal = -1f;
+            return;
+        }
+        if (ring == null) ring = ParryRing.For(gameObject);
+        if (ringTotal < 0f || state == State.Charge) ringContact = ParryContact(); // fixed during a windup; follows the player during a charge
+        if (ringTotal < 0f) ringTotal = eta;
+        ring.Show(ringContact, facing, ringTotal, eta, MeleeThreatens(player.transform.position, DashRules.ParryMeleeWindow, out _)); // armed = LMB really parries (box check too)
+    }
+
+    // Where the blow meets the player: the player's front edge (body half-width 0.45) at the attack box's height, kept inside the
+    // attack box during a windup so a player standing deep in it or at its far edge still gets a ring on the box.
+    Vector2 ParryContact()
+    {
         Vector2 c = (Vector2)transform.position + new Vector2(attackOffset.x * facing, attackOffset.y);
-        return Mathf.Abs(playerPos.x - c.x) <= attackSize.x * 0.5f + 0.45f && Mathf.Abs(playerPos.y - c.y) <= attackSize.y * 0.5f + 1f;
+        float x = player.transform.position.x - facing * 0.45f;
+        if (state != State.Charge) x = Mathf.Clamp(x, c.x - attackSize.x * 0.5f, c.x + attackSize.x * 0.5f);
+        return new Vector2(x, c.y);
     }
 
     // true = damage applied
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (kind == Kind.Android && state != State.Overload && !AndroidExposedTo(info.SourcePosition)) // frontal hit on a guarding Android
+        if (kind == Kind.Android && !info.Pierce && state != State.Overload && !AndroidExposedTo(info.SourcePosition)) // frontal hit on a guarding Android
         {
             Flash(Juice.BlockTint); // white was invisible on the (white) draft sprite
             Vector2 p = (Vector2)transform.position + new Vector2(0.45f * facing, 0.3f); // deflect spark on its front
@@ -635,8 +721,10 @@ public class TestEnemy : MonoBehaviour
         Flash(Color.red);
         hp = 0;
         EnterState(State.Stunned);
+        if (ring != null) ring.Hide(); // killed under InputLocked (dice skill 6): Update won't run to hide them
         float dir = Mathf.Approximately(info.SourcePosition.x, transform.position.x) ? -facing : Mathf.Sign(transform.position.x - info.SourcePosition.x);
         rb.linearVelocity = new Vector2(dir * Juice.KillKnockback.x, Juice.KillKnockback.y);
+        if (held) heldVelocity = rb.linearVelocity; // killed during a dice hold: fly off on release
         return true;
     }
 
@@ -741,4 +829,23 @@ public class TestEnemy : MonoBehaviour
         EnterState(State.Staggered);
         stateEnteredAt = Time.time - (openDuration - seconds); // Staggered ends at openDuration; shift so it lasts `seconds`
     }
+
+    // Dice skill 3: androids overload for `seconds` (counter window); citizens / bugs / snipers freeze for `seconds`.
+    public void Overload(float seconds)
+    {
+        if (state == State.Stunned) return;
+        if (kind == Kind.Android)
+        {
+            if (state == State.Overload && Juice.OverloadSeconds - (Time.time - stateEnteredAt) >= seconds) return; // keep the longer window
+            if (state != State.Overload) EnterState(State.Overload);
+            stateEnteredAt = Time.time - (Juice.OverloadSeconds - seconds); // Overload ends at OverloadSeconds; shift so it lasts `seconds`
+            return;
+        }
+        EnterState(State.Frozen);
+        frozenUntil = Mathf.Max(frozenUntil, Time.time + seconds);
+    }
+
+    // Dice skill 5: show a countdown value in another digit sheet over the enemy's own number.
+    public void SetNumberOverride(int value, Sprite[] digits) => number.SetOverride(value, digits);
+    public void ClearNumberOverride() => number.ClearOverride();
 }

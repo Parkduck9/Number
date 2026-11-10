@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-// STG-03: walk up to the Luddite, talk (blocking), receive the shockwave device, the exit door opens. Once only.
+// STG-03: walk up to the Luddite, talk (blocking), receive the lucky dice (DECISIONS 18), the exit door opens. Once only.
 [RequireComponent(typeof(BoxCollider2D))]
 public class LudditeMeeting : MonoBehaviour
 {
@@ -25,8 +25,8 @@ public class LudditeMeeting : MonoBehaviour
     {
         yield return null; // let the talk box lock input
         while (GameFlow.InputLocked) yield return null;
-        Shockwave.SetUnlocked(true);
-        ControlHints.Show("Shockwave"); // Space icon + what it does, a few playable seconds
+        LuckyDice.SetUnlocked(true);
+        ControlHints.Show("LuckyDice"); // Space icon + what it does, a few playable seconds
         if (exit != null) exit.SetActive(true);
     }
 }

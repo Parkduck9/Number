@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Combat FX helpers: shared 1x1 square, enemy swing placeholder, player slash. Sprite-sheet FX live in SpriteFx.
+// Combat FX helpers: shared 1x1 square, attacker nudge, player slash. Sprite-sheet FX live in SpriteFx.
 public static class ParryFx
 {
     static Sprite square;
@@ -21,22 +21,6 @@ public static class ParryFx
         }
     }
 
-    // Swing placeholder: short flash over the attack box + attacker's visual steps forward for that moment.
-    public static void Swing(Vector2 center, Vector2 size, Color color, Transform attackerVisual, int facing, float time = 0.08f, float nudge = 0.125f)
-    {
-        GameObject go = new GameObject("SwingFlash");
-        go.transform.position = center;
-        go.transform.localScale = new Vector3(size.x, size.y, 1f);
-        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = Square;
-        color.a = 0.45f;
-        sr.color = color;
-        sr.sortingOrder = 90;
-        Object.Destroy(go, time);
-
-        NudgeVisual(attackerVisual, facing, time, nudge);
-    }
-
     // Player swing: sword-slash sprite FX with its arc centered on the attack box + the attacker's visual steps forward.
     public static void Slash(Vector2 center, Transform attackerVisual, int facing, float time = 0.08f, float nudge = 0.125f)
     {
@@ -46,7 +30,8 @@ public static class ParryFx
         NudgeVisual(attackerVisual, facing, time, nudge);
     }
 
-    static void NudgeVisual(Transform attackerVisual, int facing, float time, float nudge)
+    // Attacker's visual steps forward for a moment (enemy melee strike; its tell is ParryRing).
+    public static void NudgeVisual(Transform attackerVisual, int facing, float time = 0.08f, float nudge = 0.125f)
     {
         if (attackerVisual == null) return;
         Nudge n = attackerVisual.GetComponent<Nudge>();

@@ -25,7 +25,8 @@ public class TitleScreen : MonoBehaviour
     void Start()
     {
         RespawnManager.ResetState(); // new game: no checkpoint record / pending respawn from the last run
-        Shockwave.SetUnlocked(false); // new game: the Luddite upgrade must not leak in
+        LuckyDice.SetUnlocked(false); // new game: the Luddite upgrade must not leak in
+        LuckyDice.Charges = 0;
         Time.timeScale = 1f;
         GameFlow.InputLocked = false;
         var cam = Camera.main;

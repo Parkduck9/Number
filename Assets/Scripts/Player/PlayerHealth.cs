@@ -7,11 +7,13 @@ public class PlayerHealth : MonoBehaviour
 
     int hp;
     float invulnerableUntil;
+    bool hardInvulnerable; // lucky dice skills (SetInvulnerable)
 
     public int Hp => hp;
     public int MaxHp => maxHp;
     public bool IsDead => hp <= 0;
-    public bool Invulnerable => Time.time < invulnerableUntil;
+    public bool Invulnerable => hardInvulnerable || HurtInvulnerable;
+    public bool HurtInvulnerable => Time.time < invulnerableUntil; // post-hit window only (the player blink)
 
     void Awake() => hp = maxHp;
 
@@ -19,6 +21,8 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!IsDead) hp = maxHp;
     }
+
+    public void SetInvulnerable(bool on) { hardInvulnerable = on; }
 
     public void ShiftInvulnerability(float dt) { invulnerableUntil += dt; } // frozen while input is locked
 

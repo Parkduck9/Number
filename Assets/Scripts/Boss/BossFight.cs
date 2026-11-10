@@ -123,7 +123,7 @@ public class BossFight : MonoBehaviour
         Collider2D body = clone.GetComponent<Collider2D>();
         MomentFx.EnemyWarpIn(new Vector2(point.position.x, body != null ? body.bounds.min.y : point.position.y));
         var enemy = clone.GetComponent<TestEnemy>();
-        if (enemy != null) alive.Add(enemy);
+        if (enemy != null) { enemy.IsBossWave = true; alive.Add(enemy); } // dice skills skip boss wave enemies
     }
 
     bool AllStunned()

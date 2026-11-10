@@ -60,7 +60,7 @@ public class EnemyProjectile : MonoBehaviour
 
     void Update()
     {
-        if (GameFlow.InputLocked) { dieAt += Time.deltaTime; return; }
+        if (GameFlow.InputLocked || GameFlow.EnemiesHeld) { dieAt += Time.deltaTime; return; } // dice hold freezes shots too
         if (Time.time >= dieAt) { Destroy(gameObject); return; }
         if (frames != null) Rend.sprite = frames[Mathf.FloorToInt(Time.time * FrameFps) % frames.Length];
         Vector2 prev = transform.position;
