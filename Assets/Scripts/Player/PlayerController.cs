@@ -187,7 +187,7 @@ public class PlayerController : MonoBehaviour
     {
         if (state != State.Locomotion) EnterState(State.Locomotion);
         Facing = face;
-        parryGuardUntil = parryFlashUntil = parryPoseUntil = -999f;
+        parryGuardUntil = parryFlashUntil = parryPoseUntil = riposteAt = -999f;
     }
     public void DuelClash(bool counter, ParryHeight height)
     {
@@ -215,7 +215,15 @@ public class PlayerController : MonoBehaviour
         parryPoseAt = Time.time;
         parryPoseUntil = Time.time + time;
         parryPoseForced = forced;
+        riposteAt = forced ? -999f : Time.time + RiposteDelay; // restarts on every parry; duel / boss clangs have their own exchange visuals
+        riposteFxDone = false;
     }
+
+    // DECISIONS 30: presentation-only riposte after a parry (no damage, no hit test, no state). A visual override in UpdateVisual:
+    // the HeroAttack strip played fast + the normal slash FX. Any state change (swing, Shift, RMB, hurt, death) or a lunge cancels it.
+    const float RiposteDelay = 0.11f, RiposteTime = 0.18f, RiposteFxAt = 0.4f; // (T) s after the parry (scaled: hit-stop holds it); FX at the strike frame
+    float riposteAt = -999f;
+    bool riposteFxDone;
     public void DuelHitStop(float seconds) => StartHitStop(seconds, false, true); // finisher: runs although the duel still holds the input lock
 
     void EndHitStop()
@@ -1121,8 +1129,17 @@ public class PlayerController : MonoBehaviour
     {
         if (visual == null) return;
         visual.flipX = Facing < 0;
+        if (state != State.Locomotion || lunging || now < duelPoseUntil) riposteAt = -999f; // anything else took over: the riposte is cancelled
+        bool riposte = draftSprite && now >= riposteAt && now < riposteAt + RiposteTime && DraftSprites.HeroAttack != null;
+        if (riposte && !riposteFxDone && now >= riposteAt + RiposteTime * RiposteFxAt)
+        {
+            riposteFxDone = true;
+            Sfx.Play(SfxId.Swing, 0.6f);
+            ParryFx.Slash(AttackCenter(), visual.transform, Facing);
+        }
         if (draftSprite)
-            visual.sprite = now < duelPoseUntil ? duelPose
+            visual.sprite = riposte ? DraftSprites.Pick(DraftSprites.HeroAttack, Mathf.Min((int)((now - riposteAt) / RiposteTime * DraftSprites.HeroAttack.Length), DraftSprites.HeroAttack.Length - 1), DraftSprites.Hero)
+                : now < duelPoseUntil ? duelPose
                 : now < parryPoseUntil && (parryPoseForced || state == State.Locomotion) ? DraftSprites.Pick(parryPose, now - parryPoseAt < ParryPoseKey ? 0 : 1, DraftSprites.HeroAttack ?? DraftSprites.Hero)
                 : DraftFrame(now);
         Color c = draftSprite ? Color.white : BaseColor;
