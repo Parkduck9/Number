@@ -55,7 +55,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 | Parry: left click while a bullet is incoming or you are inside an enemy's attack (parry comes first) | Left mouse |
 | Dodge + counter (invulnerable dash behind the nearest enemy within ~4 m, then turn and strike it; with no enemy near, a fixed-distance dash that ends facing back; 3.5 s cooldown) | Shift |
 | Interact / talk / hack a broadcast board | E |
-| Talisman throw: throw a talisman toward the mouse and zip to where it lands; human enemies on its path drop in one hit (not androids) | Right mouse |
+| Issen (flash strike): flash behind the enemy you aim at; human enemies drop in one hit, androids and strong enemies are only passed; 5 s cooldown | Right mouse |
 | Lucky dice (unlocked at the Luddite hideout, stage 3): 3 parries / counters = 1 roll; the face (1-6) is the spell you cast | Space |
 | Pause / language | Esc or P |
 
