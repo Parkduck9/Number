@@ -11,8 +11,6 @@ public static class Stg03Builder
     const string TalkPath = "Assets/Data/Dialogue/stg03_luddite_placeholder.txt";
     const float RoomWidth = 30f;
 
-    static readonly Color DoorColor = new Color32(0x5A, 0x4A, 0x3A, 0xFF);
-
     // Room-local coordinates (world x 0). The room is narrower than a normal segment.
     static readonly Box[] Boxes =
     {
@@ -37,7 +35,7 @@ public static class Stg03Builder
 
         var root = new GameObject("ROOM").transform;
         PartsBackdropKit.Hideout(root, RoomWidth, 1f); // layered parts (DECISIONS 17); one fixed screen
-        foreach (var b in Boxes) BuildCollider(root, b, true);
+        foreach (var b in Boxes) BuildCollider(root, b, b.id != "GROUND-A"); // floor: the wall plate's dark floor + its fill below (audit #9)
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(new[] { 0f }, PlayerStart, 1f);
@@ -45,7 +43,8 @@ public static class Stg03Builder
 
         BuildHelper(root, "LUDDITE", LudditeX, 1f); // LudditeHelper swaps the square for the helper idle art (feet at the floor)
         foreach (var f in Foes) BuildEnemy(root, f);
-        AddSquare(root, "Door (PLACEHOLDER)", new Vector2((Exit.x1 + Exit.x2) * 0.5f, 2.5f), new Vector2(Exit.x2 - Exit.x1, 3f), DoorColor, 1);
+        // exit door (audit #9): the scanner gate, doors on the trigger (x 28.25); its right wing runs behind the room wall, off screen
+        PartsBackdropKit.ExitArt(root, "buildings/gate_scanner", null, 0f, (Exit.x1 + Exit.x2) * 0.5f, Exit.y1);
 
         var exit = BuildTrigger(root, Exit);
         SetInt(exit.AddComponent<LevelTransition>(), "mode", (int)LevelTransition.Mode.Goal);

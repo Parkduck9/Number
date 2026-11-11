@@ -17,7 +17,8 @@ public static class PartsBackdropKit
     const string Parts = Stg01LayerImporter.PartsDir;
     const float Ppu = 32f;
     // camera-follow fractions (0 = world, 1 = screen): x like STG-01; y high enough that the layers stay in view while the camera climbs a tall segment
-    // The building row is world-fixed (DECISIONS 41: its roofs are floors), so only the rail keeps the old 0.3 / 0.5 building parallax.
+    // The building row is world-fixed (DECISIONS 41: its roofs are floors), so only the STG-04 hall rail keeps the old 0.3 / 0.5 building parallax
+    // (the STG-02 SEG-B rail is world-fixed on its gameplay ledges, RailOnLedges).
     const float SkyX = 0.9f, SkylineX = 0.6f, WallX = 0.45f, BldX = 0.3f;
     const float FySky = 0.8f, FySkyline = 0.75f, FyWall = 0.6f, FyBld = 0.5f;
     const float DimSky = 0.85f, DimSkyline = 0.7f, DimWall = 0.65f, DimBld = 0.8f, DimProp = 0.9f;
@@ -25,6 +26,8 @@ public static class PartsBackdropKit
     // The rail (parallax, farther) draws behind the world-fixed fence / buildings: pillars ORail, track ORail + 2.
     const int OSkyFill = -130, OSky = -129, OFarFx = -128, OSkylineFill = -127, OSkyline = -126, OTwinkle = -125, OCeiling = -124, OFar = -123,
         OWallFill = -122, OWall = -120, OBldFill = -118, ORail = -118, OFence = -117, OBld = -115, OProp = -108;
+    // STG-02 SEG-B world-fixed rail (audit #6): in front of the building row, behind the street props; ledge art (audit #4) above the props.
+    const int ORailPillar = -113, OGroundFront = -112, ORailTrack = -111, OLedge = -106;
 
     // Flat roof / lid spans the player stands on (DECISIONS 41), measured from the PNG alpha (top opaque px per column, flat runs only):
     // (first px from the left, last px, height px above the part's bottom). Sloped roofs: only the flat ridge. wall_tile (fence) is handled
@@ -66,15 +69,17 @@ public static class PartsBackdropKit
 
     // STG-02 SEG-A rooftops / SEG-B elevated rail: night city, buildings + vending / crates / lanterns on the street, rail on SEG-B.
     // row = the building row, (part in buildings/, segment-local centre x), world-fixed with floors on the roofs (DECISIONS 41).
-    public static void Rooftops(Transform root, float width, float top, float camMin, float camMax, bool rail, (string part, float x)[] row)
+    // railLedges = the gameplay rail ledges (x1, x2, top) drawn as a world-fixed elevated rail (SEG-B); null = no rail (SEG-A).
+    public static void Rooftops(Transform root, float width, float top, float camMin, float camMax, (string part, float x)[] row, (float x1, float x2, float top)[] railLedges)
     {
         Begin(root, width, top, 1f, camMin, camMax);
         walk = true;
+        bool rail = railLedges != null;
         float ySky = Y0 + 4f;
         Sky("far/rooftops_sky", ySky);
         Skyline("far/rooftops_skyline", null, 0f, "far/rooftop_window_twinkle_4f", 1f, ySky);
         Buildings(Y0, "buildings/wall_tile", row);
-        if (rail) Rail();
+        if (rail) RailOnLedges(railLedges, "buildings/wall_tile");
         var p = Props();
         float lamp = Y0 + 4.5f; // hanging lanterns (top pivot)
         if (!rail)
@@ -101,7 +106,7 @@ public static class PartsBackdropKit
             Put(p, "props/vending_dancheong", null, 0f, 38f, Y0, OProp);
             Put(p, "props/crates_neon", null, 0f, 44.5f, Y0, OProp);
             // segment end (x 46..76) was bare
-            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 51f, lamp, OProp);
+            Put(p, null, "props/lantern_hanji_sway_4f", 3f, 47f, lamp, OProp); // x 51 hung in front of the RAIL-B2 track
             Put(p, "props/vending_dancheong", null, 0f, 57f, Y0, OProp);
             Put(p, "props/crates_neon", null, 0f, 64f, Y0, OProp);
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 69.5f, lamp, OProp);
@@ -116,7 +121,7 @@ public static class PartsBackdropKit
         else
         {
             Glow(33f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(11.5f, Y0 + 1.3f, LampRed, 3f); Glow(38f, Y0 + 1.3f, LampTeal, 3f);
-            Glow(51f, lamp - 1f, LampWarm, 4f); Glow(57f, Y0 + 1.3f, LampRed, 3f); Glow(69.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(74f, Y0 + 1.3f, LampTeal, 3f);
+            Glow(47f, lamp - 1f, LampWarm, 4f); Glow(57f, Y0 + 1.3f, LampRed, 3f); Glow(69.5f, lamp - 1f, LampWarm, 4f, 0.2f); Glow(74f, Y0 + 1.3f, LampTeal, 3f);
         }
         Finish();
     }
@@ -189,7 +194,14 @@ public static class PartsBackdropKit
     {
         Begin(root, width, SegHeight, groundY, 15f, 15f);
         float yIn = Y0 - CompDrop, yFar = yIn + FarRise;
-        Ceiling("far/hideout_wall", yFar + 128f / Ppu);
+        // ceiling (audit #9): the far wall's brick navy instead of its black top row, an iron beam across with hanging lanterns
+        Ceiling(new Color32(0x12, 0x1A, 0x2D, 0xFF), yFar + 128f / Ppu);
+        var top = Props("Background (ceiling props)");
+        var beam = Load("buildings/rail_track");
+        float beamTop = yFar + 128f / Ppu + 4.25f; // 13.5 at groundY 1
+        if (beam != null) Strip(top, beam, -1f, Wd + 1f, beamTop, OFar);
+        float hang = beamTop - (beam != null ? beam.rect.height / Ppu : 0f);
+        foreach (float x in new[] { 4f, 14f, 25f }) Put(top, null, "props/lantern_hanji_sway_4f", 3f, x, hang, OProp);
         Wall("far/hideout_wall", yFar, SkylineX, FySkyline, DimSkyline, OFar, OFar, false);
         Wall("interiors/hideout_wall", yIn, WallX, FyWall, DimWall, OWallFill, OWall, true,
             ("interiors/bulb_flicker_4f", 3f), ("interiors/crt_static_4f", 6f));
@@ -209,7 +221,8 @@ public static class PartsBackdropKit
     public static void Palace(Transform root, float width, float groundY)
     {
         Begin(root, width, SegHeight, groundY, 15f, 15f);
-        float yIn = Y0 - CompDrop, yFar = yIn + FarRise;
+        // the skyline sits just under the throne wall's top (audit #10): the palace silhouette and the red horizon show above the wall
+        float yIn = Y0 - CompDrop, yFar = yIn + 196f / Ppu - 1f;
         Sky("far/palace_sky", yFar);
         Skyline("far/palace_skyline", "far/searchlight_sweep_8f", 2f, null, 0f, yFar);
         Wall("interiors/throne_wall", yIn, WallX, FyWall, DimWall, OWallFill, OWall, true, ("interiors/ledwall_shimmer_4f", 2f));
@@ -331,11 +344,11 @@ public static class PartsBackdropKit
         foreach (var o in overlays) Overlay(g, o.sheet, o.fps, y, min, max, order + 1);
     }
 
-    // Flat colour above a plate that ends below the top of the segment (the plate's own top-row colour).
-    static void Ceiling(string file, float yFrom)
+    // Flat colour above a plate that ends below the top of the segment.
+    static void Ceiling(Color c, float yFrom)
     {
         var g = Layer("Background (ceiling)", 0f, FySkyline, DimSkyline);
-        AddSquare(g, "Background (ceiling fill)", new Vector2(Wd * 0.5f, (yFrom + Top + 30f) * 0.5f), new Vector2(Wd + 4f, Top + 30f - yFrom), Edge(file, true), OCeiling);
+        AddSquare(g, "Background (ceiling fill)", new Vector2(Wd * 0.5f, (yFrom + Top + 30f) * 0.5f), new Vector2(Wd + 4f, Top + 30f - yFrom), c, OCeiling);
     }
 
     // World-fixed building row (DECISIONS 41): low fence strip (wall_tile, repeats edge to edge) with the buildings placed by hand in front
@@ -374,6 +387,69 @@ public static class PartsBackdropKit
         Range(BldX, CamMin, CamMax, out float min, out float max);
         Row(g, new[] { new Part("buildings/rail_pillar", 174) }, Y0, min, max, ORail);
         Row(g, new[] { new Part("buildings/rail_track", 0) }, Y0 + 178f / Ppu, min, max, ORail + 2);
+    }
+
+    // World-fixed elevated rail on the gameplay rail ledges (audit #6): a rail_track strip whose top is each ledge top, pillar columns stacked from
+    // below the street up to the track (one per ~10 u of track, none where a higher track's column already stands: it reads as holding both),
+    // in front of the building row (so no roof pokes through a track), behind the street props. A ground-coloured strip in front of the pillars
+    // hides their parts below the street.
+    static void RailOnLedges((float x1, float x2, float top)[] ledges, string fence)
+    {
+        Sprite track = Load("buildings/rail_track"), pillar = Load("buildings/rail_pillar");
+        if (track == null || pillar == null) { Missing("buildings/rail_track or rail_pillar"); return; }
+        var g = Props("Background (rail)");
+        float th = track.rect.height / Ppu, ph = pillar.rect.height / Ppu;
+        var cols = new List<float>();
+        foreach (var (x1, x2, top) in ledges.OrderByDescending(l => l.top))
+        {
+            Strip(g, track, x1, x2, top, ORailTrack);
+            int n = Mathf.Max(1, Mathf.RoundToInt((x2 - x1) / 10f));
+            for (int i = 0; i < n; i++)
+            {
+                float cx = Mathf.Round((x1 + (i + 0.5f) * (x2 - x1) / n) * Ppu) / Ppu;
+                if (cols.Exists(c => Mathf.Abs(c - cx) < 2.5f)) continue;
+                cols.Add(cx);
+                for (float y = top - th; y > Y0; y -= ph) Sprite1(g, "Background (rail_pillar)", pillar, new Vector2(cx, y - ph), false, ORailPillar);
+            }
+        }
+        AddSquare(g, "Background (ground front)", new Vector2(Wd * 0.5f, (Y0 - 10f) * 0.5f), new Vector2(Wd + 4f, Y0 + 10f), Edge(fence, false), OGroundFront);
+    }
+
+    // `s` tiled (SpriteDrawMode.Tiled) over [x1, x2] with its top edge at `top`, world-fixed under `parent`.
+    static SpriteRenderer Strip(Transform parent, Sprite s, float x1, float x2, float top, int order)
+    {
+        float h = s.rect.height / Ppu;
+        var t = Sprite1(parent, "Background (" + s.name + ")", s, Vector2.zero, false, order);
+        t.localPosition = new Vector3((x1 + x2) * 0.5f, top - h, 0f); // bottom-centre pivot; no odd-width shift (the strip is x2 - x1 wide)
+        var sr = t.GetComponent<SpriteRenderer>();
+        sr.drawMode = SpriteDrawMode.Tiled;
+        sr.size = new Vector2(x2 - x1, h);
+        return sr;
+    }
+
+    // Art on a gameplay ledge (audit #4): `file` (in the parts folder) tiled over the ledge [x1, x2], its top on the ledge top. Visual only;
+    // call after the backdrop kit, hide the ledge's placeholder (the collider stays). Lit like the props.
+    public static void LedgeArt(Transform root, string file, float x1, float x2, float top)
+    {
+        var s = Load(file);
+        if (s == null) { Missing(file); return; }
+        Strip(root, s, x1, x2, top, OLedge).color = new Color(DimProp, DimProp, DimProp, 1f);
+    }
+
+    // Exit door / gate art at a transition trigger (audit #8): `file` (+ looping overlay `sheet`) bottom-centre at segment-local (x, y),
+    // world-fixed, behind the characters, no collider. x on the 1/32 grid.
+    public static void ExitArt(Transform root, string file, string sheet, float fps, float x, float y)
+    {
+        var s = Load(file);
+        if (s == null) { Missing(file); return; }
+        var dim = new Color(DimProp, DimProp, DimProp, 1f);
+        Sprite1(root, "Background (exit " + Path.GetFileName(file) + ")", s, new Vector2(x, y), false, OProp).GetComponent<SpriteRenderer>().color = dim;
+        if (sheet == null) return;
+        var frames = Frames(sheet, Parts);
+        if (frames == null) { Missing(sheet); return; }
+        var o = Sprite1(root, "Background (exit " + Path.GetFileName(sheet) + ")", frames[0], new Vector2(x, y), false, OProp + 1);
+        o.GetComponent<SpriteRenderer>().color = dim;
+        Loop(o.gameObject, frames, fps);
     }
 
     static void FillBelow(string name, float fy, float dim, float toY, Color c, int order)
@@ -420,21 +496,26 @@ public static class PartsBackdropKit
         }
     }
 
-    // Most common opaque colour of the first / last pixel row (editor only: the PNGs are not readable at runtime).
+    // Most common opaque colour of the first / last pixel row (editor only: the PNGs are not readable at runtime). Pure black (outline) pixels
+    // are skipped, and a row with nothing else moves one row inward (audit #11: the black outline rows made near-black fill bands).
     static Color32 Edge(string file, bool top)
     {
         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         tex.LoadImage(File.ReadAllBytes(Parts + file + ".png"));
         var count = new Dictionary<int, int>();
-        int best = 0x14161E, bestN = 0, row = top ? tex.height - 1 : 0;
-        for (int x = 0; x < tex.width; x++)
+        int best = 0x14161E, bestN = 0;
+        for (int i = 0; i < tex.height && bestN == 0; i++)
         {
-            Color32 c = tex.GetPixel(x, row);
-            if (c.a != 255) continue;
-            int key = (c.r << 16) | (c.g << 8) | c.b;
-            count.TryGetValue(key, out int n);
-            count[key] = ++n;
-            if (n > bestN) { bestN = n; best = key; }
+            int row = top ? tex.height - 1 - i : i;
+            for (int x = 0; x < tex.width; x++)
+            {
+                Color32 c = tex.GetPixel(x, row);
+                int key = (c.r << 16) | (c.g << 8) | c.b;
+                if (c.a != 255 || key == 0) continue;
+                count.TryGetValue(key, out int n);
+                count[key] = ++n;
+                if (n > bestN) { bestN = n; best = key; }
+            }
         }
         Object.DestroyImmediate(tex);
         return new Color32((byte)(best >> 16), (byte)(best >> 8), (byte)best, 255);

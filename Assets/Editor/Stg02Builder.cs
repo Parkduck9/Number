@@ -25,10 +25,12 @@ public static class Stg02Builder
     // Placement (part, centre x): x must stay on the 1/32 grid.
     static readonly (string part, float x)[][] Row =
     {
-        // SEG-A: fence run x 16~34.75 (E-A1), then crates 29 -> fence -> ruin eave / vending -> ruin roof 5.0 (x 36.8~38.5) -> SH-A1 5.5
-        new[] { ("shop_2f", 4.5f), ("house_ac", 12.5f), ("ruin_hanok", 38.0625f), ("house_ac", 45.5f), ("shop_2f", 54f), ("ruin_hanok", 62.5f), ("shop_2f", 71f) },
-        // SEG-B: crates 7.5 -> fence run x 7~28.4 (E-B1, the old low rail) -> ruin roof 5.0; the rest is backdrop behind the rising rail
-        new[] { ("house_ac", 3.5f), ("ruin_hanok", 31.75f), ("shop_2f", 40.25f), ("house_ac", 49.5f), ("ruin_hanok", 57.25f), ("house_ac", 65f), ("shop_2f", 72.65625f) },
+        // SEG-A: fence run x 16~34.75 (E-A1), then crates 29 -> fence -> ruin eave / vending -> ruin roof 5.0 (x 36.8~38.5) -> SH-A1 5.5.
+        // Between the towers (x 46~64) only what fits: house 46.0~53.0, shop 53.0~61.4 (audit #5: nothing half-hidden behind TOWER-A1/A2).
+        new[] { ("shop_2f", 4.5f), ("house_ac", 12.5f), ("ruin_hanok", 38.0625f), ("house_ac", 49.5f), ("shop_2f", 57.1875f) },
+        // SEG-B: crates 7.5 -> fence run x 7~28.4 (E-B1, the old low rail) -> ruin roof 5.0; the rest is backdrop behind the rising rail.
+        // No building under RAIL-B3/B4 (x 56~67): their roofs (5.0 / 6.25) were floors just under the tracks (audit #6).
+        new[] { ("house_ac", 3.5f), ("ruin_hanok", 31.75f), ("shop_2f", 40.25f), ("house_ac", 49.5f), ("shop_2f", 72.65625f) },
     };
 
     // Every step is <= StepUp (1.5u) with <= 1u horizontal gap. Nothing solid hangs over a shaft (a beam above a ledge = bonk-lock).
@@ -43,7 +45,7 @@ public static class Stg02Builder
         Ledge("RIDGE-A1", A, 50f, 54f, 14.5f),
         // ---- climb 2 (x 64~76): tower block + shaft, then the top walkway back left to the gate
         Building("TOWER-A2", A, 64f, W, 14.5f),
-        Beam("ROOF-A4", A, 56f, 64f, 22.0f), // ends at the shaft edge (x 64)
+        Beam("ROOF-A4", A, 53.75f, 64f, 22.0f), // ends at the shaft edge (x 64); from x 53.75 so the gate art (x 53.8~60.7) stands on it
     }
     .Concat(Zigzag("SH-A1", A, 34f, 42f, 5.5f, 5, StepUp, false))   // 5.5 R, 7 L, 8.5 R, 10 L, 11.5 R -> tower 13.0
     .Concat(Zigzag("SH-A2", A, 64f, W, 16f, 4, StepUp, false))      // 16 R, 17.5 L, 19 R, 20.5 L (flush with ROOF-A4 at x 64) -> 22.0
@@ -110,11 +112,19 @@ public static class Stg02Builder
     static readonly Pt Spawner = new Pt("SPAWNER-B", B, 35.5f, 11.5f);
 
     // Billboards (segment-local centre): A shows 3 (review), B shows 7 (first time). Zone = the whole segment.
-    static readonly Vector2 BoardPosA = new Vector2(22f, 8.5f), BoardPosB = new Vector2(16f, 9.5f);
+    static readonly Vector2 BoardPosA = new Vector2(4.5f, 9.5f), BoardPosB = new Vector2(16f, 9.5f); // A stands on the shop_2f roof (8.25), was in the sky at (22, 8.5)
     const int BoardA = 3, BoardB = 7;
 
     static readonly Box GateA = new Box("TR-A-GATE", A, Kind.Solid, 56f, 58.5f, 22.0f, 25f); // top walkway, left end
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 30f, 33.5f, 11.5f, 15.5f); // high rail, left end
+
+    // Ledges drawn by the backdrop (no placeholder bar; colliders stay): the rail (world-fixed track on each RAIL-B ledge), the shaft girders,
+    // and the END-B stop post behind the goal gate's left wing.
+    static bool HasArt(Box b) => b.id.StartsWith("RAIL-B") || b.id.StartsWith("SH-A") || b.id == "END-B";
+
+    // Rail art spans = the RAIL-B ledges (x1, x2, top); RAIL-B7's track runs on under the END-B post to the gate's left edge (x 29).
+    static (float x1, float x2, float top)[] RailLedges() =>
+        Boxes.Where(b => b.id.StartsWith("RAIL-B")).Select(b => (b.id == "RAIL-B7" ? b.x1 - 1f : b.x1, b.x2, b.y2)).ToArray();
 
     [MenuItem("NUMBER/Build STG-02")]
     public static void Build()
@@ -127,9 +137,13 @@ public static class Stg02Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, i == B, Row[i]); // layered parts (DECISIONS 17); camera x range [15, W - 15]
+            PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, Row[i], i == B ? RailLedges() : null); // layered parts (DECISIONS 17); camera x range [15, W - 15]
         }
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL") || HasArt(b)));
+        foreach (var b in Boxes.Where(b => b.id.StartsWith("SH-A"))) PartsBackdropKit.LedgeArt(roots[b.seg], "buildings/rail_track", b.x1, b.x2, b.y2); // shaft ledges = iron girders
+        // exits (audit #8): the hanok scanner gate, door centred on the trigger (B: left wing over the END-B stop post, which it hides)
+        PartsBackdropKit.ExitArt(roots[GateA.seg], "buildings/gate_scanner", null, 0f, 57.25f, GateA.y1);
+        PartsBackdropKit.ExitArt(roots[GoalB.seg], "buildings/gate_scanner", null, 0f, 32.4375f, GoalB.y1);
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);

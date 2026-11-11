@@ -55,8 +55,9 @@ public static class Stg05Builder
         PartsBackdropKit.Palace(new GameObject("Background (boss room)").transform, RoomW, 2f);
         Todo.AddRange(StageBuildKit.Todo);
 
-        // Room: ground + walls (layer Ground; walls invisible, visible floor strip so the room reads).
-        BuildCollider("GROUND", 0f, RoomW, 0f, 2f, new Color32(0x3A, 0x3F, 0x4B, 0xFF));
+        // Room: ground + walls (layer Ground, invisible). The floor is the throne wall plate's dark bottom + the fill below it, sampled from
+        // the plate's bottom row (PartsBackdropKit.Wall), instead of the old grey strip (audit #10).
+        BuildCollider("GROUND", 0f, RoomW, 0f, 2f, null);
         BuildCollider("WALL-L", -1f, 0f, 0f, RoomH, null);
         BuildCollider("WALL-R", RoomW, RoomW + 1f, 0f, RoomH, null);
 

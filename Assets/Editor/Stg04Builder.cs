@@ -25,9 +25,11 @@ public static class Stg04Builder
     static readonly (string part, float x)[][] Row =
     {
         // SEG-A: fence runs x 7.3~23.3 (CW-A1, E-A2) and 26.7~43.7 (CW-A2); crates 8 / 23.5 step onto them. Right half = backdrop behind the shaft / blocks.
-        new[] { ("factory_hall", 4f), ("watchtower", 25f), ("factory_hall", 47f), ("watchtower", 52f), ("factory_hall", 57f), ("watchtower", 62f), ("factory_hall", 67f), ("watchtower", 72f) },
-        // SEG-B: fence run x 17.2~31.2 (CW-B1, E-B3); crates 18.5 step onto it.
-        new[] { ("watchtower", 3f), ("factory_hall", 10.5f), ("watchtower", 15.5f), ("factory_hall", 34.5f), ("watchtower", 39.5f), ("factory_hall", 44.5f), ("watchtower", 49.5f), ("factory_hall", 54.5f), ("watchtower", 59.5f), ("factory_hall", 64.5f), ("watchtower", 69.5f), ("factory_hall", 74.5f) },
+        // Nothing behind PRESS-A (x 56~60) / TOWER-A (x 72~) any more (audit #5: half-hidden parts dropped).
+        new[] { ("factory_hall", 4f), ("watchtower", 25f), ("factory_hall", 47f), ("watchtower", 52f), ("watchtower", 62f), ("factory_hall", 67f) },
+        // SEG-B: fence run x 17.2~31.2 (CW-B1, E-B3); crates 18.5 step onto it. Clear of TOWER-B (x 56~62): watchtower 51.2~54.6 (was a hall cut
+        // at x 56), the one behind the tower dropped, the right group starts at x 62 (audit #5).
+        new[] { ("watchtower", 3f), ("factory_hall", 10.5f), ("watchtower", 15.5f), ("factory_hall", 34.5f), ("watchtower", 39.5f), ("factory_hall", 44.5f), ("watchtower", 49.5f), ("watchtower", 52.875f), ("factory_hall", 65.3125f), ("watchtower", 70.3125f), ("factory_hall", 75.3125f) },
     };
 
     // Colliders (high tier drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
@@ -124,7 +126,13 @@ public static class Stg04Builder
             PartsBackdropKit.Factory(roots[i], W, H, 15f, W - 15f, i == B, Row[i]); // layered parts (DECISIONS 17); camera x range [15, W - 15]
             foreach (var w in Walls(i == A ? "A" : "B", i, W, H)) BuildCollider(roots[i], w, false); // outside the camera range
         }
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !b.id.StartsWith("GROUND")); // the floor matches the drawn ground line
+        // the floor matches the drawn ground line; the shaft ledges get prop art instead of placeholder bars (colliders unchanged, audit #4)
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("CONV-A") || b.id.StartsWith("LIFT-B")));
+        foreach (var b in Boxes.Where(b => b.id.StartsWith("CONV-A"))) PartsBackdropKit.LedgeArt(roots[b.seg], "props/conveyor", b.x1, b.x2, b.y2); // static belt (a moving one would read as a conveyor push)
+        foreach (var b in Boxes.Where(b => b.id.StartsWith("LIFT-B"))) PartsBackdropKit.LedgeArt(roots[b.seg], "buildings/rail_track", b.x1, b.x2, b.y2); // iron girders
+        // exits (audit #8): the factory scanner gate (pulsing beam) on the tower top / high run, behind the characters, no collider
+        PartsBackdropKit.ExitArt(roots[GateA.seg], "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 74.8125f, GateA.y1);
+        PartsBackdropKit.ExitArt(roots[GoalB.seg], "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 73.8125f, GoalB.y1);
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);

@@ -22,8 +22,10 @@ public static class Stg01Builder
     static readonly float[] SegH = { TallHeight, SegHeight * 1.5f }; // A climbs to y ~26, B to y ~17
     const int A = 0, B = 1;
 
-    // SEG-A background: layered, animated street backdrop (StreetBackdropKit, DECISIONS 16-2). SEG-B: no background yet, the camera colour shows.
+    // Both segments: layered, animated street backdrop (StreetBackdropKit, DECISIONS 16-2). Its street surface is the floor, so GROUND stays invisible.
     const float GroundA = 2.25f; // GROUND-A top: where the backdrop's street surface sits
+    const float GroundB = 1.0f;  // GROUND-B top: SEG-B's backdrop street surface (backdrop only: no stall / crate colliders, DECISIONS 41 is SEG-A)
+    const string ExitArt = "Assets/Art/Backgrounds/STG02_05_Parts/buildings/gate_scanner.png"; // hanok gate 220 x 140 px, bottom-centre pivot
 
     // Extra street props for climb 1 (DECISIONS 41): crate lid 3.25 at x 38.4~39.0 -> stall roof 4.75 at x 41.0~42.8 -> SH-A1-1 6.75 (x 42~46).
     static readonly (string file, float x)[] ClimbSteps = { ("crates", 38.5f), ("stall_cyan", 42f) };
@@ -48,7 +50,7 @@ public static class Stg01Builder
     .Concat(new[]
     {
         // ---- SEG-B street (x 0~41): the old opening of SEG-B (awnings, roof, pincer + ranged)
-        new Box("GROUND-B",  B, Kind.Solid, 0f,    W,     0f,    1.0f),
+        new Box("GROUND-B",  B, Kind.Solid, 0f,    W,     0f,    GroundB),
         new Box("BARREL-B",  B, Kind.OneWay, 10.0f, 10.9f, 2.2f,  2.45f),
         new Box("CRATE-B",   B, Kind.OneWay, 10.0f, 11.0f, 3.2f,  3.45f),
         new Box("AW-B1",     B, Kind.OneWay, 0f,    7.3f,  4.95f, 5.2f),
@@ -133,7 +135,8 @@ public static class Stg01Builder
             roots[i] = new GameObject(i == A ? "SEG-A" : "SEG-B").transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
         }
-        StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f, ClimbSteps); // camera x range of SEG-A = [15, W - 15]
+        StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f, ClimbSteps, hideTwinTower: true); // camera x range = [15, W - 15]
+        StreetBackdropKit.Build(roots[B], W, SegH[B], GroundB, 15f, W - 15f, null, hideTwinTower: true);       // after A: camMax is per call
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
@@ -149,6 +152,8 @@ public static class Stg01Builder
         arrival.localPosition = new Vector3(Arrival.x, Arrival.y, 0f);
         SetObj(BuildTrigger(roots[DoorA.seg], DoorA).AddComponent<LevelTransition>(), "destination", arrival);
         SetInt(BuildTrigger(roots[GoalB.seg], GoalB).AddComponent<LevelTransition>(), "mode", (int)LevelTransition.Mode.Goal);
+        BuildExitArt(roots[DoorA.seg], DoorA);
+        BuildExitArt(roots[GoalB.seg], GoalB);
 
         BuildCamera(playerGo.transform, Enumerable.Range(0, SegX.Length).Select(i => SegRect(SegX[i], W, SegH[i])).ToArray(), new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
@@ -158,6 +163,20 @@ public static class Stg01Builder
         BuildTutorial(roots[A]);
         BuildLighting(false); // night (no lamps yet)
         SaveScene(scene, Tag, ScenePath);
+    }
+
+    // Exit marker (map audit #8): the gate stands on the trigger's floor, centred on it. World layer, order -1: in front of the backdrop,
+    // behind the placeholder blocks and the characters. No collider.
+    static void BuildExitArt(Transform root, Box b)
+    {
+        var s = AssetDatabase.LoadAssetAtPath<Sprite>(ExitArt);
+        if (s == null) { Todo.Add("exit gate sprite missing: " + ExitArt); return; }
+        var go = new GameObject(b.id + " (gate art)");
+        go.transform.SetParent(root, false);
+        go.transform.localPosition = new Vector3((b.x1 + b.x2) * 0.5f, b.y1, 0f);
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = s;
+        sr.sortingOrder = -1;
     }
 
     // Helper NPC + tutorial controller (Stg01Tutorial). Idempotent: replaces an earlier copy.

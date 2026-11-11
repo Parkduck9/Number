@@ -19,8 +19,9 @@ public static class StreetBackdropKit
     const float SkylineLift = 82f;             // px: the manifest composition puts the skyline 82 px above the mid layer's bottom (towers stand above the roofs)
     internal static Vector2 camMax; // shared with PartsBackdropKit (STG-02..05)
 
-    // x / y camera-follow fractions
-    static readonly Vector2 SkyF = new Vector2(0.9f, 0.3f), SkylineF = new Vector2(0.6f, 0.25f), MidF = new Vector2(0.3f, 0.2f);
+    // x / y camera-follow fractions. Sky / skyline y 0.8 / 0.7 (map audit #2): they follow a climb in a tall segment instead of sinking out of
+    // view (one-screen segments such as STG-00 never move the camera up, so y does not matter there).
+    static readonly Vector2 SkyF = new Vector2(0.9f, 0.8f), SkylineF = new Vector2(0.6f, 0.7f), MidF = new Vector2(0.3f, 0.2f);
     // Layer origin on the street: left edge of the 810 px composition (segment-local x) = where the preview composition sits.
     const float LeftEdge = 2.5f;
     // Draw order inside the Background sorting layer (AssignSortingLayers puts every "Background*" object there).
@@ -47,7 +48,8 @@ public static class StreetBackdropKit
     // groundY = gameplay ground height (segment-local), camMinX..camMaxX = camera x range (segment-local) for the tile coverage.
     // steps (STG-01 SEG-A, DECISIONS 41): extra stalls / crates (file, segment-local x) on the street; when given, every stall roof and crate lid
     // in the segment also gets a one-way collider (low tier platforms = the drawn surfaces). Null = backdrop only (STG-00).
-    public static void Build(Transform root, float width, float top, float groundY, float camMinX, float camMaxX, (string file, float x)[] steps = null)
+    // hideTwinTower: cut the broadcast-screen tower out of the mirrored mid tiles (map audit #7), so only the real one shows.
+    public static void Build(Transform root, float width, float top, float groundY, float camMinX, float camMaxX, (string file, float x)[] steps = null, bool hideTwinTower = false)
     {
         walkRoot = steps != null ? root : null;
         foreach (string f in Directory.GetFiles(Dir, "*.png")) AssetDatabase.ImportAsset(f.Replace('\\', '/'), ImportAssetOptions.ForceSynchronousImport); // settings applied before loading
@@ -83,6 +85,11 @@ public static class StreetBackdropKit
         // ---- skyline (+ window twinkle), repeated across the segment
         var skylineG = Group(root, "Background (skyline)", SkylineF, camOrigin);
         Range(SkylineF.x, camMinX, camMaxX, out float sMin, out float sMax);
+        // fill under the skyline (its bottom-row colour): it rises faster than the mid layer, so a climb would show the sky below it.
+        // Hidden behind the mid layer while the camera is low (the mid art is opaque up to 130 px, the skyline starts at 82 px).
+        float ySkyline = y0 + SkylineLift / Ppu;
+        var skylineBottom = Runs(Dir + "far_skyline.png", true).OrderByDescending(r => r.end - r.start).First();
+        AddSquare(skylineG, "Background (skyline fill)", new Vector2(width * 0.5f, (ySkyline - 10f) * 0.5f), new Vector2(width + 4f, ySkyline + 10f), skylineBottom.c, OSkyline);
         Tiles(skylineG, "Background (far skyline)", skyline, null, 0f, cx0, y0 + SkylineLift / Ppu, sMin, sMax, false, OSkyline);
         Tiles(skylineG, "Background (window twinkle)", null, Frames("far_window_twinkle_4f"), 1f, cx0, y0 + SkylineLift / Ppu, sMin, sMax, false, OTwinkle);
 
@@ -95,6 +102,7 @@ public static class StreetBackdropKit
         Transform tile0 = Tiles(midG, "Background (mid buildings)", mid, null, 0f, cx0, y0, mMin, mMax, true, OMid);
         Tiles(midG, "Background (lantern glow)", null, Frames("mid_lantern_glow_4f"), 2f, cx0, y0, mMin, mMax, true, OGlow);
         if (tile0 != null) BroadcastNumber(tile0);
+        if (hideTwinTower) HideTwinTowers(midG, mid);
 
         // ---- props on the street plane (world-fixed), positions from the preview composition
         var props = new GameObject("Background (props)").transform;
@@ -118,6 +126,13 @@ public static class StreetBackdropKit
         // drones cross the whole segment and wrap, bobbing 1 px
         Drone(props, "drone_scout_2f", 10f, px(110f), py(185f), 1.2f, width, OFx);
         Drone(props, "drone_delivery_2f", 10f, px(445f), py(178f), -0.8f, width, OFx);
+        // segments taller than a screen: a drone every 8 u further up, so the climb does not look into an empty sky (map audit #2)
+        if (top > SegHeight)
+        {
+            int n = 0;
+            for (float hy = py(185f) + 8f; hy < top - 2f; hy += 8f, n++)
+                Drone(props, n % 2 == 0 ? "drone_delivery_2f" : "drone_scout_2f", 10f, px(n % 2 == 0 ? 600f : 250f), hy, n % 2 == 0 ? 0.9f : -1.1f, width, OFx);
+        }
     }
 
     // ------------------------------------------------------------------ pieces
@@ -243,6 +258,34 @@ public static class StreetBackdropKit
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sortingOrder = ONumber;
         go.AddComponent<BroadcastScreen>();
+    }
+
+    // mid_buildings.png: the broadcast-screen tower as px rects (x, y from the bottom, w, h), stepped to hug the roofs in front of its base.
+    static readonly RectInt[] TowerPx =
+    {
+        new RectInt(452, 180, 204, 88), new RectInt(474, 167, 166, 13), new RectInt(474, 158, 138, 9),
+        new RectInt(474, 146, 116, 12), new RectInt(476, 141, 116, 5), new RectInt(494, 131, 98, 10),
+    };
+
+    // A flipped mid tile repeats the tower (blank screen) 16 u from the real one (map audit #7). Flipped mid tiles and their glow overlays
+    // render outside SpriteMasks laid over their own tower (children of the flipped tile, so the rects mirror with it); the skyline shows through.
+    static void HideTwinTowers(Transform midG, Sprite mid)
+    {
+        float half = mid.rect.width * 0.5f;
+        foreach (Transform t in midG)
+        {
+            if (t.localScale.x > 0f) continue;
+            t.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
+            if (!t.name.EndsWith("(mid buildings)")) continue;
+            foreach (var r in TowerPx)
+            {
+                var go = new GameObject("Background (twin tower mask)");
+                go.transform.SetParent(t, false);
+                go.transform.localPosition = new Vector3((r.x + r.width * 0.5f - half) / Ppu, (r.y + r.height * 0.5f) / Ppu, 0f);
+                go.transform.localScale = new Vector3(r.width / Ppu, r.height / Ppu, 1f) / Square.bounds.size.x; // as AddSquare
+                go.AddComponent<SpriteMask>().sprite = Square;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ pixel sampling (editor only; the PNGs are not readable at runtime)
