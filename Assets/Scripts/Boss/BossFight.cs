@@ -1,6 +1,8 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 // STG-05 final boss v2 (DECISIONS 23 / 21, docs/design/impl/boss-v2.md): a huge fused machine fills the room background; only its
 // parts attack. Director (coroutine): hologram shows attack icon + N, the part glows (tell) -> attack -> its opening -> rest -> next.
@@ -1185,8 +1187,35 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             while (GameFlow.InputLocked) yield return null;
         }
         else Debug.LogWarning("[BossFight] Ending file missing/not talk mode, or no DialoguePlayer; going straight to the title.");
+        yield return EndingIllustration();
         GameFlow.InputLocked = ownLock = false;
         StageFlow.LoadTitle();
+    }
+
+    // Full-screen painterly ending image: fade in, hold (any key/click skips after 1 s), fade out. Missing art = skipped.
+    IEnumerator EndingIllustration()
+    {
+        Sprite art = DraftHud.Ui("ending_illustration");
+        if (art == null) yield break;
+        Canvas canvas = UiKit.CreateCanvas("EndingIllustrationCanvas", null, 300);
+        UiKit.FilledImage(UiKit.Stretch("Bars", canvas.transform), new Color(0.02f, 0.03f, 0.08f, 1f)); // letterbox colour
+        Image img = UiKit.FilledImage(UiKit.Stretch("Art", canvas.transform), Color.white);
+        img.sprite = art;
+        img.preserveAspect = true;
+        CanvasGroup group = canvas.gameObject.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+        for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime) { group.alpha = t; yield return null; }
+        group.alpha = 1f;
+        for (float t = 0f; t < 4f; t += Time.unscaledDeltaTime)
+        {
+            bool press = (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) ||
+                         (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
+            if (t > 1f && press) break;
+            yield return null;
+        }
+        for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime) { group.alpha = 1f - t; yield return null; }
+        group.alpha = 0f;
+        Destroy(canvas.gameObject);
     }
 
     void BreakNear(Vector2 centre, Vector2 size)

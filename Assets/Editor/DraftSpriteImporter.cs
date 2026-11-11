@@ -9,7 +9,7 @@ using UnityEngine;
 public class DraftSpriteImporter : AssetPostprocessor
 {
     const float StripFeetGap = 2f; // px: every 64x64 strip has its feet on row 61, two empty rows below
-    public override uint GetVersion() => 5; // 4: UI kit 9-slice borders, crosshair pivots, dialogue_next_2f frames; 5: bullet_*_2f 16x16 center
+    public override uint GetVersion() => 6; // 6: ending_illustration bilinear; 4: UI kit 9-slice borders, crosshair pivots, dialogue_next_2f frames; 5: bullet_*_2f 16x16 center
 
     // UI kit 9-slice borders (docs/design/concept/ui_kit/borders.json: left, right, top, bottom in source px) as Unity spriteBorder (x=left, y=bottom, z=right, w=top).
     static readonly System.Collections.Generic.Dictionary<string, Vector4> NineSlice = new System.Collections.Generic.Dictionary<string, Vector4>
@@ -38,13 +38,13 @@ public class DraftSpriteImporter : AssetPostprocessor
         var ti = (TextureImporter)assetImporter;
         ti.textureType = TextureImporterType.Sprite;
         ti.spritePixelsPerUnit = 32f;
-        ti.filterMode = FilterMode.Point;
+        string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+        ti.filterMode = name == "ending_illustration" ? FilterMode.Bilinear : FilterMode.Point; // painterly 1024x576 image, not pixel art
         ti.textureCompression = TextureImporterCompression.Uncompressed;
         ti.mipmapEnabled = false;
         ti.alphaIsTransparency = true;
         ti.npotScale = TextureImporterNPOTScale.None;
 
-        string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
         bool digits = name.Contains("_digits_"), arcs = name.Contains("_arcs_"), next2 = name == "dialogue_next_2f";
         if (!strip && !digits && !arcs && !next2)
         {
