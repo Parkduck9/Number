@@ -85,7 +85,7 @@
    - 볼 것: 세로 맵 동선, 갈고리 줄 손맛, 저격수·안드로이드 막기, 스포너·전멸 클리어, 층 분리 배경, 좌클릭 돌진·패링, 렉(F3).
 2. **팀원 이름·역할·만 19세 이상 확인 (D9)** — CREDITS.md Team, SUBMISSION_PAGE.md. **없으면 제출 불가.** 기한 11/13 정오.
 3. **대사 확인** — [design/DIALOGUE_DRAFT.md](design/DIALOGUE_DRAFT.md) (안 고치면 초안 그대로)
-4. **Gemini 원본 요청** — [design/concept/GEMINI_REQUESTS.md](design/concept/GEMINI_REQUESTS.md): **#0 러다이트 게임 스프라이트(다시, 최우선)**, #1 저격수 스프라이트, #2 엔딩 일러스트 2장, #3 STG-01 SEG-B 층 분리 배경.
+4. **기계 소품 3종 시안 승인** (랙 다듬은 뒤) — `docs/design/concept/machine_props/`. 남은 Gemini 원본: 체크포인트 표식, 엔딩 일러스트 1장, STG-01 SEG-B 배경 (Claude가 앱 브라우저로 직접 뽑을 수 있음, Gemini 로그인만 필요).
 5. **엔딩 대사 다시 쓰기** — 엔딩은 하나(기계 부수기). 지금 대사는 Claude 초안(`Assets/Data/Dialogue/ending_01_placeholder.txt`, DIALOGUE_DRAFT.md).
 6. 미추적 쓰레기(`Number/`, `Unity Game Jam.txt`, 옛 콘셉트 샘플)는 그대로 둔다.
 
@@ -101,19 +101,27 @@
 
 > ⛔ 기능 동결이 11/11 24:00이라 2·6은 새 기능에 가깝다. 동결을 넘기면 사용자에게 먼저 확인.
 
-### 🤖 Claude (Opus 구현 → Fable 검수)
-| 할 일 | 메모 |
-|---|---|
-| 플레이 피드백 반영 | 가장 먼저. ⛔ 기능 동결 11/11 24:00 |
-| **WebGL 재빌드 + 브라우저 확인** | 마지막 확인(WEBGL-BUILD-1, 13.8MB) 뒤로 보스 v2·주사위·애니메이션이 들어와서 다시 해야 함 |
-| 엔딩 대사·일러스트 | 사용자 대사 / Gemini #2 오면 연결 |
-| 대사 넣기, 이펙트 미세 조정 | 사용자 확인 후 |
+### 🤖 Claude — 여기서부터 이어서 (11/11 오후 기준, 커밋 `1b8f155` 이후)
+| 순서 | 할 일 | 메모 |
+|---|---|---|
+| 1 | **기계 소품 3종 넣기** (보스 엔딩에서 부수는 랙·감시 화면·케이블) | 시안: `docs/design/concept/machine_props/` (`prop_rack.png` 48×96, `prop_screen.png` 64×80, `prop_cables.png` 80×40, Gemini → Codex). **사용자 미승인.** 화면·케이블은 괜찮고 **랙 테두리 조각이 자잘한 점으로 지저분함(AI 티) → Codex로 단순한 반복 무늬로 다듬은 뒤** 사용자 확인 → `Assets/Resources/BossArt/`에 넣고 `Boss/BossArt.cs`의 `Props[0..2]`(RackPix/ScreenPix/CablesPix)가 그림이 있으면 그걸 쓰게 (없으면 코드 그림 유지). PPU 32, 피벗 아래 가운데. CREDITS 기록 |
+| 2 | 플레이 피드백(DECISIONS 34) 손맛 확인 | 사용자 플레이 후 조정 |
+| 3 | 남은 에셋 (Gemini → Codex, 사용자 요청 시) | 체크포인트 표식(지금 색만 바뀌는 네모), 엔딩 일러스트 1장, STG-01 SEG-B 배경 |
+| 4 | 엔딩 대사·일러스트 연결 | 사용자 대사 오면 |
+| 5 | 정리(선택) | 안 쓰게 된 Shift 돌진 코드(`State.Dash`·`TryPlanDashBehind` 등)와 "RMB issen" 주석이 남아 있음. 동결 중이라 지우지 않음 |
 
+**에셋 만드는 방법 (AI 티 줄이기, [design/AI_IMAGE_RESEARCH.md](design/AI_IMAGE_RESEARCH.md))**
+- Gemini에는 **배경·소품만**, 인물·글자 없이. 광원 하나, 12색 이하, 네온 금지를 프롬프트에 쓴다.
+- Codex(`gpt-6.1-sol`, reasoning high)가 원래 픽셀 크기로 다시 그림 + **고정 팔레트**(`Assets/Art/Palette/number_palette.png`) + Gemini 워터마크(오른쪽 아래 ✦)·가짜 글자 제거. 인물은 **실제 게임 스프라이트를 합성**.
+- Gemini 이미지 가져오기: 앱 내장 브라우저에서 gemini.google.com(로그인 필요) → 다운로드 버튼은 저장이 안 됨. 대신 페이지에서 canvas로 PNG를 만들어 `http://127.0.0.1:8766/#name=<파일>&data=<base64>`로 넘기고, 로컬 수신 서버(파이썬, scratchpad의 `recv.py` — 새 PC에서는 다시 만들어야 함)가 저장했다. Gemini CLI는 개인 계정 지원이 끝나서 못 씀.
+- Codex 호출은 프롬프트를 파일로 만들어 `Get-Content -Raw file | codex exec -m gpt-6.1-sol -c model_reasoning_effort=high -s workspace-write -` (PowerShell에 프롬프트를 바로 넣으면 따옴표가 깨짐).
+
+*끝난 것(11/11): 피드백 6개(DECISIONS 34, Fable 검수 지적 4개 반영), 부적 타이틀 로고, 키아트(타이틀 배경·WebGL 로딩 화면·itch 표지 `docs/design/concept/keyart/itch_cover_630x500.png`), 시민 걷기 6프레임, WebGL 빌드 13.6MB 통과(WEBGL-BUILD-2).*
 *끝난 것(11/10): 애니메이션 v2 연결, 4096px 넘는 띠 재포장, STG-02·04 끝 소품, 보스 v2, 주사위, 일섬, 기계 부수기 엔딩(초안 대사).*
 *참고: `Assets/Art/Palette/previews/sword-slash_quant4x.png`(2720×4168)는 미리보기용이라 게임에서 안 쓰면 빌드에 안 들어간다.*
 
 ### 기능 동결 이후 (11/12~)
-최종 WebGL 빌드 → itch.io 업로드(사용자) → CREDITS·AI 공개 최종 → 제출 체크리스트([qa/SUBMISSION_CHECKLIST.md](qa/SUBMISSION_CHECKLIST.md)).
+최종 WebGL 빌드 → itch.io 업로드(사용자, 표지는 `itch_cover_630x500.png`) → CREDITS·AI 공개 최종 → 제출 체크리스트([qa/SUBMISSION_CHECKLIST.md](qa/SUBMISSION_CHECKLIST.md)).
 
 ---
 

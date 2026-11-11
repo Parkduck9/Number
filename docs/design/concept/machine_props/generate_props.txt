@@ -1,0 +1,445 @@
+/* DRAFT ONLY, pending user approval. No Unity assets or credits are modified.
+ * Run: node docs/design/concept/machine_props/generate_props.txt
+ * Requires Node.js only; uses no paid service, generation API or external art.
+ * Source: machine_props_gemini.png, user-supplied Gemini concept, 1024x572.
+ * Conversion: source-resolution cutout -> dominant RGB-bin vote per native cell
+ * -> fixed project palette -> explicit native-grid cleanup -> nearest 4x preview.
+ * Native sizes: rack 48x96, screen 64x80, cables 80x40. PPU 32.
+ * Bottom-centre registration: opaque pixels reach the last row. PNG files do
+ * not encode Unity pivot/PPU metadata; these drafts are not imported into Unity.
+ * Palette: fixed number_palette.png subset plus exactly two extra colours:
+ * #4B3631 (dark carved wood), #837044 (aged brass). Shared outline #080B14.
+ * Final unique opaque colours: rack 10, screen 7, cables 9; union 13.
+ * Screen glow #42A9BD; screen interior #080B14. Paper #D7B4A0, red #7F1A22.
+ * Native source fits: rack 48x93 at (0,3); screen 54x80 at (5,0);
+ * cables 74x40 at (3,0). Their canvases remain the exact requested sizes.
+ * Source pixel edges contain antialias variations rather than one recoverable
+ * exact grid. Final native dimensions define the grid; no nearest downsample.
+ * Source geometry is the reference for local native redraws where voting
+ * makes fine electronics/cable paths unreadable. Outer carvings retain votes.
+ * Verified at native size, nearest 4x, and composited with boss_body.png on a
+ * temporary 960x540 navy canvas (visual review only, not a Unity Play test).
+ * Palette notes and cleanup coordinates are recorded below for reproducibility.
+ */
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const zlib = require('node:zlib');
+const assert = require('node:assert/strict');
+const OUT = __dirname;
+const ROOT = path.resolve(OUT, '../../../..');
+const SOURCE = path.join(OUT, 'machine_props_gemini.png');
+const PALETTE = path.join(ROOT, 'Assets/Art/Palette/number_palette.png');
+const BG = [11,16,38,255];
+const rgba = hex => [...Buffer.from(hex.replace('#',''), 'hex'),255];
+
+function crc(buf) {
+  let c = 0xffffffff;
+  for (const v of buf) { c ^= v; for (let k=0;k<8;k++) c=(c>>>1)^((c&1)?0xedb88320:0); }
+  return (c^0xffffffff)>>>0;
+}
+function chunk(tag,data) {
+  const t=Buffer.from(tag), n=Buffer.alloc(4), c=Buffer.alloc(4);
+  n.writeUInt32BE(data.length); c.writeUInt32BE(crc(Buffer.concat([t,data])));
+  return Buffer.concat([n,t,data,c]);
+}
+function canvas(w,h,color) {
+  const im={w,h,p:Buffer.alloc(w*h*4)};
+  if(color) for(let i=0;i<im.p.length;i+=4) im.p.set(color,i);
+  return im;
+}
+function readPNG(filename) {
+  const data=fs.readFileSync(filename), parts=[];
+  let pos=8,w,h,channels;
+  assert.equal(data.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+  while(pos<data.length) {
+    const n=data.readUInt32BE(pos), tag=data.toString('ascii',pos+4,pos+8);
+    const b=data.subarray(pos+8,pos+8+n);
+    if(tag==='IHDR') {
+      w=b.readUInt32BE(0); h=b.readUInt32BE(4);
+      assert.equal(b[8],8); assert(b[9]===2||b[9]===6);
+      assert.deepEqual([...b.subarray(10)],[0,0,0]); channels=b[9]===2?3:4;
+    }
+    if(tag==='IDAT') parts.push(b);
+    pos+=n+12;
+  }
+  const im=canvas(w,h), raw=zlib.inflateSync(Buffer.concat(parts)), decoded=Buffer.alloc(w*h*channels);
+  for(let y=0;y<h;y++) {
+    const f=raw[y*(w*channels+1)]; assert(f<=4);
+    for(let x=0;x<w*channels;x++) {
+      const a=x>=channels?decoded[y*w*channels+x-channels]:0;
+      const b=y?decoded[(y-1)*w*channels+x]:0;
+      const c=y&&x>=channels?decoded[(y-1)*w*channels+x-channels]:0, p=a+b-c;
+      const ds=[Math.abs(p-a),Math.abs(p-b),Math.abs(p-c)];
+      const pred=[0,a,b,Math.floor((a+b)/2),[a,b,c][ds.indexOf(Math.min(...ds))]][f];
+      decoded[y*w*channels+x]=(raw[y*(w*channels+1)+x+1]+pred)&255;
+    }
+  }
+  for(let i=0;i<w*h;i++) im.p.set(channels===4?decoded.subarray(i*4,i*4+4):[...decoded.subarray(i*3,i*3+3),255],i*4);
+  return im;
+}
+function encodePNG(im) {
+  const ih=Buffer.alloc(13), rows=Buffer.alloc((im.w*4+1)*im.h);
+  ih.writeUInt32BE(im.w); ih.writeUInt32BE(im.h,4); ih[8]=8; ih[9]=6;
+  for(let y=0;y<im.h;y++) im.p.copy(rows,y*(im.w*4+1)+1,y*im.w*4,(y+1)*im.w*4);
+  return Buffer.concat([Buffer.from('89504e470d0a1a0a','hex'),chunk('IHDR',ih),
+    chunk('IDAT',zlib.deflateSync(rows,{level:9})),chunk('IEND',Buffer.alloc(0))]);
+}
+function get(im,x,y) { return [...im.p.subarray((y*im.w+x)*4,(y*im.w+x)*4+4)]; }
+function put(im,x,y,color) {
+  assert(Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<im.w&&y>=0&&y<im.h);
+  im.p.set(color,(y*im.w+x)*4);
+}
+function rect(im,x,y,w,h,color) {
+  for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) put(im,xx,yy,color);
+}
+function line(im,points,color) {
+  for(let i=1;i<points.length;i++) {
+    let [x,y]=points[i-1]; const [bx,by]=points[i];
+    const dx=Math.abs(bx-x),sx=x<bx?1:-1,dy=-Math.abs(by-y),sy=y<by?1:-1;
+    let err=dx+dy;
+    while(true) {
+      put(im,x,y,color); if(x===bx&&y===by) break;
+      const t=2*err; if(t>=dy){err+=dy;x+=sx;} if(t<=dx){err+=dx;y+=sy;}
+    }
+  }
+}
+function paste(dst,src,dx,dy) {
+  for(let y=0;y<src.h;y++) for(let x=0;x<src.w;x++) {
+    const c=get(src,x,y); if(c[3]) put(dst,x+dx,y+dy,c);
+  }
+}
+function enlarge(im,n) {
+  const big=canvas(im.w*n,im.h*n);
+  for(let y=0;y<big.h;y++) for(let x=0;x<big.w;x++) put(big,x,y,get(im,Math.floor(x/n),Math.floor(y/n)));
+  return big;
+}
+function colorCounts(im) {
+  const counts=new Map();
+  for(let i=0;i<im.p.length;i+=4) if(im.p[i+3]) {
+    const c=im.p.subarray(i,i+3).toString('hex'); counts.set(c,(counts.get(c)||0)+1);
+  }
+  return [...counts.entries()].sort((a,b)=>b[1]-a[1]);
+}
+const source=readPNG(SOURCE), swatch=readPNG(PALETTE);
+assert.deepEqual([source.w,source.h],[1024,572]);
+const palette=[...new Set(colorCounts(swatch).map(([c])=>c))].map(rgba);
+if(process.argv.includes('--inspect')) {
+  console.log('Project palette:',palette.map(c=>Buffer.from(c.slice(0,3)).toString('hex')));
+  for(const [x,y] of [[0,0],[400,0],[500,100],[400,300],[600,450],[650,450],[935,485],[940,500],[110,65],[98,100],[97,200],[150,140],[700,480],[750,450]])
+    console.log(x,y,get(source,x,y));
+  console.log('Source frequent RGB:',colorCounts(source).slice(0,30));
+  const boss=readPNG(path.join(ROOT,'Assets/Resources/BossArt/boss_body.png'));
+  console.log('Boss frequent RGB:',colorCounts(boss).slice(0,20));
+  process.exit(0);
+}
+
+// Two explicit extra colours preserve the carved wood and muted brass without
+// promoting the palette's bright gold to the dominant material. No other extras.
+const EXTRA = ['4b3631','837044']; // dark carved wood; aged brass
+const C=Object.fromEntries(Object.entries({
+  ink:'080b14', deep:'1a1d33', navy:'2d3050', blue:'3f4a6e',
+  metal:'62677d', paper:'d7b4a0', red:'7f1a22', redShade:'7a3a3c',
+  teal:'226076', cyan:'42a9bd', green:'46705f', ochre:'b8862e',
+  wood:EXTRA[0], brass:EXTRA[1]
+}).map(([name,hex])=>[name,rgba(hex)]));
+const allowed=Object.values(C);
+for(const c of allowed) assert([...palette,...EXTRA.map(rgba)].some(p=>p.slice(0,3).every((v,i)=>v===c[i])));
+function nearest(c) {
+  let best,dist=Infinity;
+  for(const p of allowed) {
+    const d=(c[0]-p[0])**2+(c[1]-p[1])**2+(c[2]-p[2])**2;
+    if(d<dist){dist=d;best=p;}
+  }
+  return best;
+}
+function background(c) {
+  // Measured original backdrop is mostly #0a1124 / #0b1225, not exact #0b1026.
+  // Flood only connected backdrop pixels, preserving enclosed dark materials.
+  const [r,g,b]=c;
+  return r<=23 && g<=29 && b>=24 && b<=49 && b-g>=5 && g-r>=-3;
+}
+function cutout(bounds) {
+  const [x0,y0,x1,y1]=bounds, im=canvas(x1-x0,y1-y0);
+  for(let y=0;y<im.h;y++) for(let x=0;x<im.w;x++) put(im,x,y,get(source,x+x0,y+y0));
+  const seen=new Uint8Array(im.w*im.h),queue=[];
+  function add(x,y) {
+    if(x<0||y<0||x>=im.w||y>=im.h) return;
+    const i=y*im.w+x;
+    if(!seen[i]&&background(get(im,x,y))){seen[i]=1;queue.push(i);}
+  }
+  for(let x=0;x<im.w;x++){add(x,0);add(x,im.h-1);}
+  for(let y=0;y<im.h;y++){add(0,y);add(im.w-1,y);}
+  for(let q=0;q<queue.length;q++) {
+    const i=queue[q],x=i%im.w,y=Math.floor(i/im.w);
+    add(x-1,y);add(x+1,y);add(x,y-1);add(x,y+1);
+  }
+  for(let i=0;i<seen.length;i++) if(seen[i]) im.p.fill(0,i*4,i*4+4);
+  removeSmallComponents(im,50);
+  const box=bbox(im);
+  const trimmed=canvas(box[2]-box[0]+1,box[3]-box[1]+1);
+  for(let y=0;y<trimmed.h;y++) for(let x=0;x<trimmed.w;x++) put(trimmed,x,y,get(im,x+box[0],y+box[1]));
+  return {im:trimmed,origin:[x0+box[0],y0+box[1]]};
+}
+function removeSmallComponents(im,min) {
+  const seen=new Uint8Array(im.w*im.h);
+  for(let start=0;start<seen.length;start++) if(!seen[start]&&im.p[start*4+3]) {
+    const group=[start];seen[start]=1;
+    for(let j=0;j<group.length;j++) {
+      const i=group[j],x=i%im.w,y=Math.floor(i/im.w);
+      for(const [xx,yy] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
+        const k=yy*im.w+xx;
+        if(xx>=0&&yy>=0&&xx<im.w&&yy<im.h&&!seen[k]&&im.p[k*4+3]){seen[k]=1;group.push(k);}
+      }
+    }
+    if(group.length<min) for(const i of group) im.p.fill(0,i*4,i*4+4);
+  }
+}
+function bbox(im) {
+  let x0=im.w,y0=im.h,x1=-1,y1=-1;
+  for(let y=0;y<im.h;y++) for(let x=0;x<im.w;x++) if(im.p[(y*im.w+x)*4+3]) {
+    x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);
+  }
+  assert(x1>=0,'Empty cutout');return [x0,y0,x1,y1];
+}
+function dominantFit(cut,w,h) {
+  const src=cut.im, scale=Math.min(w/src.w,h/src.h);
+  const fw=Math.round(src.w*scale),fh=Math.round(src.h*scale);
+  const dx=Math.floor((w-fw)/2),dy=h-fh,out=canvas(w,h);
+  for(let y=0;y<fh;y++) for(let x=0;x<fw;x++) {
+    const xa=Math.floor(x*src.w/fw),xb=Math.floor((x+1)*src.w/fw);
+    const ya=Math.floor(y*src.h/fh),yb=Math.floor((y+1)*src.h/fh);
+    const bins=new Map();let opaque=0;
+    for(let yy=ya;yy<yb;yy++) for(let xx=xa;xx<xb;xx++) {
+      const c=get(src,xx,yy);if(!c[3])continue;opaque++;
+      // RGB 5-bit bins absorb source antialias variations; vote BEFORE mapping.
+      const key=((c[0]>>3)<<10)|((c[1]>>3)<<5)|(c[2]>>3);
+      if(!bins.has(key)) bins.set(key,{n:0,colors:new Map()});
+      const bin=bins.get(key),rgb=c.slice(0,3).join(',');
+      bin.n++;bin.colors.set(rgb,(bin.colors.get(rgb)||0)+1);
+    }
+    if(opaque<0.5*(xb-xa)*(yb-ya))continue;
+    const bin=[...bins.values()].sort((a,b)=>b.n-a.n)[0];
+    const rgb=[...bin.colors].sort((a,b)=>b[1]-a[1])[0][0].split(',').map(Number);
+    put(out,x+dx,y+dy,nearest(rgb));
+  }
+  removeSmallComponents(out,3);
+  console.log('Cutout / fit:',cut.origin,[src.w,src.h],'->',[fw,fh],'offset',[dx,dy]);
+  return out;
+}
+function outline(im) {
+  const copy=Buffer.from(im.p);
+  for(let y=0;y<im.h;y++) for(let x=0;x<im.w;x++) if(copy[(y*im.w+x)*4+3]) {
+    if([[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([xx,yy])=>
+      xx<0||yy<0||xx>=im.w||yy>=im.h||!copy[(yy*im.w+xx)*4+3])) put(im,x,y,C.ink);
+  }
+}
+
+function poly(im,points,color) {
+  for(let y=Math.min(...points.map(p=>p[1]));y<=Math.max(...points.map(p=>p[1]));y++)
+    for(let x=Math.min(...points.map(p=>p[0]));x<=Math.max(...points.map(p=>p[0]));x++) {
+      let inside=false;
+      for(let i=0,j=points.length-1;i<points.length;j=i++) {
+        const [ax,ay]=points[i],[bx,by]=points[j];
+        if((ay>y+.5)!==(by>y+.5)&&x+.5<(bx-ax)*(y+.5-ay)/(by-ay)+ax)inside=!inside;
+      }
+      if(inside)put(im,x,y,color);
+    }
+  line(im,[...points,points[0]],color);
+}
+function panel(im,x,y,w,h,fill) {
+  rect(im,x,y,w,h,C.ink);rect(im,x+1,y+1,w-2,h-2,fill);
+}
+function simplify(im) {
+  // Merge isolated colour noise; preserve silhouette and deliberate accents
+  // by doing this before the coordinate-specific hand cleanup below.
+  const original={...im,p:Buffer.from(im.p)};
+  for(let y=1;y<im.h-1;y++) for(let x=1;x<im.w-1;x++) {
+    const c=get(original,x,y);if(!c[3])continue;
+    const neighbors=[];
+    for(let yy=y-1;yy<=y+1;yy++) for(let xx=x-1;xx<=x+1;xx++)
+      if(xx!==x||yy!==y){const n=get(original,xx,yy);if(n[3])neighbors.push(n);}
+    if(neighbors.length!==8||neighbors.some(n=>n.every((v,i)=>v===c[i])))continue;
+    const counts=new Map();
+    for(const n of neighbors){const k=n.join(',');counts.set(k,(counts.get(k)||0)+1);}
+    const [key,n]=[...counts].sort((a,b)=>b[1]-a[1])[0];
+    if(n>=4)put(im,x,y,key.split(',').map(Number));
+  }
+}
+function cleanRack(im) {
+  // Original source registration: (96,59), 235x454 -> 48x93 at (0,3).
+  // The source's fine wood grain and circuitry have no recoverable uniform
+  // native grid. Redraw their measured structural clusters, not the silhouette.
+  // Retain voted source carvings and grain; merge pale source noise into brass.
+  for(let y=3;y<96;y++) for(let x=0;x<48;x++) {
+    const c=get(im,x,y);
+    if(c[3]&&(x<8||x>39||y<10||y>87)) {
+      if(c.every((v,i)=>v===C.paper[i])||c.every((v,i)=>v===C.ochre[i]))put(im,x,y,C.brass);
+      if(c.every((v,i)=>v===C.metal[i])||c.every((v,i)=>v===C.blue[i]))put(im,x,y,C.wood);
+    }
+  }
+  // Remove broken pixels between case and equipment, retaining the source frame.
+  rect(im,7,15,34,74,C.ink);
+  // Muted dancheong lintel follows the source's two ornament blocks.
+  rect(im,8,10,32,5,C.deep);
+  rect(im,19,11,11,2,C.teal);
+  for(const x of [10,32]) {
+    line(im,[[x,11],[x+2,12],[x,13]],C.green);
+    line(im,[[x+3,11],[x+5,12],[x+3,13]],C.redShade);
+  }
+  // Six clean server faces; status lights stay subordinate to the boss HUD.
+  rect(im,8,16,32,71,C.deep);
+  line(im,[[8,17],[8,86]],C.metal);
+  line(im,[[39,17],[39,86]],C.navy);
+  for(let i=0;i<6;i++) {
+    const y=17+i*5;
+    panel(im,10,y,28,5,C.deep);
+    line(im,[[11,y+1],[36,y+1]],C.navy);
+    for(const x of [13,16,19,22])put(im,x,y+2,C.brass);
+    rect(im,29,y+2,2,1,C.green);rect(im,32,y+2,2,1,C.green);
+    put(im,35,y+2,i===2?C.red:C.redShade);
+  }
+  // Lower equipment: grouped modules, a few purposeful leads, no tiny glyphs.
+  panel(im,10,47,28,23,C.ink);
+  panel(im,11,48,12,5,C.deep);panel(im,24,48,13,5,C.deep);
+  line(im,[[13,50],[20,50]],C.navy);line(im,[[26,50],[34,50]],C.navy);
+  panel(im,11,54,7,13,C.deep);panel(im,19,54,11,13,C.deep);panel(im,31,54,6,13,C.deep);
+  for(const x of [13,15,21,24,27,33])line(im,[[x,56],[x,63]],C.navy);
+  line(im,[[14,53],[14,55],[23,55],[23,58],[30,58],[30,52],[33,52]],C.brass);
+  line(im,[[16,64],[16,68],[27,68],[27,65],[34,65]],C.metal);
+  put(im,26,61,C.green);put(im,34,60,C.redShade);
+  // Two storage trays and a bottom ventilation grille.
+  panel(im,10,71,28,4,C.deep);panel(im,10,76,28,4,C.deep);
+  line(im,[[12,72],[35,72]],C.navy);line(im,[[12,77],[35,77]],C.navy);
+  rect(im,10,81,28,6,C.ink);
+  for(let x=12;x<=35;x+=3)line(im,[[x,81],[x,85]],C.navy);
+  // Four aged brass corner brackets, no white highlight sparkle.
+  for(const [x,y] of [[1,4],[42,4],[1,90],[42,90]]) {
+    rect(im,x,y,5,5,C.brass);
+    rect(im,x+(x===1?3:0),y+(y===4?3:0),2,2,C.wood);
+    put(im,x+1,y+1,C.ink);
+  }
+}
+function cleanScreen(im) {
+  // Source CRT silhouette is preserved. Glass and controls are simplified at
+  // native size. Screen interior is flat #080b14 for a future game overlay.
+  rect(im,7,2,50,47,C.wood);
+  panel(im,10,5,44,36,C.deep);
+  line(im,[[11,6],[52,6]],C.metal);
+  const glass=[[18,8],[48,8],[50,10],[51,13],[51,34],[49,37],[46,38],[18,38],[15,36],[14,33],[14,13],[15,10],[18,8]];
+  poly(im,glass,C.ink);
+  // One-pixel continuous cyan perimeter, with neither outer halo nor bloom.
+  line(im,glass,C.cyan);
+  // Solid stand shaft / foot, keeping source shape and bottom registration.
+  panel(im,27,54,9,21,C.wood);
+  rect(im,28,55,2,18,C.brass);line(im,[[30,56],[30,68]],C.ochre);
+  rect(im,27,71,9,4,C.brass);line(im,[[28,71],[32,71]],C.ochre);
+  panel(im,17,76,30,4,C.wood);line(im,[[19,77],[43,77]],C.brass);
+  // Tapered connector below the case.
+  poly(im,[[19,51],[44,51],[41,54],[23,54]],C.wood);
+  line(im,[[20,52],[42,52]],C.brass);
+  // Panel controls: two knobs, one indicator, four square buttons.
+  rect(im,11,41,42,7,C.wood);
+  for(const x of [16,24]) {
+    poly(im,[[x,43],[x+2,42],[x+4,43],[x+4,45],[x+2,46],[x,45]],C.ink);
+    rect(im,x+1,43,2,2,C.brass);put(im,x+1,43,C.ochre);
+  }
+  line(im,[[31,44],[36,44]],C.ink);
+  for(const x of [40,46])for(const y of [42,45]) {
+    rect(im,x,y,4,2,C.ink);rect(im,x+1,y,2,1,C.brass);
+  }
+  for(const [x,y] of [[6,1],[52,1],[6,45],[52,45]]) {
+    rect(im,x,y,6,6,C.brass);rect(im,x+1,y+1,4,4,C.wood);
+    put(im,x+1,y+1,C.brass);put(im,x+3,y+3,C.ink);
+  }
+  line(im,[[14,2],[49,2]],C.brass);
+  line(im,[[12,49],[51,49]],C.ink);
+  // Merge the source's few isolated pale/red flecks into the frame materials.
+  for(let y=0;y<im.h;y++)for(let x=0;x<im.w;x++) {
+    const c=get(im,x,y);
+    if(c.every((v,i)=>v===C.paper[i]))put(im,x,y,C.brass);
+    if(c.every((v,i)=>v===C.redShade[i]))put(im,x,y,C.wood);
+  }
+}
+function tube(im,points) {
+  // Native 3px cable: a single dark outline around a solid navy core.
+  const mask=canvas(im.w,im.h);line(mask,points,[255,255,255,255]);
+  for(let y=1;y<im.h-1;y++)for(let x=1;x<im.w-1;x++) if(get(mask,x,y)[3])
+    for(let yy=y-1;yy<=y+1;yy++)for(let xx=x-1;xx<=x+1;xx++)put(im,xx,yy,C.ink);
+  line(im,points,C.navy);
+}
+function cleanCables(im) {
+  // Source registration: (649,341), 332x180 -> 74x40 at (3,0).
+  // The Gemini sparkle at source (~935,485) occupies native (~67,32).
+  // Replace the entire cable region containing it with explicit loop paths;
+  // this removes the whole mark, including its dark arms, not just bright dots.
+  rect(im,0,10,80,30,[0,0,0,0]);
+  // Rear leads, followed by the junction enclosure, then foreground leads.
+  tube(im,[[23,10],[18,12],[15,16],[13,21],[13,26],[18,29],[24,29]]);
+  tube(im,[[61,10],[65,12],[68,16],[70,22],[73,29],[74,33],[71,35],[63,35]]);
+  // Rusted wooden junction box: source cap and body measurements.
+  panel(im,19,0,44,6,C.wood);
+  line(im,[[20,1],[60,1]],C.metal);line(im,[[20,4],[61,4]],C.deep);
+  line(im,[[23,2],[27,2]],C.redShade);line(im,[[52,3],[57,3]],C.redShade);
+  panel(im,21,6,40,15,C.wood);
+  line(im,[[22,7],[22,18]],C.metal);
+  panel(im,24,7,14,9,C.brass);
+  for(const [x,y] of [[25,8],[35,8],[25,14],[35,14]])put(im,x,y,C.ink);
+  panel(im,43,8,14,9,C.deep);
+  line(im,[[39,10],[41,10]],C.brass);line(im,[[39,14],[41,14]],C.ink);
+  panel(im,20,19,42,4,C.deep);line(im,[[22,20],[59,20]],C.metal);
+  panel(im,25,23,32,5,C.deep);
+  // Low three-loop bundle, with clear uninterrupted cable direction.
+  tube(im,[[45,30],[35,34],[24,37],[13,37],[6,36],[4,34],[5,32],[12,31],[24,33],[35,33]]);
+  tube(im,[[44,28],[35,32],[25,34],[15,34],[8,32],[7,30],[10,28],[19,28],[28,30],[36,30]]);
+  tube(im,[[43,26],[34,29],[25,31],[16,31],[11,30],[10,28],[13,27],[22,27]]);
+  // Two heavy exit leads bend down into that same bundle.
+  tube(im,[[46,11],[49,14],[52,20],[53,25],[57,29],[65,33],[71,34]]);
+  tube(im,[[51,11],[54,14],[57,21],[57,26],[61,30],[68,32],[72,31],[71,28],[68,24]]);
+  // Tight bindings use clusters, rather than speckled red texture.
+  line(im,[[29,30],[28,33],[29,37]],C.red);
+  line(im,[[31,30],[30,33],[31,36]],C.redShade);
+  line(im,[[52,22],[58,21]],C.red);line(im,[[52,24],[58,23]],C.redShade);
+  // Three clean paper seals. Abstract two-stroke marks are deliberately not
+  // characters, lettering, or pseudo-calligraphy from the Gemini source.
+  poly(im,[[17,32],[20,32],[18,39],[15,39]],C.paper);
+  line(im,[[17,34],[18,34]],C.red);line(im,[[16,37],[17,36]],C.red);
+  poly(im,[[58,23],[61,22],[63,29],[60,30]],C.paper);
+  line(im,[[59,24],[60,25]],C.red);line(im,[[61,27],[62,27]],C.red);
+  poly(im,[[68,21],[70,21],[71,25],[69,25]],C.paper);
+  line(im,[[69,22],[69,23]],C.red);
+}
+
+const rack=dominantFit(cutout([90,54,337,520]),48,96);
+const screen=dominantFit(cutout([391,190,619,520]),64,80);
+const cables=dominantFit(cutout([641,335,988,528]),80,40);
+simplify(rack);simplify(screen);simplify(cables);
+cleanRack(rack);cleanScreen(screen);cleanCables(cables);
+removeSmallComponents(rack,3);removeSmallComponents(screen,3);removeSmallComponents(cables,3);
+outline(rack);outline(screen);outline(cables);
+
+const sprites=[['prop_rack.png',rack],['prop_screen.png',screen],['prop_cables.png',cables]];
+const allowedHex=new Set(allowed.map(c=>Buffer.from(c.slice(0,3)).toString('hex')));
+for(const [filename,im] of sprites) {
+  for(let i=3;i<im.p.length;i+=4) assert(im.p[i]===0||im.p[i]===255);
+  const colors=colorCounts(im).map(([c])=>c);
+  assert(colors.every(c=>allowedHex.has(c)));
+  assert.equal(bbox(im)[3],im.h-1);
+  // Every exposed silhouette edge is exactly the shared boss outline colour.
+  for(let y=0;y<im.h;y++)for(let x=0;x<im.w;x++) if(get(im,x,y)[3]) {
+    const edge=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]].some(([xx,yy])=>
+      xx<0||yy<0||xx>=im.w||yy>=im.h||!get(im,xx,yy)[3]);
+    if(edge)assert.deepEqual(get(im,x,y),C.ink);
+  }
+  fs.writeFileSync(path.join(OUT,filename),encodePNG(im));
+  console.log(filename,im.w,im.h,'bbox',bbox(im),'colours',colors.length,colors);
+}
+const preview=canvas(240,112,BG);
+paste(preview,rack,12,104-rack.h);
+paste(preview,screen,80,104-screen.h);
+paste(preview,cables,156,104-cables.h);
+fs.writeFileSync(path.join(OUT,'props_preview_4x.png'),encodePNG(enlarge(preview,4)));
+console.log('Palette extras only:',EXTRA.map(c=>'#'+c).join(', '));
+// The usable CRT interior is uniformly dark and has no baked-in text/graphics.
+for(let y=11;y<=35;y++)for(let x=17;x<=48;x++)assert.deepEqual(get(screen,x,y),C.ink);
+console.log('Verified: binary alpha, palette membership, bottom row, common outline, blank CRT.');
