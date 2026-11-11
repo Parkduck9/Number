@@ -1,0 +1,304 @@
+"""NUMBER final D1b: hand-authored pixel grids, Python standard library only.
+
+Run: python docs/design/concept/logo/logo_gen3.py.txt
+Native 200 x 44, exactly one transparent pixel around the content bounds.
+Letters are redrawn on a smaller 12/14-cell grid, never image-resampled.
+Preview rows are 1x / 2x / 4x on #0B1026; integer pixel replication only.
+No fonts, external assets, image-generation API, antialiasing or randomness.
+The seal retains D1's six separate 2 x 2 die pips. Marks are abstract geometry.
+Writes only D1b, its preview, and the requested in-game PNG; never .meta.
+"""
+from pathlib import Path
+import struct
+import zlib
+
+OUT = Path(__file__).resolve().parent
+ROOT = OUT.parents[3]
+W, H = 200, 44
+CLEAR = (0, 0, 0, 0)
+NAVY = (11, 16, 38, 255)       # project palette 1, preview background
+INK = (26, 29, 51, 255)        # project palette 2, deep indigo outlines
+GOLD = (255, 210, 74, 255)     # approved title gold, unchanged from D1
+OCHRE = (184, 134, 46, 255)    # project palette 18, edge and letter shade
+PAPER = (194, 174, 120, 255)   # muted yellow-ochre paper
+RED = (242, 28, 42, 255)       # project palette 17, cinnabar ink
+RED_DARK = (127, 26, 34, 255)  # project palette 16, seal pressure marks
+COLORS = {INK, GOLD, OCHRE, PAPER, RED, RED_DARK}
+
+# Each # is an authored 2 x 2 block. Fourteen rows make a 28px face.
+# Wider M, open counters, six-pixel stems and deliberate diagonal steps.
+LETTERS = {
+    'N': """
+###......###
+####.....###
+#####....###
+#####....###
+######...###
+###.###..###
+###.###..###
+###..###.###
+###...######
+###...######
+###....#####
+###.....####
+###.....####
+###......###
+""".split(),
+    'U': """
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+###......###
+.##########.
+..########..
+""".split(),
+    'M': """
+###........###
+####......####
+#####....#####
+######..######
+###.######.###
+###..####..###
+###...##...###
+###........###
+###........###
+###........###
+###........###
+###........###
+###........###
+###........###
+""".split(),
+    'B': """
+##########..
+###########.
+############
+###......###
+###......###
+###......###
+###########.
+##########..
+###########.
+###......###
+###......###
+############
+###########.
+##########..
+""".split(),
+    'E': """
+###########
+###########
+###########
+###........
+###........
+###........
+#########..
+#########..
+#########..
+###........
+###........
+###########
+###########
+###########
+""".split(),
+    'R': """
+##########..
+###########.
+############
+###......###
+###......###
+###......###
+############
+###########.
+###.###.....
+###..###....
+###...###...
+###....###..
+###.....###.
+###......###
+""".split(),
+}
+
+# Native-pixel geometry: continuous two-pixel ring and zigzag strokes.
+CIRCLE = """
+..rrrr..
+.rrrrrr.
+rr....rr
+rr....rr
+rr....rr
+rr....rr
+.rrrrrr.
+..rrrr..
+""".split()
+ZIGZAG = """
+rr......rr......
+rrr....rrrr.....
+.rrr..rr..rr....
+..rrrrr....rr...
+...rrr......rr..
+....rr......rr..
+""".split()
+SEAL = """
+..rrrrrr.rrrrrrrr..
+.rrrrrrrrrrrrrrrrr.
+rr...............rr
+rr...............rr
+rr...rr.....rr...rr
+rr...rr.....rr...rr
+rr...............rr
+rr...............rr
+.r...rr.....rr...rr
+rr...rr.....rr...rr
+rr...............rr
+rr...............rr
+rr...rr.....rr...rr
+rr...rr.....rr...rr
+rr...............r.
+dr...............rr
+dr...............rr
+.drrrrrrr.rrrrrrdr.
+..ddrrrrrrrrrrrdd..
+""".split()
+
+
+def canvas(width, height, color=CLEAR):
+    return [[color for _ in range(width)] for _ in range(height)]
+
+
+def rect(x0, y0, x1, y1):
+    return {(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)}
+
+
+def place(image, points, color):
+    for x, y in points:
+        assert 0 <= x < len(image[0]) and 0 <= y < len(image)
+        image[y][x] = color
+
+
+def rim(points):
+    return {(x + dx, y + dy) for x, y in points
+            for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - points
+
+
+def grid(image, x, y, rows, colors):
+    assert all(len(row) == len(rows[0]) for row in rows)
+    for yy, row in enumerate(rows):
+        for xx, cell in enumerate(row):
+            if cell != '.':
+                image[y + yy][x + xx] = colors[cell]
+
+
+def letter_shapes():
+    x = 7
+    shapes = []
+    for char in 'NUMBER':
+        rows = LETTERS[char]
+        assert len(rows) == 14 and all(len(row) == len(rows[0]) for row in rows)
+        shapes.append({(x + xx * 2 + dx, 2 + yy * 2 + dy)
+                       for yy, row in enumerate(rows)
+                       for xx, cell in enumerate(row) if cell == '#'
+                       for dx in (0, 1) for dy in (0, 1)})
+        x += len(rows[0]) * 2 + 4
+    return shapes
+
+
+def draw_logo():
+    image = canvas(W, H)
+    # D1's long paper strip climbs four integer steps toward the right seal.
+    paper = set()
+    for x in range(2, 198):
+        rise = (x - 2) // 48
+        top, bottom = 16 - rise, 41 - rise
+        if x >= 195:
+            top += (x - 194) * 2
+            bottom -= x - 194
+        paper |= rect(x, top, x, bottom)
+    paper -= rect(2, 16, 4, 18) | rect(193, 32, 197, 33)
+    edge = {p for p in paper if any((p[0] + dx, p[1] + dy) not in paper
+                                   for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)))}
+    place(image, rim(paper), INK)
+    place(image, paper, PAPER)
+    place(image, edge, OCHRE)
+    # Isolated circles, a zigzag and two dashes; no character-like stacks.
+    grid(image, 30, 32, CIRCLE, {'r': RED})
+    grid(image, 58, 32, ZIGZAG, {'r': RED})
+    place(image, rect(95, 34, 114, 35), RED)
+    grid(image, 128, 31, CIRCLE, {'r': RED})
+    place(image, rect(151, 33, 166, 34), RED)
+    for points in letter_shapes():
+        place(image, rim(points), INK)
+        place(image, points, GOLD)
+        place(image, {(x, y) for x, y in points if y == 28}, OCHRE)
+    grid(image, 177, 15, SEAL, {'r': RED, 'd': RED_DARK})
+    return image
+
+
+def png_bytes(image):
+    height, width = len(image), len(image[0])
+    raw = b''.join(b'\0' + bytes(v for p in row for v in p) for row in image)
+
+    def chunk(kind, data):
+        return (struct.pack('>I', len(data)) + kind + data
+                + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff))
+
+    return (b'\x89PNG\r\n\x1a\n'
+            + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+            + chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+
+
+def preview(logo):
+    # 1x, 2x, 4x from top to bottom, centered with 12px gutters.
+    sheet = canvas(W * 4 + 24, H * 7 + 48, NAVY)
+    y0 = 12
+    for scale in (1, 2, 4):
+        x0 = (len(sheet[0]) - W * scale) // 2
+        for y, row in enumerate(logo):
+            for x, pixel in enumerate(row):
+                if pixel[3]:
+                    for dy in range(scale):
+                        for dx in range(scale):
+                            sheet[y0 + y * scale + dy][x0 + x * scale + dx] = pixel
+        y0 += H * scale + 12
+    return sheet
+
+
+def validate(logo):
+    assert W <= 200 and H <= 44
+    colors = {p for row in logo for p in row}
+    assert colors == COLORS | {CLEAR} and len(COLORS) <= 10
+    assert {p[3] for p in colors} == {0, 255}
+    visible = {(x, y) for y, row in enumerate(logo)
+               for x, p in enumerate(row) if p[3]}
+    assert (min(x for x, y in visible), min(y for x, y in visible),
+            max(x for x, y in visible), max(y for x, y in visible)) == (1, 1, W - 2, H - 2)
+    for points in letter_shapes():
+        assert all(logo[y][x] == (OCHRE if y == 28 else GOLD) for x, y in points)
+        assert all(logo[y][x] == INK for x, y in rim(points))
+    # Every pip is 2x2 with an empty paper halo, so all six stay separate.
+    for py in (19, 23, 27):
+        for px in (182, 189):
+            pip = rect(px, py, px + 1, py + 1)
+            assert all(logo[y][x] == RED for x, y in pip)
+            assert all(logo[y][x] == PAPER for x, y in rim(pip))
+
+
+def main():
+    logo = draw_logo()
+    validate(logo)
+    data = png_bytes(logo)
+    (OUT / 'logo_D1b.png').write_bytes(data)
+    (OUT / 'logo_D1b_preview.png').write_bytes(png_bytes(preview(logo)))
+    (ROOT / 'Assets/Resources/DraftUi/logo_number.png').write_bytes(data)
+    print(f'D1b: {W}x{H}, {len(COLORS)} opaque colors, alpha 0/255, 1px margin')
+    print('Preview: 824x356, 1x / 2x / 4x from top to bottom')
+
+
+if __name__ == '__main__':
+    main()

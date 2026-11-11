@@ -1,0 +1,381 @@
+"""NUMBER round 2 -- DRAFT ONLY, hand-authored pixel grids by Codex.
+
+Run: python docs/design/concept/logo/logo_gen2.py.txt
+Standard library only. Standalone extension of round 1: its original BLOCK
+letter grids are copied unchanged. Native 224 x 80; no fonts or resampling.
+Only previews replicate native pixels at integer 2x / 4x. All opaque colors
+come from number_palette.png except requested title gold #FFD24A.
+Paper uses palette parchment #EFD0B6 with ochre #B8862E edges.
+Talisman marks are circles, zigzags and lines, never script or characters.
+Writes ONLY the five round-2 PNGs beside this generator.
+"""
+from pathlib import Path
+import struct
+import zlib
+
+OUT = Path(__file__).resolve().parent
+W, H = 224, 80
+CLEAR = (0, 0, 0, 0)
+NAVY = (11, 16, 38, 255)       # palette 1 / previews only
+INK = (26, 29, 51, 255)        # palette 2 / one-pixel letter outline
+GOLD = (255, 210, 74, 255)     # explicitly requested #FFD24A
+SHADE = (184, 134, 46, 255)    # palette 18 / gold shade and paper edge
+PAPER = (239, 208, 182, 255)   # palette 12 / pale warm parchment
+RED = (242, 28, 42, 255)       # palette 17 / cinnabar ink
+RED_DARK = (127, 26, 34, 255)  # palette 16 / uneven stamped edge
+PALETTE = {INK, GOLD, SHADE, PAPER, RED, RED_DARK}
+
+# Round-1 A lettering: each # is an explicitly authored 2 x 2 block.
+BLOCK = {
+    'N': [
+        '###.......###',
+        '####......###',
+        '####......###',
+        '#####.....###',
+        '######....###',
+        '###.###...###',
+        '###.###...###',
+        '###..###..###',
+        '###...###.###',
+        '###...###.###',
+        '###....######',
+        '###.....#####',
+        '###.....#####',
+        '###......####',
+        '###......####',
+        '###.......###',
+    ],
+    'U': [
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '.###########.',
+        '.###########.',
+        '..#########..',
+    ],
+    'M': [
+        '###.........###',
+        '####.......####',
+        '#####.....#####',
+        '######...######',
+        '###.###.###.###',
+        '###..#####..###',
+        '###...###...###',
+        '###....#....###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+    ],
+    'B': [
+        '###########..',
+        '############.',
+        '#############',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '############.',
+        '###########..',
+        '############.',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '#############',
+        '############.',
+        '###########..',
+    ],
+    'E': [
+        '############',
+        '############',
+        '############',
+        '###.........',
+        '###.........',
+        '###.........',
+        '##########..',
+        '##########..',
+        '##########..',
+        '###.........',
+        '###.........',
+        '###.........',
+        '###.........',
+        '############',
+        '############',
+        '############',
+    ],
+    'R': [
+        '###########..',
+        '############.',
+        '#############',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '#############',
+        '############.',
+        '###########..',
+        '###..###.....',
+        '###...###....',
+        '###....###...',
+        '###.....###..',
+        '###......###.',
+        '###.......###',
+        '###.......###',
+    ],
+}
+
+
+def canvas(width=W, height=H, color=CLEAR):
+    return [[color for _ in range(width)] for _ in range(height)]
+
+
+def rectangle(x0, y0, x1, y1):
+    return {(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)}
+
+
+def place(image, points, color):
+    for x, y in points:
+        assert 0 <= x < len(image[0]) and 0 <= y < len(image)
+        image[y][x] = color
+
+
+def rim(points):
+    return {(x + dx, y + dy) for x, y in points
+            for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - points
+
+
+def grid(image, x, y, rows, colors):
+    # One cell is exactly one native pixel. Dots leave the layer below intact.
+    assert all(len(row) == len(rows[0]) for row in rows)
+    for yy, row in enumerate(rows):
+        for xx, cell in enumerate(row):
+            if cell != '.':
+                image[y + yy][x + xx] = colors[cell]
+
+
+def block_letters(y):
+    widths = [len(BLOCK[c][0]) * 2 for c in 'NUMBER']
+    x = (W - sum(widths) - 5 * 4) // 2
+    letters = []
+    for char, width in zip('NUMBER', widths):
+        rows = BLOCK[char]
+        assert len(rows) == 16 and all(len(row) * 2 == width for row in rows)
+        letters.append({(x + col * 2 + dx, y + row * 2 + dy)
+                        for row, line in enumerate(rows)
+                        for col, cell in enumerate(line) if cell == '#'
+                        for dx in (0, 1) for dy in (0, 1)})
+        x += width + 4
+    return letters
+
+
+def lettering(image, y):
+    for points in block_letters(y):
+        place(image, rim(points), INK)
+        place(image, points, GOLD)
+        place(image, {(x, yy) for x, yy in points if yy == y + 30}, SHADE)
+
+
+def paper(image, points):
+    place(image, rim(points), INK)
+    # A one-pixel ochre edge, with a flat parchment interior.
+    edge = {p for p in points if any((p[0] + dx, p[1] + dy) not in points
+                                   for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)))}
+    place(image, points, PAPER)
+    place(image, edge, SHADE)
+
+
+# Deliberately uneven square border, two columns of three pips. The six
+# separate 2 x 2 clusters describe a valid die face, with no writing inside.
+# r = red ink, d = darker pressure marks; no randomized erosion/noise.
+SEAL = [
+    '..rrrrrr.rrrrrrrr..',
+    '.rrrrrrrrrrrrrrrrr.',
+    'rr...............rr',
+    'rr...............rr',
+    'rr...rr.....rr...rr',
+    'rr...rr.....rr...rr',
+    'rr...............rr',
+    'rr...............rr',
+    '.r...rr.....rr...rr',
+    'rr...rr.....rr...rr',
+    'rr...............rr',
+    'rr...............rr',
+    'rr...rr.....rr...rr',
+    'rr...rr.....rr...rr',
+    'rr...............r.',
+    'dr...............rr',
+    'dr...............rr',
+    '.drrrrrrr.rrrrrrdr.',
+    '..ddrrrrrrrrrrrdd..',
+]
+
+CIRCLE = [
+    '..rrr..',
+    '.rrrrr.',
+    'rr...rr',
+    'rr...rr',
+    'rr...rr',
+    '.rrrrr.',
+    '..rrr..',
+]
+ZIGZAG = [
+    'rrr.......rrr......',
+    '.rrr.....rrrrr.....',
+    '..rrr...rrr.rrr....',
+    '...rrr.rrr...rrr...',
+    '....rrrrr.....rrr..',
+    '.....rrr.......rrr.',
+]
+
+
+def seal(image, x, y):
+    grid(image, x, y, SEAL, {'r': RED, 'd': RED_DARK})
+
+
+def horizontal_talisman():
+    image = canvas()
+    # Native column spans give a six-pixel uphill tilt; the right end has
+    # two deliberate tears. No rotation or image transformation is used.
+    points = set()
+    for x in range(8, 222):
+        shift = (x - 8) // 32
+        top, bottom = 35 - shift, 64 - shift
+        if x >= 219:
+            top += (x - 218) * 2
+            bottom -= x - 218
+        points |= rectangle(x, top, x, bottom)
+    points -= rectangle(8, 35, 10, 38) | rectangle(217, 54, 221, 55)
+    paper(image, points)
+    # Exposed lower strip: bold geometric marks, deliberately not glyphs.
+    grid(image, 33, 54, CIRCLE, {'r': RED})
+    grid(image, 63, 53, ZIGZAG, {'r': RED})
+    place(image, rectangle(100, 54, 120, 55), RED)
+    grid(image, 143, 51, CIRCLE, {'r': RED})
+    place(image, rectangle(168, 53, 184, 54), RED)
+    lettering(image, 18)
+    seal(image, 202, 35)
+    return image
+
+
+def hanging_talisman():
+    image = canvas()
+    # Slapped under B's lower bowl; the paper changes column at its fold.
+    # The title is drawn above the tag, preserving every original gold pixel.
+    points = set()
+    for y in range(44, 75):
+        shift = (y - 44) // 12
+        points |= rectangle(126 + shift, y, 144 + shift, y)
+    points -= rectangle(128, 73, 130, 74) | rectangle(144, 71, 146, 74)
+    paper(image, points)
+    grid(image, 132, 53, CIRCLE, {'r': RED})
+    # A separate broad zigzag, not a stack of letter-like cross strokes.
+    grid(image, 131, 63, [
+        'rrr.........',
+        '.rrrr.......',
+        '...rrrr.....',
+        '.....rrrr...',
+        '....rrrr....',
+        '..rrrr......',
+        '.rrr........',
+    ], {'r': RED})
+    lettering(image, 17)
+    # Ochre folded top corner on the tag's visible shoulder.
+    place(image, {(144, 49), (144, 50), (143, 50)}, SHADE)
+    return image
+
+
+def stamped_underline():
+    image = canvas()
+    lettering(image, 18)
+    # A short, solid four-row brush pull with deliberate tapered clusters.
+    # No loose noise, hairline tails, or thin smear as in rejected C.
+    spans = [(86, 137), (80, 147), (78, 145), (83, 134)]
+    place(image, {(x, 56 + y) for y, (left, right) in enumerate(spans)
+                  for x in range(left, right + 1)}, RED)
+    # Overlaps only the terminal corner of R; its counter and leg stay clear.
+    seal(image, 198, 46)
+    return image
+
+
+def chunk(kind, data):
+    return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+
+
+def write_png(path, image):
+    height, width = len(image), len(image[0])
+    raw = b''.join(b'\x00' + bytes(c for pixel in row for c in pixel) for row in image)
+    path.write_bytes(b'\x89PNG\r\n\x1a\n'
+                     + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+                     + chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+
+
+def composite(sheet, logo, x0, y0, scale):
+    # Nearest-neighbor preview only: replicate each native source pixel.
+    for y, row in enumerate(logo):
+        for x, pixel in enumerate(row):
+            if pixel[3]:
+                for dy in range(scale):
+                    for dx in range(scale):
+                        sheet[y0 + y * scale + dy][x0 + x * scale + dx] = pixel
+
+
+def previews(logos):
+    large = canvas(W * 4, H * 3 * 4, NAVY)
+    small = canvas(16 + W + 16 + W * 2 + 16, 16 + H * 2 * 3 + 16 * 2, NAVY)
+    for index, logo in enumerate(logos):
+        composite(large, logo, 0, index * H * 4, 4)
+        y = 16 + index * (H * 2 + 16)
+        composite(small, logo, 16, y + H // 2, 1)
+        composite(small, logo, 32 + W, y, 2)
+    return large, small
+
+
+def validate(logo, index):
+    assert len(logo) == H and all(len(row) == W for row in logo)
+    colors = {p for row in logo for p in row}
+    assert colors <= PALETTE | {CLEAR} and len(colors - {CLEAR}) <= 10
+    assert {p[3] for p in colors} == {0, 255}
+    assert all(p == CLEAR for p in logo[0] + logo[-1])
+    assert all(row[0] == row[-1] == CLEAR for row in logo)
+    gold_count = sum(p == GOLD for row in logo for p in row)
+    assert gold_count > sum(p in {RED, RED_DARK} for row in logo for p in row)
+    # Verify A's complete lettering, including the deliberate shade row.
+    # D3 permits a stamp on only the last three columns of R's terminal.
+    y = 17 if index == 1 else 18
+    for points in block_letters(y):
+        for x, yy in points:
+            if index == 2 and x >= 198 and yy >= 46:
+                continue
+            assert logo[yy][x] == (SHADE if yy == y + 30 else GOLD)
+
+
+def main():
+    logos = [horizontal_talisman(), hanging_talisman(), stamped_underline()]
+    for index, logo in enumerate(logos):
+        validate(logo, index)
+        name = f'logo_D{index + 1}.png'
+        write_png(OUT / name, logo)
+        colors = len({p for row in logo for p in row if p[3]})
+        print(f'{name}: {W}x{H}, {colors} opaque colors, alpha 0/255')
+    large, small = previews(logos)
+    write_png(OUT / 'logo_D_preview_4x.png', large)
+    write_png(OUT / 'logo_D_preview_1x_2x.png', small)
+    print(f'logo_D_preview_4x.png: {len(large[0])}x{len(large)}, D1/D2/D3 top to bottom')
+    print(f'logo_D_preview_1x_2x.png: {len(small[0])}x{len(small)}, 1x left / 2x right')
+
+
+if __name__ == '__main__':
+    main()

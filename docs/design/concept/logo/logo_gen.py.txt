@@ -1,0 +1,332 @@
+"""NUMBER title studies -- DRAFT ONLY, hand-authored by Codex.
+
+Run: python docs/design/concept/logo/logo_gen.py.txt
+Python 3 standard library only; no font, rasterizer, or external art input.
+All geometry is placed on the final 200 x 56 pixel grid. Only the contact
+sheet is enlarged, by copying each source pixel into an exact 4 x 4 block.
+Colors sampled from Assets/Art/Palette/number_palette.png, except the
+explicitly requested title gold #FFD24A (palette gold is #FFD43B).
+No import into Unity or publication is performed by this draft generator.
+"""
+
+from pathlib import Path
+import struct
+import zlib
+
+
+OUT = Path(__file__).resolve().parent
+W, H = 200, 56
+CLEAR = (0, 0, 0, 0)
+NAVY = (11, 16, 38, 255)      # #0B1026 palette 1 / preview background
+INK = (26, 29, 51, 255)       # #1A1D33 palette 2 / deep indigo outline
+GOLD = (255, 210, 74, 255)    # #FFD24A requested title-screen gold
+SHADE = (184, 134, 46, 255)   # #B8862E palette 18
+CYAN = (111, 251, 244, 255)   # #6FFBF4 palette 15
+RED = (242, 28, 42, 255)      # #F21C2A palette 17
+RED_DARK = (127, 26, 34, 255) # #7F1A22 palette 16
+PALETTE = {NAVY, INK, GOLD, SHADE, CYAN, RED, RED_DARK}
+
+
+# Original lettering, not a font. Each # explicitly describes a 2 x 2
+# gold block at native resolution; dots are counters / negative space.
+# The six glyphs are drawn for this word alone. M has a wider shoulder.
+BLOCK = {
+    'N': [
+        '###.......###',
+        '####......###',
+        '####......###',
+        '#####.....###',
+        '######....###',
+        '###.###...###',
+        '###.###...###',
+        '###..###..###',
+        '###...###.###',
+        '###...###.###',
+        '###....######',
+        '###.....#####',
+        '###.....#####',
+        '###......####',
+        '###......####',
+        '###.......###',
+    ],
+    'U': [
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '.###########.',
+        '.###########.',
+        '..#########..',
+    ],
+    'M': [
+        '###.........###',
+        '####.......####',
+        '#####.....#####',
+        '######...######',
+        '###.###.###.###',
+        '###..#####..###',
+        '###...###...###',
+        '###....#....###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+        '###.........###',
+    ],
+    'B': [
+        '###########..',
+        '############.',
+        '#############',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '############.',
+        '###########..',
+        '############.',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '#############',
+        '############.',
+        '###########..',
+    ],
+    'E': [
+        '############',
+        '############',
+        '############',
+        '###.........',
+        '###.........',
+        '###.........',
+        '##########..',
+        '##########..',
+        '##########..',
+        '###.........',
+        '###.........',
+        '###.........',
+        '###.........',
+        '############',
+        '############',
+        '############',
+    ],
+    'R': [
+        '###########..',
+        '############.',
+        '#############',
+        '###.......###',
+        '###.......###',
+        '###.......###',
+        '#############',
+        '############.',
+        '###########..',
+        '###..###.....',
+        '###...###....',
+        '###....###...',
+        '###.....###..',
+        '###......###.',
+        '###.......###',
+        '###.......###',
+    ],
+}
+
+
+def canvas(width=W, height=H, color=CLEAR):
+    return [[color for _ in range(width)] for _ in range(height)]
+
+
+def rectangle(x0, y0, x1, y1):
+    return {(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)}
+
+
+def place(image, points, color):
+    for x, y in points:
+        assert 0 <= x < len(image[0]) and 0 <= y < len(image)
+        image[y][x] = color
+
+
+def outlined(image, points, color):
+    # Exactly one native pixel around the silhouette, including counters.
+    rim = {(x + dx, y + dy) for x, y in points
+           for dx in (-1, 0, 1) for dy in (-1, 0, 1)} - points
+    place(image, rim, INK)
+    place(image, points, color)
+
+
+def block_letters(y):
+    widths = [len(BLOCK[c][0]) * 2 for c in 'NUMBER']
+    x = (W - sum(widths) - 5 * 4) // 2
+    letters = []
+    for char, width in zip('NUMBER', widths):
+        rows = BLOCK[char]
+        assert len(rows) == 16 and all(len(row) * 2 == width for row in rows)
+        points = {(x + col * 2 + dx, y + row * 2 + dy)
+                  for row, line in enumerate(rows) for col, cell in enumerate(line)
+                  if cell == '#' for dx in (0, 1) for dy in (0, 1)}
+        letters.append(points)
+        x += width + 4
+    return letters
+
+
+def clean_logo():
+    image = canvas()
+    for points in block_letters(12):
+        outlined(image, points, GOLD)
+        # A single deliberate shade row, not a gradient or extrusion.
+        place(image, {(x, y) for x, y in points if y == 42}, SHADE)
+    return image
+
+
+def horizontal_segment(y):
+    # Four-pixel block with one-pixel chamfers.
+    return rectangle(6, y, 17, y + 3) | rectangle(5, y + 1, 18, y + 2)
+
+
+def vertical_segment(x, y):
+    return rectangle(x, y + 1, x + 3, y + 10) | rectangle(x + 1, y, x + 2, y + 11)
+
+
+# A hand-plotted diagonal module. Each pair is the inclusive horizontal
+# span for one successive native pixel row; the center gap is intentional.
+DIAGONAL = [
+    (5, 7), (5, 8), (5, 8), (6, 9), (6, 9), (7, 10),
+    (7, 10), (8, 11), (8, 11), (9, 12), (9, 12), (10, 13),
+    None, None, None, None,
+    (12, 15), (12, 15), (13, 16), (13, 16), (14, 17),
+    (14, 17), (15, 18), (15, 18), (16, 18), (16, 18),
+]
+
+
+def display_logo():
+    image = canvas()
+    segments = {
+        'top': horizontal_segment(0),
+        'mid': horizontal_segment(15),
+        'base': horizontal_segment(30),
+        'ul': vertical_segment(0, 2),
+        'll': vertical_segment(0, 20),
+        'ur': vertical_segment(20, 2),
+        'lr': vertical_segment(20, 20),
+    }
+    configurations = {
+        'N': ('ul', 'll', 'ur', 'lr'),
+        'U': ('ul', 'll', 'ur', 'lr', 'base'),
+        'M': ('ul', 'll', 'ur', 'lr'),
+        'B': ('top', 'mid', 'base', 'ul', 'll', 'ur', 'lr'),
+        'E': ('top', 'mid', 'base', 'ul', 'll'),
+        'R': ('top', 'mid', 'ul', 'll', 'ur'),
+    }
+    for index, char in enumerate('NUMBER'):
+        modules = [segments[name] for name in configurations[char]]
+        if char == 'N':
+            modules.append({(x, y + 4) for y, span in enumerate(DIAGONAL)
+                            if span is not None for x in range(span[0], span[1] + 1)})
+        if char == 'M':
+            # Separate inward strokes make an uppercase M, not a digit.
+            left = {(x, y + 3) for y, span in enumerate(DIAGONAL[:12])
+                    for x in range(span[0], span[1] + 1)}
+            modules.extend([left, {(23 - x, y) for x, y in left}])
+        if char == 'R':
+            modules.append({(x, y + 18) for y, span in enumerate(DIAGONAL[16:])
+                            for x in range(span[0] - 3, span[1] - 2)}
+                           | rectangle(16, 27, 19, 31))
+        points = {(11 + index * 31 + x, 10 + y) for module in modules for x, y in module}
+        outlined(image, points, GOLD)
+        # One native-pixel cyan scanline, clipped to lit segments only.
+        place(image, {(x, y) for x, y in points if y == 34}, CYAN)
+    return image
+
+
+def talisman_logo():
+    image = canvas()
+    # A short, asymmetric brush pull, not a glyph or imitation seal text.
+    # Each row is manually shaped; sparse stepped ends suggest dry ink.
+    brush_rows = {
+        44: [(65, 82)],
+        45: [(60, 107)],
+        46: [(56, 136)],
+        47: [(54, 145)],
+        48: [(57, 142)],
+        49: [(63, 131)],
+        50: [(78, 116)],
+    }
+    brush = {(x, y) for y, runs in brush_rows.items() for x0, x1 in runs
+             for x in range(x0, x1 + 1)}
+    brush -= {(57, 46), (58, 46), (143, 47), (144, 47), (136, 48), (137, 48)}
+    outlined(image, brush, RED)
+    place(image, {(x, y) for x, y in brush if y >= 49}, RED_DARK)
+    for index, points in enumerate(block_letters(8)):
+        # Native-pixel cuts on stroke terminals give a restrained ink-cut
+        # character; the broad gold silhouettes and counters stay intact.
+        left = min(x for x, y in points)
+        right = max(x for x, y in points)
+        cuts = rectangle(left, 8, left + 1, 8)
+        if index in (0, 2, 5):
+            cuts |= rectangle(right - 1, 39, right, 39)
+        points -= cuts
+        outlined(image, points, GOLD)
+        place(image, {(x, y) for x, y in points if y == 38}, SHADE)
+    return image
+
+
+def chunk(kind, data):
+    return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+
+
+def write_png(path, image):
+    height, width = len(image), len(image[0])
+    raw = b''.join(b'\x00' + bytes(channel for pixel in row for channel in pixel) for row in image)
+    png = (b'\x89PNG\r\n\x1a\n'
+           + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+           + chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+    path.write_bytes(png)
+
+
+def preview(logos):
+    sheet = canvas(W, H * 3, NAVY)
+    for index, logo in enumerate(logos):
+        for y, row in enumerate(logo):
+            for x, pixel in enumerate(row):
+                if pixel[3]:
+                    sheet[index * H + y][x] = pixel
+    # Nearest neighbor, implemented as literal integer pixel replication.
+    return [[pixel for pixel in row for _ in range(4)] for row in sheet for _ in range(4)]
+
+
+def validate(logo):
+    assert len(logo) == H and all(len(row) == W for row in logo)
+    colors = {pixel for row in logo for pixel in row}
+    assert len(colors - {CLEAR}) <= 8
+    assert colors <= PALETTE | {CLEAR}
+    assert {pixel[3] for pixel in colors} == {0, 255}
+    assert all(pixel == CLEAR for pixel in logo[0] + logo[-1])
+    assert all(row[0] == row[-1] == CLEAR for row in logo)
+    assert sum(pixel == GOLD for row in logo for pixel in row) > sum(
+        pixel in {CYAN, RED, RED_DARK} for row in logo for pixel in row)
+
+
+def main():
+    logos = [clean_logo(), display_logo(), talisman_logo()]
+    for name, logo in zip('ABC', logos):
+        validate(logo)
+        path = OUT / f'logo_{name}.png'
+        write_png(path, logo)
+        count = len({pixel for row in logo for pixel in row if pixel[3]})
+        print(f'{path.name}: {W}x{H}, {count} opaque colors, alpha 0/255')
+    write_png(OUT / 'logo_preview_4x.png', preview(logos))
+    print('logo_preview_4x.png: 800x672, A / B / C from top to bottom')
+
+
+if __name__ == '__main__':
+    main()

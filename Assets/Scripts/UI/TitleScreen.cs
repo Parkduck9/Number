@@ -45,7 +45,7 @@ public class TitleScreen : MonoBehaviour
         var digit = UiKit.Label("Number", canvas.transform, center, new Vector2(0f, NumberY), new Vector2(400f, 240f), Number, Number, NumberSize, Gold);
         window.gameObject.AddComponent<HologramFlicker>().Init(border, fill, digit);
 
-        Sprite logoArt = DraftHud.Ui("logo_number"); // 160x40 art at 2 ref px per art pixel; falls back to the TMP text
+        Sprite logoArt = DraftHud.Ui("logo_number"); // 200x44 art at 2 ref px per art pixel; falls back to the TMP text
         if (logoArt != null)
         {
             var logoImg = UiKit.FilledImage(UiKit.Rect("Logo", canvas.transform, center, new Vector2(0f, LogoY + 10f), logoArt.rect.size * 2f), Color.white);
