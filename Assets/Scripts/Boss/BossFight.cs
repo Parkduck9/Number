@@ -13,14 +13,15 @@ using UnityEngine.UI;
 //               sticks in the bridge: mash window (DECISIONS 36), the arm jerks to pull free while LMB swings on the steel hurt
 //               (MashDamage each, up to MashCap); then it rips out and reattaches. Every unparried slam sends two low ground
 //               shockwaves left / right to the edges (DECISIONS 42): jump, a roof chunk or a hook clears them.
-//   B' blade sweep (DECISIONS 29 / 36): the arm leaves the screen, then N horizontal sweeps that carry the whole arm past the far edge,
-//               LOW (jump) or HIGH (stay down / dash); red warning band first. Then the arm flies back and clamps onto its socket.
+//   B' blade sweep (DECISIONS 29 / 36 / 45): the arm leaves the screen, then N horizontal sweeps that carry the whole arm (lying flat,
+//               8 u thick) past the far edge. LOW: up onto a wall perch / down into the under-bridge lane; HIGH: stay on the deck / the lane;
+//               a dash through the contact passes. Red warning band (the arm's full height) first. Then the arm flies back and clamps on.
 //   C chest hatch: hatch opens, yellow aim dots, N volleys of small shots in a fan (phase 3: fan / spiral arc alternate).
 //               A parried shot flies back; reaching the hatch hurts.
 //   D bug rain (DECISIONS 38): N columns of bugs dive from the ceiling at the player's x (red floor mark first), land and scatter into a
 //               short floor carpet; then the bug arm slumps like A. Phase 3: A's walls also drop a column each.
-//   Rope (DECISIONS 38, PlayerController.IGrappleTarget): two ceiling hooks to hang from (over LOW sweeps / jump-gap walls / bug carpets,
-//               not HIGH sweeps / floor-gap walls), and the open hatch with the core still inside (cyan corners): RMB pulls the hero up
+//   Rope (DECISIONS 38, PlayerController.IGrappleTarget): two ceiling hooks to hang from (over jump-gap walls / bug carpets, not
+//               floor-gap walls; both sweeps hit a hanger: swing on to a wall perch, DECISIONS 45), and the open hatch with the core still inside (cyan corners): RMB pulls the hero up
 //               for one HatchHookDamage hit. Bug attacks are weighted up in the director.
 //   Core (DECISIONS 31): in the rest after every attack the hatch opens and a glowing weak-point core drops on a cable to the bridge
 //               (pulses gold while it can be hit): LMB swings, RMB issen (PlayerController.IssenAlt) and the dice hurt it. Then it pulls back.
@@ -62,25 +63,33 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // DECISIONS 33: while it waits it keeps following the player's x (TrackSpeed u/s) and locks only when the ring appears.
     const float SlamShift = 0.15f, RingLead = 0.6f, TrackSpeed = 9f; // ring always 0.6 s (DECISIONS 28), starts after the slide
     static readonly float[] SlamAim = { 0.85f, 0.8f, 0.75f };    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
-    // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime; LOW = jump over, HIGH = stay down / dash
-    const float SweepWarn = 0.5f; // was 0.6 (DECISIONS 33)
+    // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime. DECISIONS 45: LOW = up (perch) / down (lane),
+    // HIGH = stay on the deck / the lane, dash through either. The escapes need moving, so the warning is longer than DECISIONS 33's 0.5.
+    static readonly float[] SweepWarn = { 1f, 0.9f, 0.85f }; // by phase (T): rope to a perch ~0.45 s, perch -> deck drop ~0.65 s
     static readonly float[] SweepTime = { 0.7f, 0.6f, 0.5f };   // by phase: s per RoomW - 1 u (the old edge-to-edge run; was 0.8 / 0.7 / 0.6, DECISIONS 33)
     // DECISIONS 36: the whole arm leaves the screen. boss_blade_arm is 9 x 18 u with the pivot on the tip, so lying flat it trails
     // BladeArmLen behind the tip. BladeOff: hanging, just off the right edge (where it leaves and comes back from).
     const float BladeArmLen = 18f, ReattachTime = 0.45f, ReattachOver = 0.4f;
     static readonly Vector2 BladeOff = new Vector2(RoomW + 5.5f, 10.5f), BladeWrist = new Vector2(0f, 8.5f); // clamp spark: the wrist at rest
-    static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8); the blade lies along the band centre
     // Blade hitbox (feedback 11-11): the steel of boss_blade_arm(_lit), 44 x 202 px up from the pivot (= the tip). Slams and sweeps hurt only here.
     const float BladeLen = 6.3125f, BladeHalfW = 0.6875f;
     // Sweeps (DECISIONS 43): the WHOLE drawn arm hurts. ArmSlice[u] = the sprite's opaque x range (u, px from the centre line) in the
-    // 1-u slice u..u+1 up from the tip, measured from boss_blade_arm(_lit).png (288 x 576, both the same). The arm is 8 u thick, so
-    // lying dead flat it would be an unjumpable wall: it tilts SweepTilt instead, LOW = hilt down into the bridge (only the tip end
-    // stays above the floor, top ~3.1: jump it), HIGH = hilt up into the air (lowest point ~4.2 at the tip: stand under it).
+    // 1-u slice u..u+1 up from the tip, measured from boss_blade_arm(_lit).png (288 x 576, both the same).
     static readonly Vector2[] ArmSlice = {
         new Vector2(-20, 20), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24),
         new Vector2(-40, 40), new Vector2(-66, 104), new Vector2(-68, 120), new Vector2(-64, 124), new Vector2(-36, 120), new Vector2(-46, 108),
         new Vector2(-44, 96), new Vector2(-62, 82), new Vector2(-102, 56), new Vector2(-118, 48), new Vector2(-128, 16), new Vector2(-132, -12) };
-    const float SweepTilt = 25f, SweepStep = 0.3f; // deg off flat; u between swept hit tests (no tunnelling on a long frame)
+    const float SweepStep = 0.3f; // u between swept hit tests (no tunnelling on a long frame)
+    // DECISIONS 45: the arm lies flat (rot +-90, mirrored for left -> right so both directions are the same shape). Over its whole
+    // length it covers ArmDown below the tip line (max ArmSlice.y) to ArmUp above it (-min ArmSlice.x): an 8 u wall. SweepY = tip line:
+    //   LOW  6.1 -> arm 2.225..10.225: above the lane (head 2.05), the deck and every jump inside it; clear = a perch (feet 10.5) / the lane.
+    //   HIGH 7.9 -> arm 4.025..12.025: over a standing head (3.8) and the lane; any hop, a hook, a perch, a roof chunk under 12 are inside it.
+    const float ArmDown = 124f * Px, ArmUp = 132f * Px;
+    static readonly float[] SweepY = { 6.1f, 7.9f }; // LOW, HIGH
+    // Under-bridge lane (DECISIONS 45, built by Stg05Builder from these): the deck over LaneX1..LaneX2 is a one-way grate (S + Space drops
+    // through, a jump comes back up), the lane floor is LaneY (head 2.05 < the LOW arm). Wall perches: one-way ledges PerchW wide at the
+    // walls, top PerchTop (over the LOW arm, inside the HIGH one); reached by rope from the deck (x <= ~8.5 / >= ~21.5) or from a hook.
+    public const float LaneX1 = 12f, LaneX2 = 18f, LaneY = 0.25f, PerchTop = 10.5f, PerchW = 3.5f;
     // B slam shockwave (DECISIONS 42): each unparried slam sends a low ground wave left and right from the tip to the room edges.
     // ShockH tall (a jump, a roof chunk or a hook clears it), 1 unparryable hit per wave. Two slots per pair; a wave lives up to
     // ~2.9 s and slams come ~0.9 s apart, so three pairs can be live. The waves leave ShockDelay after the impact (the floor flash
@@ -103,8 +112,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const int RainCols = 6, BugsPerCol = 10;
     const float RainWarn = 0.6f, RainSpeed = 20f, RainLen = 3f, RainHalfW = 0.5f, RainTop = 18f, CarpetHalf = 1.6f, CarpetH = 0.6f, CarpetTime = 0.9f;
     static readonly float[] RainEvery = { 0.6f, 0.5f, 0.42f }; // by phase: s between columns
-    // Rope targets (DECISIONS 38). Hanging body centre = hook - HangDrop = y 5.2: feet 4.35 clear the LOW sweep (top 3.1), a jump-gap
-    // wall's gap (3.8..6.8) and the bug carpet; top 6.0 is inside the HIGH sweep (4.2..5.4) and a floor-gap wall's bugs (gap 2..5).
+    // Rope targets (DECISIONS 38). Hanging body centre = hook - HangDrop = y 5.2: feet 4.35 clear a jump-gap wall's gap (3.8..6.8) and
+    // the bug carpet; top 6.0 is inside a floor-gap wall's bugs (gap 2..5) and both sweeps (DECISIONS 45: swing on to a wall perch).
     static readonly Vector2[] Hooks = { new Vector2(8.5f, 9.25f), new Vector2(21.5f, 9.25f) }; // rope reach (9 u) covers the whole bridge
     const float HangDrop = 4.05f, HookAim = 1.5f; // u hook -> hanging centre; u mouse radius around a hook / the hatch
     // Hatch: open (or cracked) with the core still up inside -> rope latch, pulled to HatchStrikeBelow under it, HatchHookDamage, once per
@@ -225,13 +234,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         holo = Make("Hologram", BossArt.Holo, "Background", -103, HoloAt);
         bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest, Res("boss_bug_arm_lit"));
         blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest, Res("boss_blade_arm_lit"));
-        // DECISIONS 43: a LOW sweep's hilt dips under the floor line, and the deck is part of the wall plate behind the arm (Background
-        // -120), so sorting can't put the arm behind it: this mask hides the arm below Floor while it sweeps (AttackSweep sets the interaction).
-        var deckMask = new GameObject("SweepDeckMask").AddComponent<SpriteMask>();
-        deckMask.transform.SetParent(transform, false);
-        deckMask.sprite = ParryFx.Square;
-        deckMask.transform.position = new Vector3(RoomW * 0.5f, Floor - 10f, 0f);
-        deckMask.transform.localScale = new Vector3(RoomW + 60f, 20f, 1f);
         Sprite coreArt = hatchCore != null ? hatchCore : BossArt.HatchInside;
         core = MakePart("WeakCore", new[] { coreArt, coreArt, coreArt }, coreArt, -99, HatchAt); // hidden while inside the hatch
         coreCable = Make("CoreCable", ParryFx.Square, "Background", -100, HatchAt);
@@ -606,10 +608,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         rainStage[c] = 1;
         rainT[c] = 0f;
         rainHit[c] = false;
-        rainX[c] = Snap(Mathf.Clamp(x, 1.5f, RoomW - 1.5f));
+        rainX[c] = Snap(Mathf.Clamp(x, 0.5f, RoomW - 0.5f)); // was 1.5: hugging the wall on a perch (x 0.45..0.65) no column could reach (DECISIONS 45)
         for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainOff[i] = new Vector2(Random.Range(-RainHalfW, RainHalfW), Random.value * RainLen);
         rainLane[c].transform.position = new Vector3(rainX[c], Floor + 8f, 0f);
-        rainMark[c].transform.position = new Vector3(rainX[c], Floor + 0.125f, 0f);
+        rainMark[c].transform.position = new Vector3(rainX[c], RainGround(rainX[c]) + 0.125f, 0f);
         rainLane[c].enabled = rainMark[c].enabled = true;
         Sfx.Play(SfxId.EnemyTell, 0.5f, 1.3f);
     }
@@ -623,7 +625,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         {
             if (rainStage[c] == 0) continue;
             rainT[c] += dt;
-            float x = rainX[c];
+            float x = rainX[c], g = RainGround(x);
             if (rainStage[c] == 1)
             {
                 rainMark[c].color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.5f);
@@ -636,13 +638,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 Sfx.Play(SfxId.Swing, 0.5f, 1.4f);
             }
             float head = RainTop - RainSpeed * rainT[c];
-            if (rainStage[c] == 2 && head <= Floor) // landed: the clump scatters into a floor carpet
+            if (rainStage[c] == 2 && head <= g) // landed: the clump scatters into a floor carpet
             {
                 rainStage[c] = 3;
                 rainT[c] = 0f;
                 rainMark[c].enabled = false;
-                SpriteFx.Play("land-dust", new Vector2(x - 0.6f, Floor), true, 101);
-                SpriteFx.Play("land-dust", new Vector2(x + 0.6f, Floor), false, 101);
+                SpriteFx.Play("land-dust", new Vector2(x - 0.6f, g), true, 101);
+                SpriteFx.Play("land-dust", new Vector2(x + 0.6f, g), false, 101);
                 Sfx.Play(SfxId.Hit, 0.35f, 1.4f);
             }
             if (rainStage[c] == 3 && rainT[c] >= CarpetTime)
@@ -654,7 +656,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             bool carpet = rainStage[c] == 3;
             float half = carpet ? Mathf.Lerp(RainHalfW, CarpetHalf, Smooth(rainT[c] / 0.15f)) : RainHalfW;
             if (!rainHit[c] && dt > 0f && Mathf.Abs(pp.x - x) < half + 0.35f &&
-                (carpet ? pp.y - 0.85f < Floor + CarpetH : pp.y - 0.85f < head + RainLen && pp.y + 0.8f > head) &&
+                (carpet ? pp.y - 0.85f < g + CarpetH && pp.y - 0.85f > g - 0.5f : pp.y - 0.85f < head + RainLen && pp.y + 0.8f > head) && // a carpet hits its own level only
                 player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x, pp.y), Unparryable = true }) == HitResult.Hit)
                 rainHit[c] = true; // one hit per column (dash / i-frames pass through)
             Color tint = new Color(1f, 1f, 1f, carpet ? Mathf.Clamp01((CarpetTime - rainT[c]) / 0.25f) : 1f);
@@ -662,7 +664,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             {
                 Vector2 o = rainOff[i];
                 float jx = ((i + flutter) % 3 - 1) * Px * (carpet ? 2f : 1f), jy = ((i + flutter) & 1) * Px;
-                Vector2 b = carpet ? new Vector2(x + o.x / RainHalfW * half, Floor + 0.15f + 2f * jy) : new Vector2(x + o.x, head + o.y);
+                Vector2 b = carpet ? new Vector2(x + o.x / RainHalfW * half, g + 0.15f + 2f * jy) : new Vector2(x + o.x, head + o.y);
+                if (carpet && g < Floor) b.x = Mathf.Clamp(b.x, LaneX1 + 0.1f, LaneX2 - 0.1f); // a lane carpet stays in the lane
                 rainBugs[i].transform.position = new Vector3(Snap(b.x + jx), Snap(b.y + jy), 0f);
                 rainBugs[i].color = tint;
             }
@@ -689,6 +692,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         {
             float y = Floor + Random.value * span;
             if (y >= lo) y += GapH;
+            if (lo > Floor && i % 8 == 0) y = Random.Range(LaneY, Floor); // a jump-gap wall fills the under-bridge lane too (DECISIONS 45)
             bugOff[i] = new Vector2(Random.Range(-WaveHalfW, WaveHalfW), y);
             bugs[i].enabled = true;
         }
@@ -749,6 +753,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (!waveHit[w] && dt > 0f && Mathf.Abs(pp.x - waveX[w]) < WaveHalfW + 0.35f)
             {
                 float feet = pp.y - 0.85f, top = pp.y + 0.8f;
+                if (InLane) { feet = Floor + 0.15f; top = Floor + 1.8f; } // DECISIONS 45: the lane is judged like the deck (floor gap = safe)
                 if (feet < WaveTop && (feet < gapLo[w] || top > gapLo[w] + GapH) &&
                     player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(waveX[w] - 1f, pp.y), Unparryable = true }) == HitResult.Hit)
                     waveHit[w] = true; // one hit per wall (a dash / i-frames pass through)
@@ -756,6 +761,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++)
             {
                 Vector2 o = bugOff[i];
+                if (o.y < Floor) bugs[i].enabled = OverLane(waveX[w] + o.x); // lane bugs show only over the grate (inside the deck elsewhere)
                 bugs[i].transform.position = new Vector3(Snap(waveX[w] + o.x) + ((i + flutter) % 3 - 1) * Px, Snap(o.y) + ((i + flutter) & 1) * Px, 0f);
             }
         }
@@ -907,7 +913,21 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     }
 
     // the slam lands where the blade's steel will be (tip on the floor at zx); the red zone is only the wider tell
-    bool InZone(float zx) => PlayerIn(BladeBox(new Vector2(zx, Floor), 0f));
+    // DECISIONS 45: over the grate the blade punches through into the lane; over the solid deck it stops on it (the lane is safe)
+    bool InZone(float zx)
+    {
+        Rect r = BladeBox(new Vector2(zx, Floor), 0f);
+        r.yMin = OverLane(zx, BladeHalfW) ? LaneY : Floor + 0.1f;
+        return PlayerIn(r);
+    }
+
+    // DECISIONS 45 under-bridge lane: the player's feet are down in it (player centre = feet + 1)
+    // Same feet line as the hit tests (centre - 0.85): no band between "in the lane" and "on the deck" while dropping in / jumping out
+    // (a floor-gap wall hit there although both ends are safe).
+    bool InLane => player.transform.position.y - 0.85f < Floor;
+    bool OnPerch => player.transform.position.y - 1f > PerchTop - 0.2f; // standing on a wall perch (or anything that high)
+    static bool OverLane(float x, float half = 0f) => x + half > LaneX1 && x - half < LaneX2;
+    static float RainGround(float x) => OverLane(x) ? LaneY : Floor; // a rain column over the grate falls through it into the lane
 
     // World box of the blade's steel. rotZ 0 = hanging down (slams; sweeps use ArmHitsPlayer). Only right angles: exact.
     static Rect BladeBox(Vector2 tip, float rotZ)
@@ -1034,7 +1054,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (shockDust[w] <= 0f) { shockDust[w] = ShockDustEvery; SpriteFx.Play("land-dust", new Vector2(x - dir * 0.3f, Floor), dir < 0f, 101); }
             // hit: the tall front part (ShockHitBack u behind the front), feet below the crest; dash i-frames (Dodged) keep it live
             float rel = dir * (pp.x - x); // > 0: ahead of the front
-            if (!shockHit[w] && dt > 0f && rel < 0.35f && rel > -ShockHitBack - 0.35f && feet < Floor + ShockH &&
+            if (!shockHit[w] && dt > 0f && rel < 0.35f && rel > -ShockHitBack - 0.35f && feet < Floor + ShockH && !InLane && // runs on the deck: the lane under it is safe (DECISIONS 45)
                 player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, pp.y), Unparryable = true }) == HitResult.Hit)
                 shockHit[w] = true;
             for (int c = 0; c < ShockCols; c++) // pixel crest: columns stepping down behind the front, a white cap on each, 1-px flicker
@@ -1054,9 +1074,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         }
     }
 
-    // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
-    // band and slides across wall to wall (tip x 31 -> -19 or back). DECISIONS 43: the whole drawn arm is the hitbox, tilted SweepTilt
-    // (LOW: hilt down, HIGH: hilt up) so a jump / standing still still clears it. The red band is only the warning.
+    // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing), its tip on the LOW / HIGH line,
+    // and slides across wall to wall (tip x 31 -> -19 or back). DECISIONS 43 / 45: the whole drawn arm is the hitbox (ArmSlice); it never
+    // dips under the deck, so what is drawn is what hits. The red band (the arm's full height) is only the warning.
     // DECISIONS 36: every sweep starts and ends with the whole arm off-screen; at the end it flies back and reattaches ----
     IEnumerator AttackSweep(int n, float tell)
     {
@@ -1068,19 +1088,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (i > 0) low = Random.value < 0.7f ? !low : low; // mostly alternate (T)
             // x = the tip; the arm trails BladeArmLen behind it, so x0 / x1 keep all of it outside the 0..RoomW view
             float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? RoomW + 1f : -1f, x1 = dir < 0f ? -BladeArmLen - 1f : RoomW + BladeArmLen + 1f;
-            // rot: the hilt points back (-dir), tilted down (LOW) / up (HIGH) by SweepTilt so the drawn arm leaves a gap (DECISIONS 43)
-            float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * (90f + (low ? SweepTilt : -SweepTilt));
-            sweepY = (bot + top) * 0.5f;
-            sweepFill.transform.localScale = new Vector3(RoomW, top - bot, 1f);
+            float rot = dir * 90f; // the hilt points back (-dir), lying flat (DECISIONS 45)
+            sweepY = SweepY[low ? 0 : 1];
+            sweepFill.transform.localScale = new Vector3(RoomW, ArmDown + ArmUp, 1f);
             sweepFill.enabled = true;
             blade.Glow = true;
             blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
-            // the art is lopsided (ArmSlice): mirrored for left -> right so both directions are the same shape (unflipped, the wide side
-            // of a LOW sweep rose ~0.5 u over the floor 6..9 u behind the tip and hit whoever landed there). Hidden below the floor line.
+            // the art is lopsided (ArmSlice): mirrored for left -> right so both directions cover the same ArmDown..ArmUp band
             blade.Sr.flipX = dir > 0f;
-            blade.Sr.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
             Sfx.Play(SfxId.EnemyTell, 0.8f, low ? 0.8f : 1.25f); // low tell = low pitch
-            yield return Move(blade, new Vector2(x0, sweepY), SweepWarn); // off-screen: lines up behind the edge during the warning
+            yield return Move(blade, new Vector2(x0, sweepY), SweepWarn[Phase - 1]); // off-screen: lines up behind the edge during the warning
             blade.Glow = false;
             sweepFill.enabled = false;
             Sfx.Play(SfxId.Swing, 1f, 0.6f);
@@ -1093,8 +1110,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 t += dt;
                 float x = Mathf.Lerp(x0, x1, t / time);
                 blade.Pos = new Vector2(x, sweepY);
+                // one contact per sweep: a dash (Dodged) at the first touch passes the whole 8 u arm, like it passed the blade before
                 if (!hit && dt > 0f && ArmHitsPlayer(prevX, x, sweepY, rot, dir > 0f))
-                    hit = player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, player.transform.position.y), Unparryable = true }) == HitResult.Hit; // one hit per sweep; dash i-frames (Dodged) pass through
+                {
+                    player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, player.transform.position.y), Unparryable = true });
+                    hit = true;
+                }
                 prevX = x;
                 yield return null;
             }
@@ -1103,7 +1124,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         }
         blade.Sr.transform.rotation = Quaternion.identity; // still off-screen: hang it again and bring it back from the right
         blade.Sr.flipX = false;
-        blade.Sr.maskInteraction = SpriteMaskInteraction.None;
         blade.Pos = BladeOff;
         yield return ReattachBlade();
     }
@@ -1157,7 +1177,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     {
         if (EnemyProjectile.Active.Count >= MaxShots) return;
         float r = deg * Mathf.Deg2Rad;
-        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * speed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot);
+        // DECISIONS 45: shots fired at someone in the lane fly through the grate (and the deck) instead of stopping on it: the lane is no bunker.
+        // Same for a wall perch: the shot aimed at someone hugging the wall (x < ~0.85) died on the perch's lip.
+        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * speed, playerMask, InLane || OnPerch ? 0 : groundMask, new HitInfo { Damage = 1 }, GoldShot);
         p.transform.localScale = new Vector3(BulletScale, BulletScale, 1f); // visual only: hitbox stays EnemyProjectile's 0.5
         p.ReflectLife = ShotReflectLife;
         p.ReflectTarget = HatchAt; // reflected = a weakened lob that drops back into the hatch
@@ -1307,7 +1329,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         debris.CrumbleAll(); // DECISIONS 40: the ending room has no moving platforms
         blade.Sr.transform.rotation = Quaternion.identity; // killed mid-sweep: hang the arm down again
         blade.Sr.flipX = false;
-        blade.Sr.maskInteraction = SpriteMaskInteraction.None;
         if (blade.Pos.x < 1f || blade.Pos.x > RoomW - 1f) blade.Pos = BladeRest; // killed while the arm was off-screen (sweep / reattach, DECISIONS 36): the ending must drop it in view
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
@@ -1457,7 +1478,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         if (zoneFloor.enabled) zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
         if (sweepY >= 0f && !dead)
         {
-            sweepFill.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY), 0f);
+            sweepFill.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY + (ArmUp - ArmDown) * 0.5f), 0f); // the arm's full height
             sweepFill.color = new Color(1f, 0.23f, 0.23f, blink ? 0.22f : 0.1f); // the blinking band = height tell (warning only)
         }
         Vector2 aimTo = player.transform.position;

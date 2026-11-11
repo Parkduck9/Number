@@ -57,9 +57,11 @@ public static class Stg05Builder
 
         // Room: ground + walls (layer Ground, invisible). The floor is the throne wall plate's dark bottom + the fill below it, sampled from
         // the plate's bottom row (PartsBackdropKit.Wall), instead of the old grey strip (audit #10).
-        BuildCollider("GROUND", 0f, RoomW, 0f, 2f, null);
+        BuildCollider("GROUND-L", 0f, BossFight.LaneX1, 0f, 2f, null);
+        BuildCollider("GROUND-R", BossFight.LaneX2, RoomW, 0f, 2f, null);
         BuildCollider("WALL-L", -1f, 0f, 0f, RoomH, null);
         BuildCollider("WALL-R", RoomW, RoomW + 1f, 0f, RoomH, null);
+        BuildEscapes();
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(player);
         playerGo.transform.position = new Vector3(4f, 3f, 0f); // feet (4, 2), player pivot = feet + 1
@@ -106,6 +108,31 @@ public static class Stg05Builder
         SerializedProperty p = layers.GetArrayElementAtIndex(index);
         if (string.IsNullOrEmpty(p.stringValue)) p.stringValue = name;
         else if (p.stringValue != name) Debug.LogWarning($"Layer {index} already used by '{p.stringValue}', expected '{name}'.");
+    }
+
+    // DECISIONS 45 blade-sweep escapes (numbers in BossFight): the under-bridge lane = a one-way grate in the deck (S + Space drops through,
+    // a jump comes back up) over a shallow catwalk; two one-way perches on the room walls above the LOW sweep. Art from existing parts:
+    // rail_track girders (PartsBackdropKit.PlatformArt one-way look) and a dark hollow behind the lane. Colliders built invisible.
+    static void BuildEscapes()
+    {
+        var root = new GameObject("Sweep escapes (DECISIONS 45)").transform;
+        float x1 = BossFight.LaneX1, x2 = BossFight.LaneX2, ly = BossFight.LaneY, pt = BossFight.PerchTop, pw = BossFight.PerchW;
+        StageBuildKit.AddSquare(root, "Visual (under-bridge hollow)", new Vector2((x1 + x2) * 0.5f, (ly - 1f + 2f) * 0.5f), new Vector2(x2 - x1, 3f - ly),
+            new Color32(0x0B, 0x0F, 0x1E, 0xFF), -70);
+        var boxes = new[]
+        {
+            StageBuildKit.Ledge("DECK-GRATE", 0, x1, x2, 2f),
+            new StageBuildKit.Box("LANE-FLOOR", 0, StageBuildKit.Kind.Solid, x1, x2, 0f, ly),
+            StageBuildKit.Ledge("PERCH-L", 0, 0f, pw, pt),
+            StageBuildKit.Ledge("PERCH-R", 0, RoomW - pw, RoomW, pt),
+        };
+        foreach (var b in boxes)
+        {
+            StageBuildKit.BuildCollider(root, b, false);
+            var art = b; // every piece drawn as a thin girder (the lane floor too: a catwalk, its solid collider unchanged)
+            art.kind = StageBuildKit.Kind.OneWay;
+            PartsBackdropKit.PlatformArt(root, art);
+        }
     }
 
     // Axis-aligned solid on the Ground layer; color null = invisible.
