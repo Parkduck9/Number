@@ -49,7 +49,16 @@ public static class DashRules
     public const float GrappleLedgeSnap = 2f;    // u: a wall hit within this below a ledge top anchors on the top corner instead
     // Uses: 1 per airtime (an attached rope spends it), refilled on landing.
     // DECISIONS 38 boss-room rope targets (PlayerController.GrappleAlt = BossFight): hang from a ceiling hook / strike the open chest hatch
-    public const float GrappleHangMax = 2.5f;      // (T) s hanging from a hook, then it lets go (Space = jump off, S = drop, RMB = a fresh rope, LMB = swing)
+    public const float GrappleHangMax = 2.5f;      // (T) s swinging on a rope (hook or ceiling, DECISIONS 39), then it lets go
+    // DECISIONS 39 rope swing (hooks: length = BossFight HangDrop; solid ceilings: GrappleSwingLen). Space / RMB = slingshot release, S = drop
+    public const float GrappleSwingLen = 3.5f;     // (T) u: a ceiling rope stops zipping and swings at this length
+    public const float GrappleSwingMin = 2f;       // (T) u: shortest swing rope (fired closer: falls slack until taut)
+    public const float GrappleSwingPump = 9f;      // (T) u/s^2 along the arc while A/D held
+    public const float GrappleSwingMaxSpeed = 16f; // (T) u/s swing speed cap
+    public const float GrappleSwingBoost = 1.15f;  // (T) release velocity multiplier
+    public const float GrappleSwingLiftFrac = 0.35f; // (T) release: + this * jump speed upward
+    public const float GrappleSwingCarryTime = 0.8f; // (T) s the release momentum eases into air control...
+    public const float GrappleSwingAirAccel = 14f;  // (T) u/s^2 ...at this rate (ground ropes: GrappleCarryTime / GrappleAirAccel)
     public const float GrappleStrikeBounceX = 4f;  // (T) u/s sideways (back the way the hero came) after the hatch strike
     public const float GrappleStrikeBounceY = 5f;  // (T) u/s upward pop off the hatch, then the fall
     public const float GrappleStrikeSafe = 0.8f;   // (T) s of i-frames after a landed hatch strike (covers the fall back to the bridge)

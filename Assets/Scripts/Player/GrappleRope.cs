@@ -30,6 +30,7 @@ public class GrappleRope : MonoBehaviour
     Vector2 target;
     bool active, hit;
     float t;
+    public bool Taut; // DECISIONS 39 swing: a straight line (no pull wobble); reset by Shoot
 
     public static GrappleRope Create(PlayerController player)
     {
@@ -43,6 +44,7 @@ public class GrappleRope : MonoBehaviour
     {
         target = to;
         hit = attached;
+        Taut = false;
         t = 0f;
         active = true;
         Draw();
@@ -81,7 +83,7 @@ public class GrappleRope : MonoBehaviour
 
         float amp = WhipAmp;
         if (hit) amp = WhipAmp * Mathf.Exp(-since * SnapDamp) * Mathf.Cos(since * SnapFreq) // damped spring jolt, then a taut wobble
-                       + (t >= ext ? PullAmp * Mathf.Clamp01(len / DashRules.GrappleRange) : 0f);
+                       + (t >= ext && !Taut ? PullAmp * Mathf.Clamp01(len / DashRules.GrappleRange) : 0f);
         else amp *= Mathf.Exp(-since * MissDamp);
         amp = Mathf.Clamp(amp, -len * 0.25f, len * 0.25f);
         float sag = SagAmp * len * Mathf.Clamp01(back * 3f); // miss: goes slack

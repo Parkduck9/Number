@@ -97,7 +97,8 @@ public class EnemyProjectile : MonoBehaviour
         float dist = step.magnitude;
         Vector2 dir = dist > 0f ? step / dist : Vector2.right;
 
-        if (groundMask.value != 0 && Physics2D.BoxCast(prev, size, 0f, dir, dist, groundMask).collider != null)
+        Collider2D wall = groundMask.value != 0 ? Physics2D.BoxCast(prev, size, 0f, dir, dist, groundMask).collider : null;
+        if (wall != null && !(Reflected && wall.usedByEffector)) // a parried shot flies through one-way platforms (boss roof chunks must not block the lob to the hatch)
         {
             Destroy(gameObject);
             return;

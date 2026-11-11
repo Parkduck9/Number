@@ -129,10 +129,14 @@ public class PlayerController : MonoBehaviour
     bool pendingGrapple;      // pressed during a hit-stop
     // DECISIONS 38 boss-room targets (GrappleAlt): the body is pulled to grapplePull (= grappleAnchor for ground ropes)
     Vector2 grapplePull;
-    bool grappleHang;         // a ceiling hook: hold at grapplePull until Space / S / RMB (re-rope) / LMB or GrappleHangMax
+    bool grappleHang;         // a ceiling hook (RMB while swinging = a fresh rope from it)
     bool grappleStrike;       // the open hatch: strike on arrival, then bounce off and fall (GrappleStrikeSafe i-frames)
-    bool hanging;             // reached the hang point
+    // DECISIONS 39 rope swing: a hook or a solid ceiling zips to swingLen, then the body swings on the rope (pendulum, gravity, A/D pump)
+    bool grappleSwing;        // this rope swings when it reaches swingLen (else the DECISIONS 16 pull-and-pop)
+    float swingLen;           // rope length while swinging
+    bool hanging;             // swinging on the rope
     float hangSince;
+    float grappleCarryAccel = DashRules.GrappleAirAccel; // carried release momentum -> air control rate (a swing release keeps it longer)
     float grappleSafeUntil;   // i-frames after a landed hatch strike
     readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
@@ -499,6 +503,7 @@ public class PlayerController : MonoBehaviour
                 rb.gravityScale = 0f;
                 rb.linearVelocity = Vector2.zero; // hangs still while the rope flies out, then the pull (FixedUpdate)
                 grappleAttached = hanging = false;
+                grappleCarryAccel = DashRules.GrappleAirAccel; // SwingRelease overrides it after the release
                 break;
         }
     }
@@ -510,7 +515,7 @@ public class PlayerController : MonoBehaviour
             case State.Locomotion:
                 float vx = input.MoveX * moveSpeed;
                 if (Time.time < grappleCarryUntil && !grounded) // rope release: keep the swing, blend into air control
-                    vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, DashRules.GrappleAirAccel * Time.fixedDeltaTime);
+                    vx = Mathf.MoveTowards(rb.linearVelocity.x, vx, grappleCarryAccel * Time.fixedDeltaTime);
                 if (!grounded && vx != 0f && PushingIntoWall(vx > 0f ? 1 : -1)) vx = 0f; // airborne against a wall face: no push, so gravity slides us down
                 rb.linearVelocity = new Vector2(vx, rb.linearVelocity.y);
                 break;
@@ -518,10 +523,10 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = Vector2.zero;
                 break;
             case State.Grapple:
-                if (!grappleAttached || hanging) { rb.linearVelocity = Vector2.zero; break; }
+                if (!grappleAttached) { rb.linearVelocity = Vector2.zero; break; }
+                if (hanging) { SwingStep(); break; }
                 Vector2 toAnchor = grapplePull - rb.position;
-                float pull = grappleHang ? Mathf.Min(DashRules.GrapplePullSpeed, toAnchor.magnitude / Time.fixedDeltaTime) : DashRules.GrapplePullSpeed; // a hook stops on the hang point
-                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * pull : Vector2.zero; // full speed to the end (release keeps it)
+                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * DashRules.GrapplePullSpeed : Vector2.zero; // full speed to the end (release keeps it)
                 break;
             case State.Dash:
                 rb.linearVelocity = dashVelocity;
@@ -899,9 +904,10 @@ public class PlayerController : MonoBehaviour
         {
             Facing = face;
             grappleAnchor = altAnchor;
-            grapplePull = altPull;
+            grapplePull = hang ? altAnchor : altPull; // a hook: zip toward the hook itself, swing at the old hang depth (DECISIONS 39)
             grappleCeiling = false;
-            grappleHang = hang;
+            grappleHang = grappleSwing = hang;
+            swingLen = Vector2.Distance(altAnchor, altPull);
             grappleStrike = !hang;
             grappleUsed = true;
             EnterState(State.Grapple);
@@ -932,6 +938,8 @@ public class PlayerController : MonoBehaviour
         }
         grapplePull = grappleAnchor;
         grappleHang = grappleStrike = false;
+        grappleSwing = grappleCeiling && !best.collider.usedByEffector; // solid ceiling / overhang swings; a one-way platform keeps the pop through it
+        swingLen = DashRules.GrappleSwingLen;
         grappleUsed = true;
         EnterState(State.Grapple);
         rope.Shoot(grappleAnchor, true);
@@ -942,6 +950,12 @@ public class PlayerController : MonoBehaviour
     void UpdateGrapple(float now, float elapsed)
     {
         // Jump = early release + a normal jump. LMB = release into a swing (UpdateLocomotion runs it this frame). Shift stays buffered until the pull ends.
+        if (now <= jumpBufferedUntil && grappleAttached && hanging) // swinging: let go with the swing (slingshot)
+        {
+            SwingRelease();
+            jumpBufferedUntil = -999f;
+            return;
+        }
         if (now <= jumpBufferedUntil && grappleAttached) // a (buffered) press while pulling (not during the extend: no free air jump)
         {
             ReleaseGrapple(false);
@@ -964,16 +978,17 @@ public class PlayerController : MonoBehaviour
             Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
             return;
         }
-        if (hanging) // DECISIONS 38 hook: S (or the time limit) drops straight down
+        if (hanging) // DECISIONS 39 swing (FixedUpdate SwingStep): S, landing or the time limit lets go keeping the swing velocity
         {
-            if (input.GrapplePressed) // RMB again: a fresh rope from the hook (the open hatch, a wall); a miss just drops
+            if (input.GrapplePressed) // RMB again: let go with the swing; a hook also allows a fresh rope (the open hatch, a wall), a miss just flies on
             {
-                ReleaseGrapple(false);
+                SwingRelease();
+                if (!grappleHang) return;
                 grappleUsed = false;
                 grappleReadyAt = now;
                 TryGrapple(now);
             }
-            else if (input.DownHeld || now - hangSince >= DashRules.GrappleHangMax) ReleaseGrapple(false);
+            else if (input.DownHeld || now - hangSince >= DashRules.GrappleHangMax || (grounded && rb.linearVelocity.y <= 0.1f)) ReleaseGrapple(false);
             return;
         }
         SpawnAfterimage(now);
@@ -984,12 +999,15 @@ public class PlayerController : MonoBehaviour
         bool blocked = pulled > 2f * Time.fixedDeltaTime && dist > 0.001f &&
             Vector2.Dot(rb.linearVelocity, toAnchor / dist) < 0.25f * wanted; // stuck on a corner / ceiling: let go
         float step = DashRules.GrapplePullSpeed * Time.fixedDeltaTime;
-        if (grappleHang && dist <= step + 0.05f) // reached the hang point (FixedUpdate slows onto it): hold still under the hook
+        if (grappleSwing && (dist <= swingLen + step || blocked || pulled >= DashRules.GrappleMaxPull)) // rope length reached: swing from here
         {
             hanging = true;
             hangSince = now;
-            rb.linearVelocity = Vector2.zero;
-            rb.position = grapplePull;
+            // The rope is as long as it is now (closer than the min: falls slack until taut). Never shorter than dist: SwingStep would
+            // yank the overshoot back in one step (up to max speed toward the anchor, kept afterwards = a random bounce / a shove into a blocker).
+            swingLen = Mathf.Max(dist, DashRules.GrappleSwingMin);
+            if (dist > 0.001f) { Vector2 r = toAnchor / dist; rb.linearVelocity -= r * Vector2.Dot(rb.linearVelocity, r); } // keep only the tangential part
+            rope.Taut = true;
             return;
         }
         if (grappleStrike && dist <= DashRules.GrappleReleaseDist + step) { HatchStrike(now); return; }
@@ -1025,6 +1043,38 @@ public class PlayerController : MonoBehaviour
         jumpCut = true; // the pop is not a held jump: releasing Space must not halve it
         grappleCarryUntil = Time.time + DashRules.GrappleCarryTime;
         grappleReadyAt = Time.time + DashRules.GrappleCooldown; // ground ropes refill at once: no spammed wall zip
+    }
+
+    // DECISIONS 39: Space / RMB off a swing. The swing velocity x GrappleSwingBoost plus a small lift; the momentum eases into air control slowly.
+    void SwingRelease()
+    {
+        Vector2 v = rb.linearVelocity * DashRules.GrappleSwingBoost + Vector2.up * (DashRules.GrappleSwingLiftFrac * jumpSpeed);
+        ReleaseGrapple(false);
+        rb.linearVelocity = v;
+        grappleCarryUntil = Time.time + DashRules.GrappleSwingCarryTime;
+        grappleCarryAccel = DashRules.GrappleSwingAirAccel;
+    }
+
+    // FixedUpdate while swinging (gravityScale stays 0 in Grapple; gravity is added here): a one-sided rope of swingLen from grappleAnchor.
+    void SwingStep()
+    {
+        float dt = Time.fixedDeltaTime;
+        Vector2 v = rb.linearVelocity + Physics2D.gravity * (gravityScale * dt);
+        Vector2 off = rb.position - grappleAnchor;
+        float d = off.magnitude;
+        if (d > 0.001f)
+        {
+            Vector2 r = off / d, tan = new Vector2(-r.y, r.x);
+            if (tan.x < 0f) tan = -tan; // D pumps along the arc to the right, A to the left
+            v += tan * (input.MoveX * DashRules.GrappleSwingPump * dt);
+            if (d >= swingLen) // taut: no outward speed, and back onto the circle this step
+            {
+                float outV = Vector2.Dot(v, r);
+                if (outV > 0f) v -= r * outV;
+                v -= r * ((d - swingLen) / dt);
+            }
+        }
+        rb.linearVelocity = Vector2.ClampMagnitude(v, DashRules.GrappleSwingMaxSpeed);
     }
 
     void SpawnAfterimage(float now)

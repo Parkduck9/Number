@@ -10,7 +10,7 @@ public enum ParryHeight { Mid, High, Low }
 // so 2D lights don't darken it. Owned and driven by TestEnemy (melee only); no Update of its own except ending the flash.
 public class ParryRing : MonoBehaviour
 {
-    const int Radius = 10;                        // (T) px: 21 px ring, 1 px dark rim outside it
+    const int Radius = 15;                        // (T) px: 31 px ring, 1 px dark rim outside it (was 10; user 11-11: bigger)
     const float Ppu = 32f;
     const float ApproachTime = 0.6f;              // (T) s: the red ring is visible for the last 0.6 s and shrinks 3x radius -> 1x radius at a constant rate;
                                                   // a shorter warning (eta starts below 0.6) shows it from the start at the same rate, so it begins smaller

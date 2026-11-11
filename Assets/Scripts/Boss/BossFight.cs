@@ -34,6 +34,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     [SerializeField] Sprite bugArmArt;    // pivot bottom-centre = the palm
     [SerializeField] Sprite bladeArmArt;  // pivot bottom-centre = the blade tip
     [SerializeField] Sprite hatchArt;     // left half, centre pivot (the right half is the same sprite flipped)
+    [SerializeField] Sprite debrisArt;    // falling roof chunk (DECISIONS 40), pivot bottom-centre; empty = a code-drawn slab
     [Header("Ending")]
     [SerializeField] TextAsset ending;    // END-01 lines (talk mode)
     [SerializeField] TMP_FontAsset font;  // "smash the machines" hint
@@ -136,6 +137,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     public bool BladeStuck { get; private set; }
     public Transform CoreTransform => core.Sr.transform; // dice talismans fly here
     public bool CoreExposed => coreOpen;                 // dropped and hittable right now
+    public bool Started => started;                      // the fight is on (falling roof chunks spawn, DECISIONS 40)
     public bool Dead => dead;                            // ending (smash the machines): LuckyDice plays the field skills, not the boss ones
     public Vector2 CorePosition => core.Pos;
     int Phase => hp * 3 > MaxHp * 2 ? 1 : hp * 3 > MaxHp ? 2 : 3;
@@ -160,9 +162,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     bool hatchHook, hatchLatched, wasHookable; // hatchHook: an attack holds the hatch open for the rope; latched: the rope is on its way
     float hookCd, hookOpenedAt;
 
-    SpriteRenderer zoneFloor, zoneLane, white, sweepFill, sweepLine;
-    float sweepY = -1f; // band centre while the B' warning / slash shows, < 0 = off
-    readonly SpriteRenderer[] zoneEdge = new SpriteRenderer[2];           // FX: blinking side lines of the danger lane
+    SpriteRenderer zoneFloor, zoneLane, white, sweepFill; // DECISIONS 40: no red lines (sweep centre line, danger lane side lines)
+    float sweepY = -1f; // band centre while the B' warning shows, < 0 = off
+    BossDebris debris; // DECISIONS 40: falling roof chunks to ride / rope
     static readonly int FlashId = Shader.PropertyToID("_Flash");
     readonly SpriteRenderer[] aimDots = new SpriteRenderer[14];
     readonly SpriteRenderer[] coreBracket = new SpriteRenderer[8]; // gold lock-on corners around the open core (DECISIONS 32)
@@ -244,15 +246,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         zoneFloor.transform.localScale = new Vector3(ZoneHalf * 2f, 0.25f, 1f);
         zoneLane.color = new Color(1f, 0.23f, 0.23f, 0.12f);
         zoneLane.enabled = zoneFloor.enabled = false;
-        for (int i = 0; i < zoneEdge.Length; i++)
-        {
-            zoneEdge[i] = Make("DangerEdge", ParryFx.Square, "World", 6, Vector2.zero);
-            zoneEdge[i].transform.localScale = new Vector3(Px, 8f, 1f);
-            zoneEdge[i].enabled = false;
-        }
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
-        sweepLine = Make("SweepLine", ParryFx.Square, "World", 6, Vector2.zero);
-        sweepFill.enabled = sweepLine.enabled = false;
+        sweepFill.enabled = false;
+        debris = gameObject.AddComponent<BossDebris>();
+        debris.Setup(this, debrisArt);
         for (int i = 0; i < aimDots.Length; i++)
         {
             aimDots[i] = Make("AimDot", ParryFx.Square, "FX", 30, Vector2.zero);
@@ -886,11 +883,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         zoneFloor.enabled = zoneLane.enabled = on;
         zoneFloor.transform.position = new Vector3(zx, Floor + 0.125f, 0f);
         zoneLane.transform.position = new Vector3(zx, Floor + 4f, 0f);
-        for (int i = 0; i < zoneEdge.Length; i++)
-        {
-            zoneEdge[i].enabled = on;
-            zoneEdge[i].transform.position = new Vector3(zx + (i == 0 ? -ZoneHalf : ZoneHalf), Floor + 4f, 0f);
-        }
     }
 
     // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
@@ -909,7 +901,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * 90f; // rot: the hilt points back (-dir)
             sweepY = (bot + top) * 0.5f;
             sweepFill.transform.localScale = new Vector3(RoomW, top - bot, 1f);
-            sweepFill.enabled = sweepLine.enabled = true;
+            sweepFill.enabled = true;
             blade.Glow = true;
             blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
             Sfx.Play(SfxId.EnemyTell, 0.8f, low ? 0.8f : 1.25f); // low tell = low pitch
@@ -933,7 +925,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 yield return null;
             }
             blade.Pos = new Vector2(x1, sweepY);
-            sweepLine.enabled = false;
             sweepY = -1f;
         }
         blade.Sr.transform.rotation = Quaternion.identity; // still off-screen: hang it again and bring it back from the right
@@ -1135,8 +1126,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
         ShowZone(0f, false);
-        sweepFill.enabled = sweepLine.enabled = false;
+        sweepFill.enabled = false;
         sweepY = -1f;
+        debris.CrumbleAll(); // DECISIONS 40: the ending room has no moving platforms
         blade.Sr.transform.rotation = Quaternion.identity; // killed mid-sweep: hang the arm down again
         if (blade.Pos.x < 1f || blade.Pos.x > RoomW - 1f) blade.Pos = BladeRest; // killed while the arm was off-screen (sweep / reattach, DECISIONS 36): the ending must drop it in view
         ring.Hide();
@@ -1281,17 +1273,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             holo.transform.position = new Vector3(Snap(HoloAt.x) + (glitch ? (Random.value < 0.5f ? -2f : 2f) * Px : 0f), Snap(HoloAt.y), 0f);
             holo.color = new Color(1f, 1f, 1f, !started ? 0.35f : glitch && Random.value < 0.5f ? 0.45f : 1f);
         }
-        if (zoneFloor.enabled)
-        {
-            zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
-            zoneEdge[0].color = zoneEdge[1].color = new Color(1f, 0.23f, 0.23f, blink ? 0.9f : 0.4f);
-        }
+        if (zoneFloor.enabled) zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
         if (sweepY >= 0f && !dead)
         {
-            sweepFill.transform.position = sweepLine.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY), 0f);
-            sweepLine.transform.localScale = new Vector3(RoomW, 2f * Px, 1f);
-            sweepFill.color = new Color(1f, 0.23f, 0.23f, blink ? 0.22f : 0.1f);
-            sweepLine.color = new Color(1f, 0.23f, 0.23f, !sweepFill.enabled ? 0.35f : blink ? 0.95f : 0.45f); // fill off = slashing
+            sweepFill.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY), 0f);
+            sweepFill.color = new Color(1f, 0.23f, 0.23f, blink ? 0.22f : 0.1f); // the blinking band = height tell (warning only)
         }
         Vector2 aimTo = player.transform.position;
         bool aim = (aimOn || bugAim) && !dead;

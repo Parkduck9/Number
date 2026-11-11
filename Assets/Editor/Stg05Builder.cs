@@ -17,6 +17,7 @@ public static class Stg05Builder
     const string PlayerPrefab = "Assets/Prefabs/Prototype/Player.prefab";
     const string SquarePath = "Packages/com.unity.2d.sprite/Editor/ObjectMenuCreation/DefaultAssets/Textures/v2/Square.png";
     const string Ending01 = "Assets/Data/Dialogue/ending_01_placeholder.txt";
+    const string DebrisArt = "Assets/Art/Backgrounds/STG02_05_Parts/buildings/rail_track.png";
     const int GroundLayer = 6, PlayerLayer = 7, EnemyLayer = 8;
 
     const float RoomW = 30f, RoomH = 16.875f;
@@ -67,6 +68,8 @@ public static class Stg05Builder
         var fight = new GameObject("BossFight").AddComponent<BossFight>();
         SetObj(fight, "ending", AssetDatabase.LoadAssetAtPath<TextAsset>(Ending01));
         SetObj(fight, "font", font);
+        // DECISIONS 40 falling roof chunks: the rail girder for now (empty = code-drawn slab). TODO art: a proper broken roof chunk.
+        SetObj(fight, "debrisArt", AssetDatabase.LoadAssetAtPath<Sprite>(DebrisArt));
 
         // Room camera: CameraFollow2D clamped to the one-screen room (fixed view; shakes and the duel zoom need the follow).
         StageBuildKit.BuildCamera(playerGo.transform, new[] { new Rect(0f, 0f, RoomW, RoomH) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
