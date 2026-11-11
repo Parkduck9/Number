@@ -68,7 +68,13 @@ public class ParryRing : MonoBehaviour
         approach.enabled = false;
         target.color = FlashColor;
         flashUntil = Time.time + FlashTime;
+        flashFrame = Time.frameCount;
     }
+
+    // DECISIONS 44: the merge flash was talisman yellow (the parry colour) even when the blow hit the player. The strike resolves right
+    // after Flash in the same frame, so a hurt on that frame turns the merged ring red, held a little longer.
+    const float HurtFlashTime = 0.15f; // (T) s
+    int flashFrame = -1;
 
     public void Hide()
     {
@@ -81,6 +87,12 @@ public class ParryRing : MonoBehaviour
 
     void LateUpdate()
     {
+        if (flashFrame >= 0 && flashFrame == PlayerController.HurtFrame && flashUntil >= 0f)
+        {
+            target.color = ApproachColor;
+            flashUntil = Time.time + HurtFlashTime;
+            flashFrame = -1;
+        }
         if (flashUntil >= 0f && Time.time >= flashUntil) Hide();
     }
 

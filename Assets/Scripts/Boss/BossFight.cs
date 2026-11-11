@@ -57,7 +57,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // MashCap hits (= the old duel's 6 damage) rip it out early. The arm tugs every TugEvery s (shorter as time runs out).
     const int MashDamage = 1, MashCap = 6;
     const float StuckTime = 2.5f, TugEvery = 0.4f, TugEveryEnd = 0.2f;
-    const float WindowEarly = 0.25f, WindowLate = 0.1f, Lockout = 0.25f; // same LMB window as EliteDuel
+    const float WindowEarly = 0.25f, WindowLate = 0.1f, Lockout = 0.12f; // same LMB window as EliteDuel; Lockout 0.25 -> 0.12 (DECISIONS 43: swallowed the right press)
     // B tracks (DECISIONS 29): after each slam the blade re-aims at the player's x, slides there in SlamShift, waits SlamAim, slams.
     // DECISIONS 33: while it waits it keeps following the player's x (TrackSpeed u/s) and locks only when the ring appears.
     const float SlamShift = 0.15f, RingLead = 0.6f, TrackSpeed = 9f; // ring always 0.6 s (DECISIONS 28), starts after the slide
@@ -72,6 +72,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8); the blade lies along the band centre
     // Blade hitbox (feedback 11-11): the steel of boss_blade_arm(_lit), 44 x 202 px up from the pivot (= the tip). Slams and sweeps hurt only here.
     const float BladeLen = 6.3125f, BladeHalfW = 0.6875f;
+    // Sweeps (DECISIONS 43): the WHOLE drawn arm hurts. ArmSlice[u] = the sprite's opaque x range (u, px from the centre line) in the
+    // 1-u slice u..u+1 up from the tip, measured from boss_blade_arm(_lit).png (288 x 576, both the same). The arm is 8 u thick, so
+    // lying dead flat it would be an unjumpable wall: it tilts SweepTilt instead, LOW = hilt down into the bridge (only the tip end
+    // stays above the floor, top ~3.1: jump it), HIGH = hilt up into the air (lowest point ~4.2 at the tip: stand under it).
+    static readonly Vector2[] ArmSlice = {
+        new Vector2(-20, 20), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24), new Vector2(-20, 24),
+        new Vector2(-40, 40), new Vector2(-66, 104), new Vector2(-68, 120), new Vector2(-64, 124), new Vector2(-36, 120), new Vector2(-46, 108),
+        new Vector2(-44, 96), new Vector2(-62, 82), new Vector2(-102, 56), new Vector2(-118, 48), new Vector2(-128, 16), new Vector2(-132, -12) };
+    const float SweepTilt = 25f, SweepStep = 0.3f; // deg off flat; u between swept hit tests (no tunnelling on a long frame)
     // B slam shockwave (DECISIONS 42): each unparried slam sends a low ground wave left and right from the tip to the room edges.
     // ShockH tall (a jump, a roof chunk or a hook clears it), 1 unparryable hit per wave. Two slots per pair; a wave lives up to
     // ~2.9 s and slams come ~0.9 s apart, so three pairs can be live. The waves leave ShockDelay after the impact (the floor flash
@@ -216,6 +225,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         holo = Make("Hologram", BossArt.Holo, "Background", -103, HoloAt);
         bugArm = MakePart("BugArm", BossArt.BugArm, bugArmArt, -102, BugRest, Res("boss_bug_arm_lit"));
         blade = MakePart("BladeArm", BossArt.BladeArm, bladeArmArt, -101, BladeRest, Res("boss_blade_arm_lit"));
+        // DECISIONS 43: a LOW sweep's hilt dips under the floor line, and the deck is part of the wall plate behind the arm (Background
+        // -120), so sorting can't put the arm behind it: this mask hides the arm below Floor while it sweeps (AttackSweep sets the interaction).
+        var deckMask = new GameObject("SweepDeckMask").AddComponent<SpriteMask>();
+        deckMask.transform.SetParent(transform, false);
+        deckMask.sprite = ParryFx.Square;
+        deckMask.transform.position = new Vector3(RoomW * 0.5f, Floor - 10f, 0f);
+        deckMask.transform.localScale = new Vector3(RoomW + 60f, 20f, 1f);
         Sprite coreArt = hatchCore != null ? hatchCore : BossArt.HatchInside;
         core = MakePart("WeakCore", new[] { coreArt, coreArt, coreArt }, coreArt, -99, HatchAt); // hidden while inside the hatch
         coreCable = Make("CoreCable", ParryFx.Square, "Background", -100, HatchAt);
@@ -757,7 +773,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         blade.Glow = false;
         // Per-slam clock tt (0 = the previous slam resolved): slide to the new x in SlamShift, hold, drop in the last 0.12 s, slam at s.
         // First slam: the blade is already above zx (tell), slam at FirstSlam as before.
-        float aim = SlamAim[Phase - 1], s = FirstSlam, tt = 0f, lockedUntil = -10f, fromX = zx;
+        float aim = SlamAim[Phase - 1], s = FirstSlam, tt = 0f, lockedUntil = -10f, fromX = zx, pressAt = -1f;
         int k = 0;
         bool struck = false, parried = false;
         ParryHeight h = ParryRing.RandomHeight(); // per slam, presentation only
@@ -766,11 +782,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             float dt = Dt;
             tt += dt;
             bool last = k == n - 1;
-            if (input != null && input.AttackPressedRaw && dt > 0f) // the player's own LMB judged here, like EliteDuel (no parry state for a boss part)
+            // the player's own LMB judged here, like EliteDuel (no parry state for a boss part). A press on a frozen frame (hit-stop:
+            // dt 0) is remembered at the frozen clock and judged when the clock runs again (DECISIONS 43); input locks still drop it.
+            if (input != null && input.AttackPressedRaw && !GameFlow.InputLocked) pressAt = tt;
+            if (pressAt >= 0f && dt > 0f)
             {
-                if (tt < lockedUntil) { }
-                else if (!parried && tt >= s - WindowEarly && tt - dt <= s + WindowLate) parried = true;
-                else if (tt < s - WindowEarly || tt > s + WindowLate) lockedUntil = tt + Lockout; // anti-mash
+                float p = pressAt;
+                pressAt = -1f;
+                if (p < lockedUntil) { }
+                else if (!parried && p >= s - WindowEarly && p - dt <= s + WindowLate) parried = true;
+                else if (p < s - WindowEarly || p > s + WindowLate) lockedUntil = p + Lockout; // anti-mash
             }
             // DECISIONS 33: after the slide the blade keeps following the player until the ring shows, then the spot is locked
             if (!struck && dt > 0f && (k == 0 || tt >= SlamShift) && tt < s - RingLead)
@@ -789,12 +810,17 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             {
                 struck = true;
                 blade.Pos = new Vector2(zx, last ? BladeStuckY : Floor);
-                Juice.Shake(Juice.ShakeHurtAmp, 0.18f, Vector2.down);
-                Sfx.Play(SfxId.Hit, 0.7f, 0.6f);
-                SpriteFx.Play("impact-ring", new Vector2(zx, Floor), false, 101);
-                SpriteFx.Play("land-dust", new Vector2(zx - 0.9f, Floor), true, 101);
-                SpriteFx.Play("land-dust", new Vector2(zx + 0.9f, Floor), false, 101);
-                if (last) { SpriteFx.Play("kill-burst", new Vector2(zx, Floor + 0.3f), false, 102); Juice.Shake(Juice.ShakeKillAmp, 0.3f, Vector2.down); }
+                // DECISIONS 43: a big impact (whole-number scales keep the pixel grid): 3x ring, burst, sparks, wide dust
+                Juice.Shake(0.22f, 0.25f, Vector2.down);
+                Sfx.Play(SfxId.Hit, 0.85f, 0.6f);
+                SpriteFx.Play("impact-ring", new Vector2(zx, Floor + 0.25f), false, 101, 3f);
+                SpriteFx.Play("kill-burst", new Vector2(zx, Floor + 0.3f), false, 102, last ? 3f : 2f);
+                SpriteFx.Play("hit-spark", new Vector2(zx, Floor + 0.5f), false, 103, 2f);
+                SpriteFx.Play("land-dust", new Vector2(zx - 1.2f, Floor), true, 101, 2f);
+                SpriteFx.Play("land-dust", new Vector2(zx + 1.2f, Floor), false, 101, 2f);
+                SpriteFx.Play("land-dust", new Vector2(zx - 2.8f, Floor), true, 101, 2f);
+                SpriteFx.Play("land-dust", new Vector2(zx + 2.8f, Floor), false, 101, 2f);
+                if (last) Juice.Shake(0.3f, 0.35f, Vector2.down);
                 if (!(inZone && parried)) LaunchShock(zx, inZone); // a clang stops the blade: no shockwave
                 else shockA = shockB = -1;
             }
@@ -811,6 +837,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                     fromX = zx;
                     zx = Snap(Mathf.Clamp(player.transform.position.x, 3.5f, RoomW - 3.5f));
                     lockedUntil -= tt;
+                    if (pressAt >= 0f) pressAt = Mathf.Max(0f, pressAt - tt); // a still-buffered press moves to the new clock
                     tt = 0f;
                     s = SlamShift + aim;
                 }
@@ -882,12 +909,35 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // the slam lands where the blade's steel will be (tip on the floor at zx); the red zone is only the wider tell
     bool InZone(float zx) => PlayerIn(BladeBox(new Vector2(zx, Floor), 0f));
 
-    // World box of the blade's steel. rotZ 0 = hanging down (slams), +-90 = lying flat, hilt trailing (sweeps). Only right angles: exact.
+    // World box of the blade's steel. rotZ 0 = hanging down (slams; sweeps use ArmHitsPlayer). Only right angles: exact.
     static Rect BladeBox(Vector2 tip, float rotZ)
     {
         Vector2 up = Quaternion.Euler(0f, 0f, rotZ) * Vector2.up; // tip -> hilt
         Vector2 far = tip + up * BladeLen, side = new Vector2(Mathf.Abs(up.y), Mathf.Abs(up.x)) * BladeHalfW;
         return Rect.MinMaxRect(Mathf.Min(tip.x, far.x) - side.x, Mathf.Min(tip.y, far.y) - side.y, Mathf.Max(tip.x, far.x) + side.x, Mathf.Max(tip.y, far.y) + side.y);
+    }
+
+    // Sweep hit (DECISIONS 43): does the drawn arm (ArmSlice) touch the player while its tip moves fromX -> toX at height y?
+    // Samples the player's hit box (same 0.7 x 1.65 as PlayerIn) in the arm's own frame, every SweepStep u along the move.
+    bool ArmHitsPlayer(float fromX, float toX, float y, float rotZ, bool flipX)
+    {
+        Quaternion inv = Quaternion.Euler(0f, 0f, -rotZ);
+        Vector2 pp = player.transform.position;
+        int steps = Mathf.Max(1, Mathf.CeilToInt(Mathf.Abs(toX - fromX) / SweepStep));
+        for (int k = 1; k <= steps; k++)
+        {
+            Vector2 tip = new Vector2(Mathf.Lerp(fromX, toX, (float)k / steps), y);
+            for (int ix = -1; ix <= 1; ix++)
+                for (int iy = 0; iy <= 4; iy++)
+                {
+                    Vector2 l = inv * (pp + new Vector2(ix * 0.35f, Mathf.Lerp(-0.85f, 0.8f, iy / 4f)) - tip); // x = across, y = up from the tip
+                    if (flipX) l.x = -l.x; // the renderer is mirrored about the centre line (pivot x 0.5)
+                    int u = Mathf.FloorToInt(l.y);
+                    if (u < 0 || u >= ArmSlice.Length) continue;
+                    if (l.x > ArmSlice[u].x * Px && l.x < ArmSlice[u].y * Px) return true;
+                }
+        }
+        return false;
     }
 
     bool PlayerIn(Rect r) // player centre = feet + 1, box 0.9 x 2 (hit test a little smaller, like the bug walls)
@@ -920,7 +970,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     {
         shockSpeed = ShockSpeed[Phase - 1];
         slamFlashT = SlamFlashTime;
-        slamFlash.transform.position = new Vector3(zx, Floor + 3f * Px, 0f);
+        slamFlash.transform.position = new Vector3(zx, Floor + 5f * Px, 0f);
         slamFlash.enabled = true;
         shockA = shockB = -1;
         for (int k = 0; k < 2; k++)
@@ -965,7 +1015,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             slamFlashT -= dt;
             float f = Mathf.Clamp01(slamFlashT / SlamFlashTime);
             slamFlash.color = new Color(1f, 0.97f, 0.8f, f);
-            slamFlash.transform.localScale = new Vector3(Snap(1.5f + 2f * f), 6f * Px, 1f);
+            slamFlash.transform.localScale = new Vector3(Snap(4f + 6f * f), Snap(4f * Px + 10f * Px * f), 1f); // DECISIONS 43: ~3x the old 1.5..3.5 x 6 px
             if (slamFlashT <= 0f) slamFlash.enabled = false;
         }
         Vector2 pp = player.transform.position; // player centre = feet + 0.85..1, same box as the bug walls / rain
@@ -1005,7 +1055,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     }
 
     // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
-    // band and slides across; the blade's steel is the hitbox (feedback 11-11). The red band is only the warning.
+    // band and slides across wall to wall (tip x 31 -> -19 or back). DECISIONS 43: the whole drawn arm is the hitbox, tilted SweepTilt
+    // (LOW: hilt down, HIGH: hilt up) so a jump / standing still still clears it. The red band is only the warning.
     // DECISIONS 36: every sweep starts and ends with the whole arm off-screen; at the end it flies back and reattaches ----
     IEnumerator AttackSweep(int n, float tell)
     {
@@ -1017,12 +1068,17 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (i > 0) low = Random.value < 0.7f ? !low : low; // mostly alternate (T)
             // x = the tip; the arm trails BladeArmLen behind it, so x0 / x1 keep all of it outside the 0..RoomW view
             float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? RoomW + 1f : -1f, x1 = dir < 0f ? -BladeArmLen - 1f : RoomW + BladeArmLen + 1f;
-            float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * 90f; // rot: the hilt points back (-dir)
+            // rot: the hilt points back (-dir), tilted down (LOW) / up (HIGH) by SweepTilt so the drawn arm leaves a gap (DECISIONS 43)
+            float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * (90f + (low ? SweepTilt : -SweepTilt));
             sweepY = (bot + top) * 0.5f;
             sweepFill.transform.localScale = new Vector3(RoomW, top - bot, 1f);
             sweepFill.enabled = true;
             blade.Glow = true;
             blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
+            // the art is lopsided (ArmSlice): mirrored for left -> right so both directions are the same shape (unflipped, the wide side
+            // of a LOW sweep rose ~0.5 u over the floor 6..9 u behind the tip and hit whoever landed there). Hidden below the floor line.
+            blade.Sr.flipX = dir > 0f;
+            blade.Sr.maskInteraction = SpriteMaskInteraction.VisibleOutsideMask;
             Sfx.Play(SfxId.EnemyTell, 0.8f, low ? 0.8f : 1.25f); // low tell = low pitch
             yield return Move(blade, new Vector2(x0, sweepY), SweepWarn); // off-screen: lines up behind the edge during the warning
             blade.Glow = false;
@@ -1037,8 +1093,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 t += dt;
                 float x = Mathf.Lerp(x0, x1, t / time);
                 blade.Pos = new Vector2(x, sweepY);
-                Rect a = BladeBox(new Vector2(prevX, sweepY), rot), b = BladeBox(blade.Pos, rot); // swept: a long frame must not skip the player
-                if (!hit && dt > 0f && PlayerIn(Rect.MinMaxRect(Mathf.Min(a.xMin, b.xMin), b.yMin, Mathf.Max(a.xMax, b.xMax), b.yMax)))
+                if (!hit && dt > 0f && ArmHitsPlayer(prevX, x, sweepY, rot, dir > 0f))
                     hit = player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, player.transform.position.y), Unparryable = true }) == HitResult.Hit; // one hit per sweep; dash i-frames (Dodged) pass through
                 prevX = x;
                 yield return null;
@@ -1047,6 +1102,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             sweepY = -1f;
         }
         blade.Sr.transform.rotation = Quaternion.identity; // still off-screen: hang it again and bring it back from the right
+        blade.Sr.flipX = false;
+        blade.Sr.maskInteraction = SpriteMaskInteraction.None;
         blade.Pos = BladeOff;
         yield return ReattachBlade();
     }
@@ -1249,6 +1306,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         sweepY = -1f;
         debris.CrumbleAll(); // DECISIONS 40: the ending room has no moving platforms
         blade.Sr.transform.rotation = Quaternion.identity; // killed mid-sweep: hang the arm down again
+        blade.Sr.flipX = false;
+        blade.Sr.maskInteraction = SpriteMaskInteraction.None;
         if (blade.Pos.x < 1f || blade.Pos.x > RoomW - 1f) blade.Pos = BladeRest; // killed while the arm was off-screen (sweep / reattach, DECISIONS 36): the ending must drop it in view
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;

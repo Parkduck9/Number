@@ -133,6 +133,8 @@ public class PlayerController : MonoBehaviour
     Vector2 grappleLocal;     // anchor in grappleTarget's local space
     bool grappleFollow;       // grappleTarget is set (a destroyed one reads null, so a flag marks "had a target")
     bool grappleHang;        // a ceiling hook (RMB while swinging = a fresh rope from it)
+    Vector2 hookLetGo;        // DECISIONS 44: the boss hook last let go of; it can't be grabbed again until hookFreeAt (no endless re-hook hang)
+    float hookFreeAt = -999f;
     bool grappleStrike;       // the open hatch: strike on arrival, then bounce off and fall (GrappleStrikeSafe i-frames)
     // DECISIONS 39 rope swing: a hook or a solid ceiling zips to swingLen, then the body swings on the rope (pendulum, gravity, A/D pump)
     bool grappleSwing;        // this rope swings when it reaches swingLen (else the DECISIONS 16 pull-and-pop)
@@ -151,7 +153,7 @@ public class PlayerController : MonoBehaviour
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
     public static int ParryTries, ParryCount, ParryFailHits;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; IssenAlt = null; GrappleAlt = null; } // Domain Reload is off
+    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; HurtFrame = -1; Swung = null; IssenAlt = null; GrappleAlt = null; } // Domain Reload is off
 
     // In-place LMB swing landed its hit box (centre, size): BossFight hits boss parts / machine props with it (they are not TestEnemies).
     public static event System.Action<Vector2, Vector2> Swung;
@@ -169,6 +171,8 @@ public class PlayerController : MonoBehaviour
     public State CurrentState => state;
     public bool Grounded => grounded;
     public bool ParryActive => state == State.Parry && Time.time - stateEnteredAt < parryActiveFor;
+    int pressSpentFrame = -1; // DECISIONS 44: frame whose LMB press already parried inside ReceiveEnemyHit
+    public static int HurtFrame = -1; // frame the player last took damage (ParryRing turns a merge flash red on it)
     float parryActiveFor; // parryActiveTime, or longer for an LMB parry so it covers the threat it was chosen for (DashRules.ParryCoverMargin)
     float ParryLength => Mathf.Max(parryDuration, parryActiveFor); // the Parry state never ends while its active window is still open
     public float DashCooldownRemaining => Mathf.Max(0f, dashCooldownUntil - Time.time);
@@ -302,6 +306,7 @@ public class PlayerController : MonoBehaviour
             grappleReadyAt += dt;
             grappleCarryUntil += dt;
             grappleSafeUntil += dt;
+            hookFreeAt += dt;
             health.ShiftInvulnerability(dt);
             if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
             EndLunge(); // same for a lunge (gravity back, velocity zeroed)
@@ -338,6 +343,9 @@ public class PlayerController : MonoBehaviour
         {
             case State.Locomotion: UpdateLocomotion(now); break;
             case State.Attack:
+                // DECISIONS 44: an on-time LMB during an in-place swing (an early press swung) parries at once instead of waiting
+                // in the buffer until the swing ends (by then the blow had landed).
+                if (!lunging && input.AttackPressed && TryEnterParry()) break;
                 if (lunging) UpdateLunge(now, elapsed);
                 else if (!attackHitDone && elapsed >= attackHitDelay) DoAttackHit();
                 if (!lunging) TryJump(now); // playtest 11-11: jump out of a swing; the swing's hit and length are unchanged
@@ -371,7 +379,7 @@ public class PlayerController : MonoBehaviour
     void BufferDuringHitStop()
     {
         if (input.JumpPressed) jumpBufferedUntil = Time.time + jumpBuffer;
-        if (input.AttackPressed && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
+        if (input.AttackPressed && Time.frameCount != pressSpentFrame && state != State.Hurt && state != State.Dead) attackBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
         pendingIssen |= input.IssenPressed;
         if (input.IssenPressed && state != State.Locomotion && state != State.Issen && state != State.Hurt && state != State.Dead)
             issenBufferedUntil = Mathf.Max(Time.time, StateEndsAt()) + attackBuffer;
@@ -402,17 +410,20 @@ public class PlayerController : MonoBehaviour
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
             // DECISIONS 12-B: LMB = parry when a parryable threat is about to land, else lunge, else in-place swing.
-            if (FaceParryThreat(out float eta))
-            {
-                EnterState(State.Parry);
-                // No upper cap: a strike seen at eta 0.3 lands up to 2 frames later (Windup->Strike->DoStrike); the Parry state stretches to match.
-                // Shots are bounded by their eligibility (ParryShotRange / ParryShotWindow), so the guard always lasts until they land.
-                parryActiveFor = Mathf.Max(eta + DashRules.ParryCoverMargin, parryActiveTime);
-            }
-            else EnterState(State.Attack);
+            if (!TryEnterParry()) EnterState(State.Attack);
             return;
         }
         TryJump(now);
+    }
+
+    bool TryEnterParry()
+    {
+        if (!FaceParryThreat(out float eta)) return false;
+        EnterState(State.Parry);
+        // No upper cap: a strike seen at eta 0.3 lands up to 2 frames later (Windup->Strike->DoStrike); the Parry state stretches to match.
+        // Shots are bounded by their eligibility (ParryShotRange / ParryShotWindow), so the guard always lasts until they land.
+        parryActiveFor = Mathf.Max(eta + DashRules.ParryCoverMargin, parryActiveTime);
+        return true;
     }
 
     // jump with coyote + buffer
@@ -461,6 +472,7 @@ public class PlayerController : MonoBehaviour
     {
         EndLunge();                     // any state change ends a lunge (dash cancel, hurt, death)
         if (state == State.Grapple && rope != null) rope.Hide(); // ...and an attached rope (release, hurt, dialogue)
+        if (state == State.Grapple && grappleHang) { hookLetGo = grappleAnchor; hookFreeAt = Time.time + DashRules.GrappleHookRegrab; }
         state = next;
         if (next == State.Dead) MomentFx.PlayerDeath(rb.position + feetOffset);
         stateEnteredAt = Time.time;
@@ -907,7 +919,8 @@ public class PlayerController : MonoBehaviour
         aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);
         int face = Mathf.Abs(aim.x) > 0.01f ? (aim.x > 0f ? 1 : -1) : Facing; // applied on a hit only (Facing is the parry front)
         hand = (Vector2)transform.position + new Vector2(face * 0.35f, 0.25f);
-        if (aimed && GrappleAlt != null && GrappleAlt.PlanGrapple(mouse, hand, out Vector2 altAnchor, out Vector2 altPull, out bool hang)) // DECISIONS 38
+        if (aimed && GrappleAlt != null && GrappleAlt.PlanGrapple(mouse, hand, out Vector2 altAnchor, out Vector2 altPull, out bool hang) // DECISIONS 38
+            && !(hang && now < hookFreeAt && (altAnchor - hookLetGo).sqrMagnitude < 0.01f)) // DECISIONS 44: not the hook just let go of
         {
             Facing = face;
             grappleAnchor = altAnchor;
@@ -1366,6 +1379,49 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
+    // DECISIONS 44 dice face 6 in the boss fight: a free standing spot on the ground `off` u beside `at` (the hero's side first, then
+    // the far side) with a clear line from the hero. Ground = the first surface under (spot x, at.y); none within 10 u, a wall / solid
+    // in the body box, or a wall between = that side is out. false = both out.
+    public bool PlanSpotBeside(Vector2 at, float off, out Vector2 spot)
+    {
+        spot = default;
+        if (state == State.Dead) return false;
+        const float halfW = 0.45f, halfH = 1f; // player box 0.9 x 2 (same as PlanBehind)
+        int first = rb.position.x <= at.x ? -1 : 1;
+        for (int k = 0; k < 2; k++)
+        {
+            float x = at.x + (k == 0 ? first : -first) * off;
+            RaycastHit2D g = Physics2D.Raycast(new Vector2(x, at.y), Vector2.down, 10f, groundMask);
+            if (g.collider == null || g.distance < 0.01f || g.normal.y < 0.7f) continue; // nothing below / starts inside a solid
+            Vector2 s = new Vector2(x, g.point.y - feetOffset.y + 0.02f);
+            if (BlinkSpotBlocked(s, new Vector2(halfW * 2f - 0.1f, halfH * 2f - 0.2f)) || !ClearLine(rb.position, s)) continue;
+            spot = s;
+            return true;
+        }
+        return false;
+    }
+
+    // DECISIONS 44 dice face 6 boss dash, one frame of it (LuckyDice drives it under its input lock + i-frames): the body sits at `pos`
+    // (still, so gravity can't drift it), faces `face`, and leaves a dash afterimage. first = the take-off (rope / swing dropped, burst, whoosh).
+    public void DiceDashStep(Vector2 pos, int face, bool first)
+    {
+        if (state == State.Dead) return;
+        if (first)
+        {
+            if (state != State.Locomotion) EnterState(State.Locomotion); // ends a rope / swing / parry
+            grappleCarryUntil = 0f;
+            PlayDashBurst(face);
+            Sfx.Play(SfxId.Dash);
+        }
+        rb.linearVelocity = Vector2.zero;
+        rb.position = pos;
+        transform.position = pos;
+        Facing = face;
+        if (visual == null) return;
+        visual.flipX = face < 0; // UpdateVisual already ran this frame with the old facing
+        SpriteFx.Afterimage(visual, AfterimageColor, afterimageLife);
+    }
+
     // Solid ground / walls in the box (one-way platforms do not count: the body can stand in one and drops or rises through).
     bool BlinkSpotBlocked(Vector2 at, Vector2 size)
     {
@@ -1390,15 +1446,25 @@ public class PlayerController : MonoBehaviour
         if (health.Invulnerable || Time.time < grappleSafeUntil) return HitResult.Dodged; // grappleSafeUntil: hatch strike fall (DECISIONS 38)
 
         float dx = info.SourcePosition.x - transform.position.x;
+        // DECISIONS 44: LMB pressed on this very frame, but the blow resolved before this Update read the press (script order is not
+        // fixed): it parries, turned to the blow like FaceParryThreat would have. PlayerInputReader runs first (-100), so the press is known.
+        bool pressedNow = input.AttackPressed && !info.Unparryable && !lunging && (state == State.Locomotion || state == State.Attack);
+        if (pressedNow)
+        {
+            if (!Mathf.Approximately(info.TravelDirX, 0f)) Facing = info.TravelDirX > 0f ? -1 : 1;
+            else if (!Mathf.Approximately(dx, 0f)) Facing = dx > 0f ? 1 : -1;
+            ParryTries++;
+        }
         // projectiles judge by travel direction (a shot spawned inside the player's box has no meaningful position side)
         bool fromFront = !Mathf.Approximately(info.TravelDirX, 0f)
             ? Mathf.Sign(info.TravelDirX) == -Facing
             : Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
         // An LMB lunge parries what it runs into (playtest 11-10: a shot met on the way in counted as a hit). The lunge keeps going.
-        if ((ParryActive || Time.time < parryGuardUntil || lunging) && fromFront && !info.Unparryable)
+        if ((ParryActive || Time.time < parryGuardUntil || lunging || pressedNow) && fromFront && !info.Unparryable)
         {
             // No knockback for either side. Hit-stop + flash + parry FX. A guard parry during an attack must not abort the swing.
             if (state == State.Parry) EnterState(State.Locomotion);
+            if (pressedNow) { pressSpentFrame = Time.frameCount; attackBufferedUntil = -999f; } // that press is spent: no swing buffered behind the parry hit-stop (or already buffered by this frame's Update, mid-swing)
             parryGuardUntil = Time.time + parryGuardTime;
             ParryCount++;
             // Shot: where the bullet is. Melee: the hero's front edge at the strike height, where the ring merges (TestEnemy.ParryContact).
@@ -1414,6 +1480,7 @@ public class PlayerController : MonoBehaviour
         }
 
         if (state == State.Parry) ParryFailHits++;
+        HurtFrame = Time.frameCount;
         health.TakeDamage(info.Damage);
         Sfx.Play(SfxId.Hurt, 1f, HurtPitch); // DECISIONS 26: duller, lower than the parry clang
         ScreenFlash.Hurt();

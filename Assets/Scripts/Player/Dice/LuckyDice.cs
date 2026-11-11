@@ -158,7 +158,7 @@ public class LuckyDice : MonoBehaviour
     }
 
     // Boss fight (DECISIONS 31 / 32): face 2 (rope whirl) plays as usual; 3 (talisman lightning) and 4 (sheath cut) play their boss
-    // versions on the core; the others need TestEnemies and would only fizzle, so their caption shows and `face` talismans fly into
+    // versions on the core; 6 dashes beside the core (BossPath, DECISIONS 44); the others need TestEnemies and would only fizzle, so their caption shows and `face` talismans fly into
     // the core instead. Then every face hurts the boss (BossFight.SkillHit, DiceDamage); 3 / 4 land with their bolt / click.
     static readonly string[] BossCapEn = { "SHRINK EARTH", "BINDING ROPE", "TALISMAN LIGHTNING", "SHEATH CUT", "FIVE TALISMANS", "DIVINATION PATH" };
     static readonly string[] BossCapKo = { "축지법", "오랏줄", "부적 낙뢰", "칼집 일섬", "부적 다섯 장", "점괘 길" };
@@ -166,7 +166,8 @@ public class LuckyDice : MonoBehaviour
 
     IEnumerator BossSkill(int face)
     {
-        IEnumerator s = face == 2 ? SkillFor(face) : face == 3 ? Skill3Talisman.RunBoss(this, boss) : face == 4 ? Skill4Hold.RunBoss(this, boss) : BossTalismans(face);
+        IEnumerator s = face == 2 ? SkillFor(face) : face == 3 ? Skill3Talisman.RunBoss(this, boss) : face == 4 ? Skill4Hold.RunBoss(this, boss)
+            : face == 6 ? BossPath() : BossTalismans(face);
         try { while (s.MoveNext()) yield return s.Current; }
         finally { (s as IDisposable)?.Dispose(); } // disabled mid-skill: the inner finally blocks still restore their flags
         while (GameFlow.InputLocked) yield return null; // a blade duel that began while the talismans flew: a kill now would stop the fight under it
@@ -174,8 +175,50 @@ public class LuckyDice : MonoBehaviour
         Vector2 at = boss.CorePosition;
         if (face == 3) Skill3Talisman.Smite(new List<Vector2> { at }, Cam);
         else if (face == 4) Skill4Hold.Click(Player);
+        else if (face == 6) { ParryFx.Slash(at, null, Player.Facing); Sfx.Play(SfxId.Swing); }
         boss.SkillHit(BossFight.DiceDamage(face), at);
-        if (face == 3 || face == 4) Player.DuelHitStop(Juice.HitStopKill);
+        if (face == 3 || face == 4 || face == 6) Player.DuelHitStop(Juice.HitStopKill);
+    }
+
+    // DECISIONS 44: face 6 in the boss fight = a whoosh dash (afterimages + streak) to a clear floor spot BossPathSide u beside the core,
+    // under the input lock with i-frames, facing the core; BossSkill then lands the hit. No clear spot: the old talisman volley.
+    const float BossPathSide = 2.5f, BossPathTime = 0.16f, BossPathHold = 0.08f; // (T) u / s / s
+
+    IEnumerator BossPath()
+    {
+        if (DiceSkillKit.PlayerGone(this) || !Player.PlanSpotBeside(boss.CorePosition, BossPathSide, out Vector2 spot))
+        {
+            IEnumerator volley = BossTalismans(6);
+            while (volley.MoveNext()) yield return volley.Current;
+            yield break;
+        }
+        DiceSkillKit.Caption(BossCapEn[5], BossCapKo[5], DiceSkillKit.Cyan);
+        Sfx.Play(SfxId.HackOk);
+        try
+        {
+            DiceSkillKit.Lock();
+            DiceSkillKit.SetInvulnerable(this);
+            Vector2 from = Player.Body.position;
+            int travel = spot.x >= from.x ? 1 : -1;
+            DiceSkillKit.Streak(from, spot, 0.3f);
+            Player.DiceDashStep(from, travel, true);
+            for (float t = 0f; t < BossPathTime; t += Time.deltaTime)
+            {
+                if (DiceSkillKit.PlayerGone(this)) yield break;
+                float u = t / BossPathTime;
+                Player.DiceDashStep(Vector2.Lerp(from, spot, 1f - (1f - u) * (1f - u)), travel, false); // ease-out
+                yield return null;
+            }
+            if (DiceSkillKit.PlayerGone(this)) yield break;
+            float dx = boss.CorePosition.x - spot.x;
+            Player.DiceDashStep(spot, Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : travel, false); // land facing the core
+            yield return DiceSkillKit.Wait(BossPathHold);
+        }
+        finally
+        {
+            DiceSkillKit.ReleaseLock();
+            DiceSkillKit.ReleaseInvulnerable();
+        }
     }
 
     IEnumerator BossTalismans(int face)
