@@ -1,0 +1,387 @@
+# Ending v5 deterministic native-grid redraw. Run at repository root:
+# & ([scriptblock]::Create((Get-Content -Raw docs/design/concept/ending/generate_ending_v5.txt)))
+# Reuses Pic, dominant Vote, Simplify, CleanOrphans and Check3x from generate_ending.txt
+# and generate_keyart.txt. Windows System.Drawing only; no network or image API.
+# AI provenance: user-approved Gemini source; Codex authored pixel cleanup/redraw.
+# Only the three requested PNGs are written. Existing ending files are never changed.
+# Palette additions (all other colours come from number_palette.png):
+# Sky: #345B80 #4B7591 #7D8C97 #BEA08E #E3AB7B #F5BE82
+# Sun/pale yellow paper: #FFF0BD. Muted magenta neon: #DE6BAF.
+# The source is a composition/shape reference, not an automatically pixelated final.
+# No CREDITS or Unity asset is edited; provenance remains here for later integration.
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Drawing
+$code = @'
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Collections.Generic;
+
+public class NumberEndingV5 {
+  class Pic {
+    public int W,H; public int[] P;
+    public Pic(int w,int h,int c=0){W=w;H=h;P=Enumerable.Repeat(c,w*h).ToArray();}
+    public int Get(int x,int y){return P[Math.Max(0,Math.Min(H-1,y))*W+Math.Max(0,Math.Min(W-1,x))];}
+    public void Put(int x,int y,int c){if(x>=0&&y>=0&&x<W&&y<H)P[y*W+x]=c;}
+    public Pic Copy(){var p=new Pic(W,H);Array.Copy(P,p.P,P.Length);return p;}
+    public static Pic Load(string path){using(var b=new Bitmap(path)){var p=new Pic(b.Width,b.Height);for(int y=0;y<p.H;y++)for(int x=0;x<p.W;x++)p.Put(x,y,b.GetPixel(x,y).ToArgb());return p;}}
+    public void Save(string path){using(var b=new Bitmap(W,H,PixelFormat.Format32bppArgb)){for(int y=0;y<H;y++)for(int x=0;x<W;x++)b.SetPixel(x,y,Color.FromArgb(Get(x,y)));b.Save(path,ImageFormat.Png);}}
+    public void Rect(int x,int y,int w,int h,int c){for(int j=y;j<y+h;j++)for(int i=x;i<x+w;i++)Put(i,j,c);}
+    public void Line(int x,int y,int xx,int yy,int c){int dx=Math.Abs(xx-x),sx=x<xx?1:-1,dy=-Math.Abs(yy-y),sy=y<yy?1:-1,e=dx+dy;while(true){Put(x,y,c);if(x==xx&&y==yy)break;int e2=2*e;if(e2>=dy){e+=dy;x+=sx;}if(e2<=dx){e+=dx;y+=sy;}}}
+    public void Poly(int c,params int[] xy){int n=xy.Length/2;int lo=H,hi=0;for(int i=0;i<n;i++){lo=Math.Min(lo,xy[2*i+1]);hi=Math.Max(hi,xy[2*i+1]);}for(int y=lo;y<=hi;y++)for(int x=0;x<W;x++){bool inside=false;for(int i=0,j=n-1;i<n;j=i++){int xi=xy[2*i],yi=xy[2*i+1],xj=xy[2*j],yj=xy[2*j+1];if((yi>y)!=(yj>y)&&x<(double)(xj-xi)*(y-yi)/(yj-yi)+xi)inside=!inside;}if(inside)Put(x,y,c);}for(int i=0;i<n;i++)Line(xy[2*i],xy[2*i+1],xy[2*((i+1)%n)],xy[2*((i+1)%n)+1],c);}
+    public void Blit(Pic s,int x,int y){for(int j=0;j<s.H;j++)for(int i=0;i<s.W;i++){int c=s.Get(i,j),a=(int)((uint)c>>24);if(a==255)Put(x+i,y+j,c);else if(a!=0)throw new Exception("Nonbinary sprite alpha");}}
+    public Pic Crop(int x,int y,int w,int h){var p=new Pic(w,h);for(int j=0;j<h;j++)for(int i=0;i<w;i++)p.Put(i,j,Get(x+i,y+j));return p;}
+    public Pic Scale(int s){var p=new Pic(W*s,H*s);for(int y=0;y<p.H;y++)for(int x=0;x<p.W;x++)p.Put(x,y,Get(x/s,y/s));return p;}
+  }
+  static int C(string hex){return unchecked((int)0xff000000)|Convert.ToInt32(hex,16);}
+  static int Dist(int a,int b){int r=((a>>16)&255)-((b>>16)&255),g=((a>>8)&255)-((b>>8)&255),bl=(a&255)-(b&255);return r*r+g*g+bl*bl;}
+  static int Nearest(int c,int[] pal){int best=pal[0],d=int.MaxValue;foreach(int p in pal){int k=Dist(c,p);if(k<d){d=k;best=p;}}return best;}
+  static int Bucket(int c){return ((c>>12)&0xf00)|((c>>8)&0xf0)|((c>>4)&15);}
+  static Pic Vote(Pic src,int[] pal){
+    // Source has no recoverable uniform grid: raster cells vary ~3-7 source px.
+    // Impose the requested 320x180 grid. Extend 2 rows at each edge to 1024x576
+    // before sampling, giving square 3.2x3.2-source-pixel cells without stretch.
+    var p=new Pic(320,180);
+    for(int y=0;y<180;y++)for(int x=0;x<320;x++){
+      int x0=(int)Math.Floor(x*3.2),x1=(int)Math.Floor((x+1)*3.2);
+      int y0=(int)Math.Floor(y*3.2)-2,y1=(int)Math.Floor((y+1)*3.2)-2;
+      var bins=new Dictionary<int,int>();var exact=new Dictionary<int,int>();
+      for(int j=y0;j<y1;j++)for(int i=x0;i<x1;i++){int c=src.Get(i,j),k=Bucket(c);bins[k]=bins.ContainsKey(k)?bins[k]+1:1;exact[c]=exact.ContainsKey(c)?exact[c]+1:1;}
+      int center=src.Get((x0+x1-1)/2,(y0+y1-1)/2);
+      int winner=bins.OrderByDescending(k=>k.Value).ThenBy(k=>k.Key==Bucket(center)?0:1).ThenBy(k=>k.Key).First().Key;
+      // Actual source sample from the winning colour family, never a blended colour.
+      int dominant=exact.Where(k=>Bucket(k.Key)==winner).OrderByDescending(k=>k.Value).ThenBy(k=>Dist(k.Key,center)).ThenBy(k=>k.Key).First().Key;
+      p.Put(x,y,Nearest(dominant,pal));
+    }return p;
+  }
+  static void CleanOrphans(Pic p){
+    // Background only. Synchronous eight-neighbour vote removes single-pixel islands.
+    // No filtering of the real sprites, lettering, broadcast marks, or cleaned outlines.
+    for(int pass=0;pass<2;pass++){int[] old=(int[])p.P.Clone();for(int y=1;y<p.H-1;y++)for(int x=1;x<p.W-1;x++){
+      int c=old[y*p.W+x];var count=new Dictionary<int,int>();for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){if(i==0&&j==0)continue;int k=old[(y+j)*p.W+x+i];count[k]=count.ContainsKey(k)?count[k]+1:1;}
+      if(!count.ContainsKey(c)){var win=count.OrderByDescending(k=>k.Value).ThenBy(k=>Dist(k.Key,c)).First();if(win.Value>=3)p.Put(x,y,win.Key);}
+    }}
+  }
+  static void Simplify(Pic p){
+    // Remove high-frequency conversion chatter before the authored pixel pass.
+    for(int pass=0;pass<2;pass++){int[] old=(int[])p.P.Clone();for(int y=1;y<p.H-1;y++)for(int x=1;x<p.W-1;x++){
+      var count=new Dictionary<int,int>();for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){int k=old[(y+j)*p.W+x+i];count[k]=count.ContainsKey(k)?count[k]+1:1;}
+      var win=count.OrderByDescending(k=>k.Value).ThenBy(k=>Dist(k.Key,old[y*p.W+x])).First();
+      if(win.Value>=5&&Dist(win.Key,old[y*p.W+x])<14000)p.Put(x,y,win.Key);
+    }}
+  }
+  static void Check(bool ok,string message){if(!ok)throw new Exception(message);}
+  static void Check3x(Pic native,Pic scaled){Check(scaled.W==native.W*3&&scaled.H==native.H*3,"Scale dimensions");for(int y=0;y<scaled.H;y++)for(int x=0;x<scaled.W;x++)Check(scaled.Get(x,y)==native.Get(x/3,y/3),"Non-nearest pixel found");}
+  static void CheckSprite(Pic sprite,Pic final,int ox,int oy){for(int y=0;y<sprite.H;y++)for(int x=0;x<sprite.W;x++)if((uint)sprite.Get(x,y)>>24==255)Check(sprite.Get(x,y)==final.Get(ox+x,oy+y),"Sprite changed or occluded");}
+  static Pic Flip(Pic src){var p=new Pic(src.W,src.H);for(int y=0;y<p.H;y++)for(int x=0;x<p.W;x++)p.Put(x,y,src.Get(src.W-1-x,y));return p;}
+  static int ink=C("080B14"),night=C("1A1D33"),blue=C("2D3050"),stone=C("3F4A6E"),edge=C("62677D"),gray=C("858A9B"),wood=C("7A3A3C"),rim=C("D77E54");
+  static void Roof(Pic p,int x,int y,int w,int h,bool near){
+    // Low, long giwa roof: a shallow ridge and gently lifted continuous eaves.
+    p.Poly(ink,x-3,y+h-1,x+1,y+h-3,x+8,y+1,x+10,y,x+w-10,y+1,x+w-7,y-1,x+w-4,y+4,x+w+2,y+h-2,x+w+5,y+h-1,x+w+2,y+h+2,x+5,y+h+3);
+    p.Poly(blue,x+1,y+h-1,x+9,y+2,x+w-8,y+2,x+w-3,y+h-2,x+w+1,y+h,x+6,y+h+1);
+    p.Line(x+9,y+1,x+w-9,y+1,near?edge:stone);
+    p.Line(x-1,y+h,x+6,y+h+2,stone);p.Line(x+6,y+h+2,x+w-3,y+h+1,near?edge:stone);p.Line(x+w-3,y+h+1,x+w+3,y+h-1,stone);
+    for(int k=x+12;k<x+w-7;k+=near?5:6){p.Line(k,y+3,k-5,y+h-1,ink);p.Line(k+1,y+3,k-4,y+h-1,stone);}
+    if(near){p.Line(x+7,y+h/2+2,x+w-6,y+h/2+2,stone);}
+  }
+  static void House(Pic p,int x,int y,int w,int h,int rh,bool near){
+    p.Rect(x+3,y+rh,w-2,h,ink);p.Rect(x+5,y+rh+2,w-6,h-2,near?edge:stone);
+    p.Rect(x+w-8,y+rh+2,4,h-2,blue);
+    for(int k=x+9;k<x+w-9;k+=10){p.Rect(k,y+rh+5,6,Math.Max(3,h-7),night);if(near)p.Line(k+2,y+rh+6,k+2,y+rh+h-3,blue);}
+    p.Line(x+5,y+rh+h-2,x+w-3,y+rh+h-2,blue);
+    Roof(p,x,y,w,rh,near);
+  }
+  static void Sag(Pic p,int x,int y,int xx,int yy,int sag){
+    // Each x gets exactly one opaque pixel. Both endpoints are on crossarms.
+    int last=y;
+    for(int i=x;i<=xx;i++){double t=(double)(i-x)/(xx-x);int j=(int)Math.Round(y+(yy-y)*t+4*sag*t*(1-t));p.Put(i,j,ink);if(i>x&&Math.Abs(j-last)>1)p.Line(i-1,last,i,j,ink);last=j;}
+  }
+  static int signCount=0;
+  static void Sign(Pic p,int x,int y,int w,int h,int colour){
+    Check(w>=5&&h>=5,"Sign needs visible field and 1px frame");
+    p.Rect(x,y,w,h,night);p.Rect(x+1,y+1,w-2,h-2,colour);signCount++;
+  }
+  static void CheckSign(Pic p,int x,int y,int w,int h,int colour){
+    for(int j=0;j<h;j++)for(int i=0;i<w;i++){
+      bool frame=i==0||j==0||i==w-1||j==h-1;
+      Check(p.Get(x+i,y+j)==(frame?night:colour),"Damaged sign frame or unmarked field");
+    }
+  }
+  static void Scene(Pic p){
+    // Every visible plane is authored on the final grid. No random/detail noise.
+    // Six sky steps, on long 4:1 stair edges, preserve the right-hand dawn.
+    int[] sky=new string[]{"345B80","4B7591","7D8C97","BEA08E","E3AB7B","F5BE82"}.Select(C).ToArray();
+    for(int y=0;y<180;y++)for(int x=0;x<320;x++){
+      int q=y+x/4;int band=q<23?0:q<48?1:q<70?2:q<91?3:q<112?4:5;p.Put(x,y,sky[band]);
+    }
+    // Windblown smoke is a single contiguous stepped plume from the broken crown.
+    p.Poly(edge,109,46,109,36,111,34,111,29,115,27,118,24,118,19,122,16,127,14,131,10,132,5,135,0,152,0,145,4,140,6,139,12,136,16,129,19,123,21,122,26,117,29,113,30,113,35,111,37,111,46);
+    // Distant mountain silhouettes keep the same basin and right-hand saddle.
+    p.Poly(edge,0,55,8,53,14,51,20,52,25,55,31,57,38,60,48,60,56,58,63,60,70,60,78,64,86,68,95,73,107,76,124,77,139,75,153,72,165,67,174,65,182,67,191,65,200,61,207,60,215,62,224,64,235,66,247,65,259,61,273,60,281,63,290,61,301,60,310,58,319,55,319,120,0,120);
+    p.Poly(C("7D8C97"),0,67,12,65,23,65,35,66,45,69,61,70,76,75,89,78,101,79,118,78,137,79,150,78,162,75,174,74,189,73,203,75,220,75,231,72,245,70,260,68,276,69,292,66,308,64,319,65,319,130,0,130);
+    // Stepped, hard-edged sun, without a halo or gradient.
+    int sun=C("FFF0BD");
+    p.Poly(sun,284,62,284,59,285,57,287,55,289,54,291,53,296,53,298,54,300,56,301,58,302,61,301,64,299,65,288,65,286,64);
+    // Warm right ridge partially crosses the sun's lower edge.
+    p.Poly(C("D77E54"),257,91,265,85,271,80,278,79,282,75,287,73,293,73,296,72,300,67,304,61,307,58,310,57,310,56,314,56,314,55,319,55,319,132,257,132);
+    p.Poly(C("7D8C97"),0,79,25,78,47,79,66,78,88,81,109,83,129,83,149,81,169,81,192,79,211,80,230,81,250,78,269,81,286,86,301,89,319,86,319,179,0,179);
+    p.Poly(C("BEA08E"),144,88,163,88,163,86,180,86,180,84,199,84,199,82,218,82,218,81,250,79,269,81,286,86,301,89,319,86,319,179,144,179);
+    // Far skyline: plain, lower-contrast blocks with caps, no luminous specks.
+    int[,] far={{3,88,7,18},{12,86,6,21},{20,83,3,19},{29,82,7,24},{39,87,8,18},{50,91,4,15},{60,86,7,20},{73,89,5,18},{86,78,5,28},{93,88,5,19},{120,85,6,25},{133,83,4,27},{143,89,6,21},{151,83,5,26},{162,80,5,31},{173,76,5,34},{184,88,4,24},{194,86,7,24},{204,91,7,22},{214,88,6,26}};
+    for(int i=0;i<far.GetLength(0);i++){
+      int x=far[i,0],y=far[i,1],w=far[i,2],h=far[i,3];p.Rect(x,y,w,h,gray);
+      // Broad adjoining roof blocks vary the skyline without tiny window noise.
+      if(i%3==0)p.Rect(x+1,y-2,Math.Max(2,w-2),2,gray);
+      if(i%5==0){p.Rect(x+w-2,y+2,2,h-2,edge);p.Rect(x-2,y+6,2,h-6,gray);}
+      if(i%4==0)p.Line(x+1,y+7,x+w-2,y+7,C("7D8C97"));
+    }
+    p.Rect(174,72,1,5,gray);p.Rect(175,75,3,1,gray);
+    // Fog uses exactly four opaque colours. Flat horizontal banks cut skyline bases.
+    p.Poly(C("7D8C97"),0,99,31,99,31,98,63,98,63,101,97,101,97,100,132,100,132,99,163,99,163,101,196,101,196,104,227,104,227,113,0,113);
+    p.Poly(C("BEA08E"),91,105,123,105,123,104,156,104,156,103,193,103,193,104,220,104,220,102,247,102,247,100,275,100,275,99,319,99,319,179,91,179);
+    // Four quiet mist contours, never dithered or alpha blended. They cross
+    // the feet of far buildings and widen into the empty streets nearer camera.
+    p.Poly(C("7D8C97"),0,91,14,91,14,92,30,92,30,94,46,94,46,95,65,95,65,96,86,96,86,98,67,98,67,97,44,97,44,96,27,96,27,95,13,95,13,94,0,94);
+    p.Poly(C("BEA08E"),124,95,142,95,142,94,164,94,164,95,183,95,183,97,163,97,163,96,141,96,141,97,125,97);
+    p.Poly(gray,0,116,27,116,27,118,47,118,47,119,69,119,69,121,90,121,90,124,108,124,108,128,128,128,128,131,106,131,106,128,86,128,86,126,65,126,65,123,43,123,43,121,22,121,22,120,0,120);
+    // The tall ruined tower is the visual anchor at centre-left.
+    p.Poly(stone,99,91,102,85,103,75,105,65,105,49,106,49,106,42,108,47,110,46,111,50,112,49,113,51,113,61,112,62,112,75,114,83,117,90,124,92,124,95,98,95);
+    p.Poly(night,104,85,106,71,106,48,108,49,108,46,110,49,111,48,111,63,110,64,110,76,112,87,115,92,102,93);
+    p.Line(106,51,106,69,ink);p.Line(108,47,108,56,ink);
+    p.Line(112,68,112,78,edge);p.Line(113,80,114,86,edge);p.Line(114,87,119,91,edge);
+    p.Rect(118,88,5,5,stone);p.Line(119,88,123,88,edge);p.Rect(121,86,1,2,edge);
+    // Mid-distance warehouse/tower silhouettes, with broad facade shadows.
+    p.Rect(45,71,10,42,stone);p.Rect(46,72,3,39,blue);p.Rect(44,70,12,2,night);
+    p.Rect(48,62,1,8,night);p.Rect(47,69,6,1,edge);
+    p.Line(45,83,54,83,blue);p.Line(45,90,54,90,blue);p.Line(45,100,54,100,blue);
+    p.Line(54,73,54,109,gray);p.Rect(47,76,2,4,edge);p.Rect(50,85,2,4,edge);
+    p.Rect(60,89,5,24,stone);p.Rect(59,88,7,2,blue);p.Rect(62,86,1,3,stone);
+    p.Rect(31,83,5,23,edge);p.Rect(30,82,7,1,edge);p.Rect(33,77,1,5,edge);
+    p.Rect(86,79,4,22,edge);p.Rect(98,84,3,17,edge);
+    p.Rect(168,85,4,28,stone);p.Rect(167,89,6,1,stone);p.Rect(169,81,1,5,stone);
+    p.Rect(174,78,4,36,edge);p.Rect(173,77,5,2,edge);p.Rect(175,73,1,4,edge);
+    // Small overlapping roof clusters fade into the four fog planes. Their
+    // deliberately staggered placement follows the source's dense city basin.
+    int[,] distantRoofs={
+      {5,98,7},{13,96,9},{25,100,8},{36,98,8},{55,97,9},{63,94,8},
+      {73,92,7},{81,95,8},{92,94,9},{119,94,8},{127,91,8},{139,95,7},
+      {150,92,8},{158,97,7},{183,99,8},{205,99,8},{212,105,9},
+      {2,107,9},{25,105,8},{36,109,9},{58,105,7},{66,102,8},{101,101,10},
+      {109,98,8},{123,103,9},{132,100,7},{145,104,9},{156,102,8},{163,106,8}
+    };
+    for(int i=0;i<distantRoofs.GetLength(0);i++){
+      int x=distantRoofs[i,0],y=distantRoofs[i,1],w=distantRoofs[i,2];
+      int c=y<100?gray:edge;
+      p.Poly(c,x-1,y+2,x+2,y,x+w-3,y,x+w,y+2,x+w-1,y+3,x,y+3);
+      p.Rect(x+1,y+3,w-2,3,c);
+      if(y>=100)p.Line(x+2,y+3,x+w-2,y+3,gray);
+    }
+    // Distant low hanok group, traced around the source alleys.
+    p.Poly(edge,1,113,8,108,10,106,13,109,18,110,22,109,26,108,30,110,34,111,39,108,43,109,46,112,54,113,59,110,64,111,70,107,75,108,81,112,87,109,92,110,97,107,103,109,109,107,114,109,120,106,126,109,134,108,141,105,146,107,151,109,156,106,162,108,169,105,175,108,182,108,186,106,191,109,196,108,204,111,211,109,217,110,222,107,228,109,232,112,232,157,0,157);
+    p.Poly(gray,74,117,93,117,93,115,113,115,113,117,133,117,133,114,151,114,151,116,175,116,175,119,194,119,194,123,217,123,217,128,225,128,225,179,74,179);
+    // Source's receding alley: narrowing banks with a few half-hidden masonry
+    // silhouettes. Deliberately no bright pixels in these fog-only areas.
+    p.Poly(C("BEA08E"),105,112,120,112,120,113,138,113,138,115,154,115,154,117,171,117,171,120,153,120,153,119,135,119,135,117,119,117,119,115,105,115);
+    p.Poly(edge,103,117,106,115,110,116,112,118,111,122,104,122);
+    p.Poly(edge,122,123,125,120,130,121,133,123,131,126,123,126);
+    p.Poly(edge,136,126,139,123,143,124,145,126,144,129,137,129);
+    p.Poly(edge,149,133,153,129,158,130,162,133,159,135,159,138,150,138);
+    p.Poly(edge,139,140,141,137,146,138,149,140,147,143,140,143);
+    p.Line(151,133,158,132,gray);p.Line(140,140,146,140,gray);
+    p.Poly(C("D7B4A0"),157,132,178,132,178,130,201,130,201,129,219,129,219,127,236,127,236,125,253,125,253,122,272,122,272,124,296,124,296,126,319,126,319,179,157,179);
+    // Four distinct middle-ground groups keep visible fog streets between them.
+    House(p,69,95,21,10,5,false); // sign building A
+    House(p,84,104,22,11,6,false); // sign building B
+    House(p,111,104,20,10,5,false);
+    House(p,134,102,23,11,6,false);
+    House(p,153,111,24,12,7,false);
+    House(p,15,106,26,15,8,false);
+    House(p,40,111,25,13,7,false);
+    p.Rect(182,96,22,31,blue);p.Rect(184,98,17,28,stone);p.Rect(199,98,3,28,edge);
+    p.Line(184,113,201,113,blue);p.Line(184,120,201,120,blue);
+    // Both dead billboard faces are blank, mounted above the same tower facade.
+    p.Rect(185,87,2,3,night);p.Rect(197,87,2,4,night);
+    p.Poly(night,185,87,200,88,200,96,185,95);p.Poly(ink,186,88,199,89,199,94,186,93);
+    p.Rect(184,97,16,5,night);p.Rect(185,98,14,3,ink);
+    House(p,202,122,24,13,7,false);
+    House(p,171,126,28,15,8,false);
+    House(p,9,123,24,17,7,true);
+    // Nearest left and middle houses: readable timber bays and giwa tile courses.
+    House(p,54,128,30,29,10,true);
+    House(p,74,146,36,32,11,true); // foreground sign building D
+    House(p,112,146,49,23,14,true); // foreground sign building E
+    House(p,167,142,33,20,11,true);
+    // The left side has broad cool facades and an overhanging eave.
+    p.Rect(0,149,48,31,ink);p.Rect(2,152,44,28,wood);p.Rect(3,153,39,27,night);
+    p.Line(47,149,47,179,edge);p.Rect(43,155,2,25,stone);
+    p.Poly(ink,0,140,16,135,28,130,36,124,38,123,39,127,43,136,48,141,55,143,63,142,60,148,55,152,38,161,22,168,0,176);
+    p.Poly(blue,0,143,18,138,29,132,36,128,40,137,47,144,54,146,58,145,54,149,37,158,21,165,0,172);
+    p.Line(0,141,18,136,edge);p.Line(18,136,29,131,edge);p.Line(29,131,37,125,edge);
+    p.Line(37,126,42,137,stone);p.Line(42,137,49,143,stone);p.Line(49,143,60,144,stone);
+    for(int k=0;k<9;k++){int xx=k*5,yy=143-(k*3)/2;p.Line(xx,yy,xx+12,yy+20,ink);p.Line(xx+1,yy,xx+13,yy+19,stone);}
+    p.Line(0,153,24,144,stone);p.Line(24,144,39,135,stone);
+    p.Line(0,163,32,150,stone);p.Line(32,150,43,142,stone);
+    p.Line(0,174,24,165,edge);p.Line(24,165,39,159,edge);p.Line(39,159,55,150,edge);p.Line(55,150,60,146,edge);
+    // Central dead billboard, attached to a roof with two intact supports.
+    p.Rect(102,132,2,16,night);p.Rect(127,132,2,14,night);
+    p.Rect(99,116,34,21,ink);p.Rect(100,117,32,19,edge);p.Rect(101,118,30,17,ink);p.Rect(102,119,28,15,night);
+    p.Line(100,136,131,136,stone);p.Line(103,138,127,138,night);p.Line(103,140,127,140,stone);
+    // Exactly six unlettered light boxes, on five explicitly drawn facades.
+    Sign(p,76,102,5,6,C("DE6BAF"));
+    Sign(p,91,111,5,7,C("6FFBF4"));
+    Sign(p,179,103,5,10,C("DE6BAF"));p.Rect(184,106,1,2,night); // tower wall bracket
+    Sign(p,195,101,5,10,C("6FFBF4"));
+    Sign(p,78,160,5,10,C("DE6BAF"));
+    Sign(p,126,170,11,6,C("F21C2A"));
+    // Three nearest utility poles, all in the lower-left; no other cables exist.
+    p.Rect(19,91,2,54,night);p.Line(20,94,20,141,edge);p.Rect(16,94,10,1,ink);p.Rect(16,97,10,1,ink);
+    p.Rect(17,92,1,2,ink);p.Rect(24,92,1,2,ink);p.Rect(18,105,3,5,ink);
+    p.Rect(51,112,2,45,night);p.Line(52,114,52,153,edge);p.Rect(47,113,11,1,ink);p.Rect(47,116,11,1,ink);
+    p.Rect(48,111,1,2,ink);p.Rect(56,111,1,2,ink);
+    p.Rect(75,126,1,30,night);p.Rect(72,128,7,1,ink);p.Rect(72,131,7,1,ink);
+    Sag(p,20,94,52,113,7);Sag(p,20,97,52,116,8);
+    Sag(p,52,113,75,128,4);Sag(p,52,116,75,131,5);
+    // The entire hill is repainted, including the old lower-right watermark.
+    p.Poly(ink,145,179,160,174,173,170,180,162,184,158,199,152,214,147,230,143,240,143,245,142,254,144,264,143,274,148,285,147,291,142,296,132,305,131,311,129,319,130,319,179);
+    p.Poly(night,160,179,175,173,183,163,194,158,211,153,227,149,240,147,252,147,264,146,275,151,289,150,294,144,300,136,311,133,319,133,319,179);
+    p.Poly(blue,179,174,186,161,201,156,219,151,230,147,241,147,235,152,221,155,208,159,201,163,187,163);
+    p.Poly(stone,184,159,197,154,213,149,229,145,239,145,234,147,220,150,205,153,195,157);
+    p.Line(182,160,198,154,edge);p.Line(198,154,214,150,edge);p.Line(214,150,229,146,C("A37B70"));
+    p.Poly(blue,238,151,256,149,269,151,277,156,291,158,299,165,283,163,271,160,258,157,244,157);
+    p.Poly(stone,263,150,270,150,276,153,287,154,291,157,278,156,270,153);
+    p.Poly(blue,294,143,300,135,311,132,319,132,319,139,309,140,306,145);
+    p.Line(300,134,310,132,edge);p.Line(311,131,319,131,edge);
+    p.Poly(ink,183,166,190,164,197,166,202,171,213,172,216,175,203,175,195,169,188,168,177,179,172,179);
+    p.Poly(blue,220,164,231,164,238,162,247,162,254,165,244,166,236,165,229,167,219,167);
+    p.Line(223,163,230,163,stone);p.Line(230,163,235,161,stone);
+    p.Poly(ink,247,177,258,171,268,172,277,176,288,175,299,179);
+    p.Line(290,163,298,163,ink);p.Line(298,163,303,168,ink);p.Line(303,168,315,170,ink);
+  }
+  static void Hero(Pic p,Pic reference){
+    // Reuse the dominant-reduced coat as an underdrawing; every outline and
+    // clothing plane below is then re-authored, without the held sword/knot.
+    // Rear hip scabbard is drawn first so the coat actually occludes its upper part.
+    p.Poly(ink,231,88,234,89,222,124,219,124,219,122);
+    p.Line(231,91,220,122,blue);
+    // Boots and trouser legs, planted on the same rocky ledge as the source.
+    p.Poly(ink,229,130,242,130,242,139,239,144,239,153,237,160,232,163,224,162,224,159,229,157,230,147);
+    p.Poly(night,232,133,240,134,239,140,236,144,236,156,233,159,226,160,232,161,236,159,237,153,237,143,233,139);
+    p.Line(230,143,231,154,rim);p.Line(229,157,225,158,rim);
+    p.Line(239,144,239,151,rim);p.Line(238,153,237,158,rim);
+    p.Poly(ink,249,130,263,131,262,140,263,149,264,151,263,157,257,158,253,155,253,152,255,151,254,142);
+    p.Poly(night,252,133,261,133,260,141,261,149,258,151,255,152,255,155,260,156,262,154,261,150,258,148,257,140);
+    p.Line(261,137,261,148,rim);p.Line(262,150,262,154,rim);
+    // Broad coat, wrapping and blowing right; traced asymmetry is intentional.
+    int[] outline={236,49,240,47,249,47,254,50,260,54,262,65,266,76,264,83,262,87,266,97,272,106,279,114,285,119,294,118,291,123,287,125,283,130,279,131,277,128,271,127,267,132,259,136,253,135,248,140,241,138,237,141,230,138,227,132,226,124,224,115,225,109,224,101,223,94,224,88,223,81,225,72,228,61,230,55};
+    var mask=new Pic(320,180);mask.Poly(unchecked((int)0xffffffff),outline);
+    for(int y=46;y<142;y++)for(int x=220;x<296;x++)if(mask.Get(x,y)!=0)p.Put(x,y,Nearest(reference.Get(x,y),new int[]{ink,night,blue}));
+    p.Poly(ink,outline);
+    p.Poly(night,236,51,243,49,250,50,257,55,259,64,262,77,260,84,258,87,262,98,269,107,277,115,285,120,292,119,286,123,281,128,277,125,270,124,264,130,259,134,252,132,247,136,242,135,237,138,231,135,229,129,227,116,229,106,228,97,226,91,227,81,228,71,231,60);
+    // Coherent dark indigo fabric planes; no conversion speckles.
+    p.Poly(blue,237,53,241,51,247,52,251,55,253,65,253,77,249,80,240,79,237,73,237,62);
+    p.Poly(blue,255,56,258,59,259,70,262,78,260,83,257,85,258,78,256,71);
+    p.Poly(blue,230,61,233,56,232,70,230,78,230,84,227,87,227,80);
+    p.Line(233,57,233,66,ink);p.Line(233,66,231,74,ink);p.Line(231,74,232,78,ink);
+    p.Line(228,82,232,85,ink);p.Line(226,87,231,89,blue);p.Line(227,91,230,92,ink);
+    p.Line(248,55,250,65,night);p.Line(250,65,250,74,night);
+    p.Poly(blue,239,89,244,90,247,103,252,117,259,130,256,133,250,131,243,116,239,102);
+    p.Poly(blue,250,88,253,89,259,99,267,110,276,119,282,121,279,124,270,122,260,112,253,100);
+    p.Poly(blue,231,104,234,114,238,127,243,134,238,136,232,132,229,121);
+    p.Line(235,111,240,127,ink);p.Line(240,127,245,133,ink);
+    p.Line(247,108,254,121,ink);p.Line(254,121,260,128,ink);
+    p.Line(263,111,271,119,ink);p.Line(271,119,277,121,ink);
+    p.Line(228,118,230,130,blue);p.Line(230,130,234,135,blue);
+    // Orange selout is precisely 1 native pixel on sun-facing outer contours.
+    p.Line(251,49,260,55,rim);p.Line(260,55,262,66,rim);p.Line(262,66,265,77,rim);
+    p.Line(265,77,263,83,rim);p.Line(263,83,261,86,rim);
+    p.Line(264,96,271,106,rim);p.Line(271,106,279,114,rim);p.Line(279,114,287,119,rim);p.Line(287,119,293,118,rim);
+    p.Line(246,137,248,138,rim);p.Line(237,139,239,139,rim);
+    // Relaxed left wrist/hand below the sleeve, fingers pointing down, no weapon.
+    p.Poly(ink,224,98,228,99,228,102,226,107,224,108,221,105,222,101);
+    p.Poly(C("A37B70"),224,100,226,100,226,103,225,106,223,105,223,102);
+    p.Line(224,104,225,106,C("D7B4A0"));p.Line(226,101,227,100,wood);
+    // Neck and head: turned left, back of head dominant; source topknot silhouette.
+    p.Poly(ink,237,37,248,37,251,43,250,48,253,50,241,52,238,49,237,45,235,43);
+    p.Poly(C("A37B70"),237,38,242,40,246,40,247,45,250,48,244,49,240,47,239,43,237,42);
+    p.Poly(wood,242,41,248,40,248,45,250,47,245,47,242,45);
+    p.Line(239,47,242,49,edge);p.Line(242,49,249,47,edge);
+    p.Poly(ink,232,32,231,30,234,29,235,27,239,27,241,26,246,27,250,28,253,32,253,38,251,41,244,41,241,40,238,40,237,37,234,37,234,34);
+    p.Poly(night,236,30,240,28,245,28,249,30,251,33,249,37,242,37,237,35);
+    // Tied hair is discrete, connected locks, rather than scattered single pixels.
+    p.Poly(ink,248,29,250,25,253,24,255,22,257,23,261,22,260,25,263,25,265,24,264,27,259,29,263,30,264,32,261,32,263,35,260,34,259,37,257,34,255,32,252,31);
+    p.Line(253,24,255,23,rim);p.Line(258,23,260,23,rim);p.Line(262,27,264,26,rim);
+    p.Line(252,33,252,37,rim);p.Line(249,41,250,42,rim);
+    // Muted blue headband, one broad cluster, without glowing ornaments.
+    p.Line(234,34,238,37,C("226076"));p.Line(238,37,249,39,C("226076"));
+    p.Line(234,34,234,37,C("42A9BD"));p.Line(235,35,236,37,C("42A9BD"));
+    p.Line(238,36,245,38,C("3F4A6E"));p.Line(246,38,250,38,C("226076"));
+    // Dark red sash, no gold knot. Two loose cloth tails follow the wind.
+    p.Poly(ink,235,80,241,81,251,80,255,79,256,85,249,88,237,88,233,86);
+    p.Poly(C("7F1A22"),236,81,242,82,251,81,254,80,254,85,248,87,237,86,235,85);
+    p.Line(237,82,248,83,wood);p.Line(238,85,250,84,wood);
+    p.Line(251,82,253,81,rim);p.Line(253,83,253,85,rim);
+    p.Poly(ink,254,84,261,90,271,93,280,91,288,95,293,96,296,96,296,101,289,99,281,97,271,98,261,94,255,90);
+    p.Poly(wood,255,85,262,91,272,95,280,93,288,96,294,97,295,99,287,97,280,95,271,96,261,93);
+    p.Line(257,86,264,91,rim);p.Line(264,91,272,93,rim);p.Line(272,93,280,92,rim);p.Line(280,92,288,95,rim);
+    p.Poly(ink,254,85,262,96,272,101,281,102,284,105,274,104,266,101,259,96,253,89);
+    p.Poly(wood,255,87,262,95,271,100,278,101,273,102,266,99,260,94);
+    p.Line(260,93,266,98,rim);p.Line(266,98,274,101,rim);
+    // Left-hip short hilt/guard, above the occluded dark scabbard. No blade.
+    p.Poly(ink,230,86,232,85,236,91,233,93);
+    p.Line(231,86,234,91,edge);p.Line(232,88,233,89,night);
+    p.Line(230,92,236,89,ink);p.Line(231,92,235,90,wood);
+    // Three distinct rectangular paper talismans with one 1px red stripe each.
+    for(int i=0;i<3;i++){
+      int x=236+i*4,y=89+i%2,h=8+i%2;
+      p.Rect(x-1,y-1,4,h+2,ink);p.Rect(x,y,2,h,C("FFF0BD"));
+      p.Rect(x,y+2,2,1,C("7F1A22"));p.Line(x,y-2,x,y-1,wood);
+    }
+  }
+  public static void Run(string root){
+    signCount=0;
+    string dir=Path.Combine(root,"docs/design/concept/ending");
+    var source=Pic.Load(Path.Combine(dir,"ending_v5_gemini.png"));
+    Check(source.W==1024&&source.H==572,"Expected approved 1024x572 source");
+    int[] project=Pic.Load(Path.Combine(root,"Assets/Art/Palette/number_palette.png")).P.Distinct().ToArray();
+    int[] extra=new string[]{"345B80","4B7591","7D8C97","BEA08E","E3AB7B","F5BE82","FFF0BD","DE6BAF"}.Select(C).ToArray();
+    int[] palette=project.Concat(extra).Distinct().ToArray();
+    var reduced=Vote(source,palette);Simplify(reduced);CleanOrphans(reduced);
+    var plate=reduced.Copy();Scene(plate);Hero(plate,reduced);
+    // Remove accidental single-pixel islands after authored line intersections.
+    // All intentional small marks (paper stripes, hilt, hair ties, rims) form
+    // connected 2px-or-longer clusters; no star or sparkle is preserved.
+    CleanOrphans(plate);
+    Check(signCount==6,"Expected exactly six mounted signs");
+    Check(plate.P.All(c=>palette.Contains(c)),"Pixel escaped the 32-colour palette");
+    Check(plate.P.All(c=>((uint)c>>24)==255),"Non-opaque pixel");
+    plate.Save(Path.Combine(dir,"ending_v5_320x180.png"));
+    plate.Scale(3).Save(Path.Combine(dir,"ending_v5_960x540.png"));
+    // Side-by-side at equal review scale, no labels/text. Source is DOWNscaled
+    // to 960x536 and extended by 2 rows top/bottom (1024x572 -> 1024x576).
+    var comparison=new Pic(1920,540);
+    for(int y=0;y<540;y++)for(int x=0;x<960;x++)comparison.Put(x,y,source.Get(x*1024/960,(y*576/540)-2));
+    comparison.Blit(plate.Scale(3),960,0);comparison.Save(Path.Combine(dir,"ending_v5_compare.png"));
+    var saved=Pic.Load(Path.Combine(dir,"ending_v5_320x180.png"));
+    Check(saved.W==320&&saved.H==180,"Native dimensions");
+    Check3x(saved,Pic.Load(Path.Combine(dir,"ending_v5_960x540.png")));
+    Check(saved.P.Distinct().Count()<=32,"More than 32 colours");
+    CheckSign(saved,76,102,5,6,C("DE6BAF"));CheckSign(saved,91,111,5,7,C("6FFBF4"));
+    CheckSign(saved,179,103,5,10,C("DE6BAF"));CheckSign(saved,195,101,5,10,C("6FFBF4"));
+    CheckSign(saved,78,160,5,10,C("DE6BAF"));CheckSign(saved,126,170,11,6,C("F21C2A"));
+    for(int i=0;i<3;i++){
+      int x=236+i*4,y=89+i%2,h=8+i%2;
+      for(int j=0;j<h;j++)for(int k=0;k<2;k++)Check(saved.Get(x+k,y+j)==(j==2?C("7F1A22"):C("FFF0BD")),"Talisman paper/stripe changed");
+    }
+    var savedComparison=Pic.Load(Path.Combine(dir,"ending_v5_compare.png"));
+    Check(savedComparison.W==1920&&savedComparison.H==540,"Comparison dimensions");
+    Check3x(saved,savedComparison.Crop(960,0,960,540));
+    Console.WriteLine("PASS: 320x180, exact 3x 960x540, opaque, "+saved.P.Distinct().Count()+" colours, 6 signs / 5 buildings, 3 poles / 4 attached sag spans.");
+    Console.WriteLine("Added colours: "+string.Join(", ",extra.Select(c=>"#"+(c&0xffffff).ToString("X6"))));
+  }
+}
+'@
+Add-Type -TypeDefinition $code -ReferencedAssemblies System.Drawing
+[NumberEndingV5]::Run((Get-Location).Path)

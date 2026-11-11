@@ -101,7 +101,25 @@
 
 > ⛔ 기능 동결이 11/11 24:00이라 2·6은 새 기능에 가깝다. 동결을 넘기면 사용자에게 먼저 확인.
 
-### 🤖 Claude — 여기서부터 이어서 (11/11 오후 기준, 커밋 `1b8f155` 이후)
+### 🤖 Claude — 11/11 저녁 기준 (이 PC 작업 끝, 커밋 `4922d5d` 이후) ← 여기부터 이어서
+**오늘 이 PC에서 끝난 것** (모두 main에 푸시, Play 모드 확인은 아직 — 사용자 플레이 필요):
+- 기계 소품 3종 엔딩 연결(`cf09e86`), 체크포인트 부적 기둥 그림(`4dfdd11`), 저격수 레이저 굵게(`4545127`)
+- DECISIONS 35: 패링 시 맞은 지점이 빛남(주인공 흰 깜빡임·금색 화면 섬광 제거), Shift = 일섬 가능하면 일섬, 아니면 공격 없는 대시(쿨 0.6초), **S+Space = 얇은 발판 아래로**
+- DECISIONS 36: 보스 벌레 팔이 지휘하며 빛남 + 벌레 탄은 해치에서, 칼 휘두르기는 팔 전체가 화면 밖으로 나갔다 들어옴 + 재장착 연출, 칼 꽂힘 = 좌클릭 연타(결투 삭제)
+- DECISIONS 37: 주사위 충전 = **적중 7번** (패링 아님), HUD 7칸
+- DECISIONS 38: 보스전 우클릭 — 천장 고리 2개(매달려 낮은 공격 피하기), 열린 해치로 날아가 베기(2 피해) + 벌레 비 공격 추가, 벌레 공격 빈도 증가. **보스가 빨리 죽을 수 있음(HP 60) → 플레이 후 조정**
+- WebGL 빌드: `94841c0` 기준까지 확인(13.6MB). 그 뒤 커밋은 빌드 안 됨 → 최종 빌드 필요
+
+| 순서 | 할 일 | 메모 |
+|---|---|---|
+| 1 | **엔딩 일러스트 연결** | 그림은 `Assets/Resources/DraftUi/ending_illustration.png` (1024×576, Gemini 원본 그대로 + 워터마크만 제거, 사용자 선택). 엔딩 대사(`ending_01_placeholder.txt`) 끝난 뒤 몇 초 보여 주고 타이틀로 — `Boss/BossFight.cs` `Ending()`. 픽셀아트가 아닌 고해상도 그림이니 화면에 꽉 차게(UI Image 또는 카메라 앞 스프라이트, 필터 Point/Bilinear는 보고 결정). 다시 그린 시안들(`ending_final_*`, `ending_v5_*`)은 사용자가 거절 |
+| 2 | **발판 그림 세션 결과 합치기** | 브랜치 `claude/level-art-adad4e` (세션 "Level platform art and missing map parts"). STG01~05 전체 캡처·임시 막대/빈 구역 목록까지 끝(`0db1f00`, `docs/qa/level_overview/before/`), **아트 계획 사용자 승인 대기**. 승인 → Gemini→Codex 발판 그림 → 빌더 수정 → 씬 재생성. 끝나면 main에 병합(사용자 확인 후) |
+| 3 | 보스 난이도·우클릭 손맛 조정 | 사용자 플레이 후 |
+| 4 | 최종 WebGL 빌드 + zip | 메뉴 `NUMBER/Build WebGL` 또는 배치 모드 `-executeMethod BuildWebGL.Build`. 빌드 뒤 `Mulmaru SDF.asset` 되돌리기 |
+
+**이 PC 메모:** git은 GitHub Desktop 내장(`C:/Users/User/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe`), 컴파일 확인은 scratchpad `csc_check2.py`(csproj가 오래돼서 `GrappleRope.cs`를 추가해 검사). Gemini 이미지 수신 서버는 포트 8798. `Assets/Scenes/STG05.unity`·`Sandbox.unity`의 로컬 변경은 커밋 안 함.
+
+### 🤖 Claude — (이전) 11/11 오후 기준, 커밋 `1b8f155` 이후
 | 순서 | 할 일 | 메모 |
 |---|---|---|
 | 1 | **기계 소품 3종 넣기** (보스 엔딩에서 부수는 랙·감시 화면·케이블) | 시안: `docs/design/concept/machine_props/` (`prop_rack.png` 48×96, `prop_screen.png` 64×80, `prop_cables.png` 80×40, Gemini → Codex). **사용자 미승인.** 화면·케이블은 괜찮고 **랙 테두리 조각이 자잘한 점으로 지저분함(AI 티) → Codex로 단순한 반복 무늬로 다듬은 뒤** 사용자 확인 → `Assets/Resources/BossArt/`에 넣고 `Boss/BossArt.cs`의 `Props[0..2]`(RackPix/ScreenPix/CablesPix)가 그림이 있으면 그걸 쓰게 (없으면 코드 그림 유지). PPU 32, 피벗 아래 가운데. CREDITS 기록 |

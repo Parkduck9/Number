@@ -1,0 +1,411 @@
+﻿# Ending final: faithful source sampling plus local, hand-authored pixel corrections.
+# Run from repository root (Windows PowerShell, no external packages):
+# & ([scriptblock]::Create((Get-Content -Raw -Encoding UTF8 docs/design/concept/ending/generate_ending_final.txt)))
+# Source: user-approved ending_fresh_gemini.png, AI generated with Google Gemini.
+# Conversion and hand-placed pixels: Codex, local System.Drawing; no image API.
+# Project palette: all 24 original colours, plus the following 8 (32 maximum).
+# Sky: #3D6090 #66658F #906D91 #C38592 #E89B83 #F5AC80
+# Sun / paper highlight: #FFE5AD. Neon: #DF63DD.
+# Source is extended by 2 edge rows above and below, never stretched.
+# No generic house generation, broad smoothing, dithering, or city redraw.
+# Only the four ending PNGs and the hero before/after PNG are written.
+# BeforeHero retains the previous figure solely for reproducible comparison.
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Drawing
+$code = @'
+using System;
+using System.IO;
+using System.Linq;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Collections.Generic;
+public class NumberEndingFinal {
+  class Pic {
+    public int W,H; public int[] P;
+    public Pic(int w,int h,int c=0){W=w;H=h;P=Enumerable.Repeat(c,w*h).ToArray();}
+    public int Get(int x,int y){return P[Math.Max(0,Math.Min(H-1,y))*W+Math.Max(0,Math.Min(W-1,x))];}
+    public void Put(int x,int y,int c){if(x>=0&&y>=0&&x<W&&y<H)P[y*W+x]=c;}
+    public Pic Copy(){var p=new Pic(W,H);Array.Copy(P,p.P,P.Length);return p;}
+    public static Pic Load(string path){using(var b=new Bitmap(path)){var p=new Pic(b.Width,b.Height);for(int y=0;y<p.H;y++)for(int x=0;x<p.W;x++)p.Put(x,y,b.GetPixel(x,y).ToArgb());return p;}}
+    public void Save(string path){using(var b=new Bitmap(W,H,PixelFormat.Format32bppArgb)){for(int y=0;y<H;y++)for(int x=0;x<W;x++)b.SetPixel(x,y,Color.FromArgb(Get(x,y)));b.Save(path,ImageFormat.Png);}}
+    public void Rect(int x,int y,int w,int h,int c){for(int j=y;j<y+h;j++)for(int i=x;i<x+w;i++)Put(i,j,c);}
+    public void Line(int x,int y,int xx,int yy,int c){int dx=Math.Abs(xx-x),sx=x<xx?1:-1,dy=-Math.Abs(yy-y),sy=y<yy?1:-1,e=dx+dy;while(true){Put(x,y,c);if(x==xx&&y==yy)break;int e2=2*e;if(e2>=dy){e+=dy;x+=sx;}if(e2<=dx){e+=dx;y+=sy;}}}
+    public void Poly(int c,params int[] xy){int n=xy.Length/2;int lo=H,hi=0;for(int i=0;i<n;i++){lo=Math.Min(lo,xy[2*i+1]);hi=Math.Max(hi,xy[2*i+1]);}for(int y=lo;y<=hi;y++)for(int x=0;x<W;x++){bool inside=false;for(int i=0,j=n-1;i<n;j=i++){int xi=xy[2*i],yi=xy[2*i+1],xj=xy[2*j],yj=xy[2*j+1];if((yi>y)!=(yj>y)&&x<(double)(xj-xi)*(y-yi)/(yj-yi)+xi)inside=!inside;}if(inside)Put(x,y,c);}for(int i=0;i<n;i++)Line(xy[2*i],xy[2*i+1],xy[2*((i+1)%n)],xy[2*((i+1)%n)+1],c);}
+    public void Blit(Pic s,int x,int y){for(int j=0;j<s.H;j++)for(int i=0;i<s.W;i++){int c=s.Get(i,j),a=(int)((uint)c>>24);if(a==255)Put(x+i,y+j,c);else if(a!=0)throw new Exception("Nonbinary sprite alpha");}}
+    public Pic Crop(int x,int y,int w,int h){var p=new Pic(w,h);for(int j=0;j<h;j++)for(int i=0;i<w;i++)p.Put(i,j,Get(x+i,y+j));return p;}
+    public Pic Scale(int s){var p=new Pic(W*s,H*s);for(int y=0;y<p.H;y++)for(int x=0;x<p.W;x++)p.Put(x,y,Get(x/s,y/s));return p;}
+  }
+  static int C(string hex){return unchecked((int)0xff000000)|Convert.ToInt32(hex,16);}
+  static int Dist(int a,int b){int r=((a>>16)&255)-((b>>16)&255),g=((a>>8)&255)-((b>>8)&255),bl=(a&255)-(b&255);return r*r+g*g+bl*bl;}
+  static int Nearest(int c,int[] pal){int best=pal[0],d=int.MaxValue;foreach(int p in pal){int k=Dist(c,p);if(k<d){d=k;best=p;}}return best;}
+  static int Bucket(int c){return ((c>>12)&0xf00)|((c>>8)&0xf0)|((c>>4)&15);}
+  static Pic Vote(Pic src,int[] pal){
+    // Source has no recoverable uniform grid: raster cells vary ~3-7 source px.
+    // Impose the requested 320x180 grid. Extend 2 rows at each edge to 1024x576
+    // before sampling, giving square 3.2x3.2-source-pixel cells without stretch.
+    var p=new Pic(320,180);
+    for(int y=0;y<180;y++)for(int x=0;x<320;x++){
+      int x0=(int)Math.Floor(x*3.2),x1=(int)Math.Floor((x+1)*3.2);
+      int y0=(int)Math.Floor(y*3.2)-2,y1=(int)Math.Floor((y+1)*3.2)-2;
+      var bins=new Dictionary<int,int>();var exact=new Dictionary<int,int>();
+      for(int j=y0;j<y1;j++)for(int i=x0;i<x1;i++){int c=src.Get(i,j),k=Bucket(c);bins[k]=bins.ContainsKey(k)?bins[k]+1:1;exact[c]=exact.ContainsKey(c)?exact[c]+1:1;}
+      int center=src.Get((x0+x1-1)/2,(y0+y1-1)/2);
+      int winner=bins.OrderByDescending(k=>k.Value).ThenBy(k=>k.Key==Bucket(center)?0:1).ThenBy(k=>k.Key).First().Key;
+      // Actual source sample from the winning colour family, never a blended colour.
+      int dominant=exact.Where(k=>Bucket(k.Key)==winner).OrderByDescending(k=>k.Value).ThenBy(k=>Dist(k.Key,center)).ThenBy(k=>k.Key).First().Key;
+      p.Put(x,y,dominant);
+    }
+    // Flood the connected sky field, so its purple ramp never colours city fog.
+    int[] reference=new string[]{"40629A","63669D","916D98","BF7292","DB8382","F7946D","FFE5AD"}.Select(C).ToArray();
+    bool[] sky=new bool[320*180];var queue=new Queue<int>();
+    for(int x=0;x<320;x++){sky[x]=true;queue.Enqueue(x);}
+    while(queue.Count>0){int i=queue.Dequeue(),x=i%320,y=i/320;
+      int[] next={x>0?i-1:-1,x<319?i+1:-1,y>0?i-320:-1,y<80?i+320:-1};
+      foreach(int j in next)if(j>=0&&j<sky.Length&&!sky[j]&&reference.Any(c=>Dist(c,p.P[j])<450)){sky[j]=true;queue.Enqueue(j);}
+    }
+    int[] skyPalette=new string[]{"3D6090","66658F","906D91","C38592","E89B83","F5AC80","FFE5AD"}.Select(C).ToArray();
+    int[] backgroundPalette=pal.Where(c=>!skyPalette.Contains(c)).ToArray();
+    for(int i=0;i<p.P.Length;i++)p.P[i]=Nearest(p.P[i],sky[i]?skyPalette:backgroundPalette);
+    return p;
+  }
+  static int ink=C("080B14"), hair=C("0B1026"), navy=C("1A1D33"), cloth=C("2D3050"), light=C("3F4A6E"), rim=C("D77E54"), red=C("7F1A22"), redlit=C("7A3A3C"), paper=C("EFD0B6"), cyan=C("42A9BD"), cyandark=C("226076");
+  static bool InPoly(int x,int y,int[] points){bool b=false;int n=points.Length/2;for(int i=0,j=n-1;i<n;j=i++){int xi=points[2*i],yi=points[2*i+1],xj=points[2*j],yj=points[2*j+1];if((yi>y)!=(yj>y)&&x<(double)(xj-xi)*(y-yi)/(yj-yi)+xi)b=!b;}return b;}
+  static int Clean(Pic p){
+    // A single synchronous pass. Keep wires, window clusters, neon and the hero.
+    int[] old=(int[])p.P.Clone();int changed=0;
+    for(int y=1;y<179;y++)for(int x=1;x<319;x++){
+      if(x>=245&&y>=16)continue;
+      int c=old[y*320+x];if(c==C("DF63DD")||c==C("6FFBF4")||c==C("42A9BD")||c==C("F21C2A"))continue;
+      var ns=new Dictionary<int,int>();for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){if(i==0&&j==0)continue;int k=old[(y+j)*320+x+i];ns[k]=ns.ContainsKey(k)?ns[k]+1:1;}
+      if(!ns.ContainsKey(c)){var w=ns.OrderByDescending(z=>z.Value).ThenBy(z=>Dist(z.Key,c)).First();if(w.Value>=4){p.Put(x,y,w.Key);changed++;}}
+    }return changed;
+  }
+  static void BeforeHero(Pic p){
+    // Native-grid silhouette, hair crown y23, boot soles y156: 134 px total.
+    // Head including hair: 19 px high (1:7). Shoulders: 36 px / head width 18.
+    // Sash y86..89; torso 43 px; hip-to-sole legs 67 px, visible below coat.
+    // Rear view; asymmetric relaxed arms, no face, fingers or lettering.
+    // Boots and long trousers, drawn behind the split hanbok coat.
+    p.Poly(ink,263,88,287,88,291,115,291,138,293,150,294,153,293,155,281,155,280,153,281,141,279,122,275,109,271,129,270,145,270,153,268,156,256,156,255,154,259,151,261,138,261,116);
+    p.Poly(navy,264,102,274,102,272,122,268,139,268,150,260,151,263,137,264,118);
+    p.Poly(cloth,266,111,271,112,268,135,267,146,263,146,265,132);
+    p.Poly(navy,277,102,285,102,288,121,288,139,291,150,283,151,284,138,281,121);
+    p.Line(285,117,287,135,light);p.Line(288,139,290,150,rim);
+    p.Poly(hair,260,146,268,146,268,153,266,154,257,154,261,151);
+    p.Poly(hair,283,146,289,146,292,151,292,153,282,153);
+    p.Line(267,147,267,153,light);p.Line(290,150,292,152,rim);
+    // Sword on the left hip behind coat: oblique wrapped hilt and dark sheath.
+    p.Line(249,75,277,115,ink);p.Line(250,75,279,115,ink);
+    p.Line(249,75,259,89,light);p.Line(250,75,260,89,navy);
+    for(int n=0;n<5;n++)p.Line(250+n*2,77+n*2,252+n*2,77+n*2,C("62677D"));
+    p.Line(254,88,261,84,ink);p.Line(255,89,261,85,light);
+    p.Poly(ink,258,88,260,87,299,132,298,135,295,133);
+    p.Line(261,91,297,133,navy);p.Line(293,128,297,132,light);
+    // Small neck, no cheek except a one-pixel warm ear, below strap.
+    p.Poly(ink,271,38,281,37,283,46,277,50,269,45);
+    p.Poly(redlit,274,39,280,39,280,44,275,46,271,43);
+    p.Line(280,40,280,44,rim);
+    // Coat outer outline includes sleeves and rightward fluttering skirt.
+    p.Poly(ink,270,44,278,44,288,47,292,53,293,68,294,81,291,96,291,105,297,121,292,125,282,128,276,124,273,120,268,125,257,122,257,112,260,96,258,87,253,98,251,95,253,79,256,65,258,52,263,48);
+    // Body: three main shades; large connected planes, no pseudo texture.
+    p.Poly(navy,271,46,278,46,287,49,290,54,290,69,288,85,265,87,261,74,260,56,264,51);
+    p.Poly(cloth,262,53,270,49,274,49,268,53,265,69,265,83,262,82,259,72);
+    p.Line(265,52,271,49,light);p.Line(271,49,280,48,light);
+    p.Poly(hair,273,56,280,52,287,52,289,58,288,75,285,82,271,84,268,80,269,67);
+    p.Poly(navy,275,54,281,51,287,54,288,65,285,78,275,81,271,78,272,65);
+    p.Line(270,80,278,82,cloth);p.Line(278,82,286,80,cloth);
+    // Left sleeve and empty hand, separated from hip by a narrow notch.
+    p.Poly(navy,258,55,261,54,264,61,263,75,258,94,253,93,255,79);
+    p.Line(258,60,257,76,cloth);p.Line(256,79,254,90,cloth);
+    p.Poly(ink,253,94,257,95,258,100,256,104,253,103,251,100,251,96);
+    p.Poly(redlit,253,96,256,96,256,101,254,102,252,99);
+    p.Line(256,97,256,100,C("A37B70"));
+    // Right sleeve and a relaxed, empty hand visible outside the skirt.
+    p.Poly(navy,289,53,291,56,292,70,293,81,290,95,286,94,288,77);
+    p.Line(291,61,291,72,cloth);p.Line(292,76,291,86,cloth);
+    p.Poly(ink,287,94,290,94,291,99,289,104,286,102,286,98);
+    p.Poly(redlit,287,96,289,96,289,101,287,102);
+    p.Line(290,97,290,100,rim);
+    // Skirt / hanbok gores: a clear centre split exposes the long legs.
+    p.Poly(navy,265,89,287,89,288,103,295,121,288,124,281,125,276,118,274,103,268,120,260,120,260,112);
+    p.Poly(cloth,265,94,268,94,266,111,264,118,260,119,261,112);
+    p.Poly(hair,271,96,275,96,274,111,270,121,266,123,267,117);
+    p.Poly(cloth,283,96,286,96,287,107,293,120,286,122,282,115,280,105);
+    p.Line(277,99,280,115,light);p.Line(281,117,285,123,light);
+    // Red sash at the figure midpoint, two plain pale talismans, stripe only.
+    p.Poly(ink,263,85,287,84,288,89,265,91,262,89);
+    p.Line(264,86,286,85,redlit);p.Line(264,87,286,86,red);
+    p.Line(265,88,285,87,red);p.Line(265,89,284,88,redlit);
+    p.Poly(ink,269,90,273,90,272,101,268,101);
+    p.Poly(paper,270,91,272,91,271,100,269,100);p.Line(270,94,272,94,red);
+    p.Poly(ink,280,89,283,89,285,99,281,100);
+    p.Poly(paper,281,90,282,90,284,98,282,99);p.Line(281,93,283,93,red);
+    // One-pixel orange right rim, inside the clean one-pixel dark silhouette.
+    p.Line(289,51,291,56,rim);p.Line(292,59,292,70,rim);
+    p.Line(293,73,293,80,rim);p.Line(292,83,291,91,rim);
+    p.Line(289,105,296,121,rim);p.Line(291,124,285,126,rim);
+    p.Line(290,127,290,137,rim);p.Line(291,140,292,149,rim);
+    // Spiky black head: 18 px cranial width, 19 px crown-to-nape height.
+    p.Poly(ink,268,26,266,23,272,25,274,24,278,27,282,24,281,28,285,26,284,30,286,32,284,35,283,40,279,43,273,42,269,39,268,34,264,34,266,31,263,30,268,29);
+    p.Poly(hair,270,28,274,27,278,30,282,28,281,31,284,33,281,39,277,41,272,39,270,34,267,33,270,31);
+    p.Line(272,27,275,29,navy);p.Line(277,30,280,29,navy);
+    // Compact tied ponytail, its ends angle right. It never reads as a face.
+    p.Poly(ink,283,29,287,27,290,28,293,31,291,31,295,35,292,34,293,40,290,37,289,34,286,33,284,34);
+    p.Line(286,29,290,29,hair);p.Line(289,30,292,33,hair);
+    p.Line(291,30,292,31,rim);p.Line(293,35,293,37,rim);
+    // Cyan strap around back of head; subdued enough to keep the tower focal.
+    p.Line(268,35,282,34,cyandark);p.Line(270,35,281,34,cyan);
+    p.Line(267,35,267,37,cyan);p.Put(268,38,redlit);
+    p.Line(280,41,282,39,rim);p.Line(269,25,272,26,rim);
+    p.Line(278,27,280,26,rim);
+  }
+  static void Hero(Pic p){
+    // Hand-placed native pixels. Crown y23, soles y156; 19px head (~1:7).
+    // Rear three-quarter pose looking left/down: left shoulder y49, right y53.
+    // Weight rests on the right leg; the free left knee/foot angle outwards.
+    // Hip-to-sole 72px, nape-to-sash 39px. No face or simulated lettering.
+    // Legs first, behind the coat: straight supporting leg and bent free leg.
+    p.Poly(ink,267,84,282,86,286,103,286,123,285,144,288,150,291,153,290,156,278,156,277,153,279,146,278,127,275,110,272,124,267,141,266,150,265,154,253,154,253,152,258,148,260,135,263,117,262,102);
+    p.Poly(navy,268,96,275,99,273,120,269,133,264,148,259,150,262,135,265,117);
+    p.Poly(cloth,268,112,271,113,269,127,265,140,264,145,262,145,265,129);
+    p.Line(267,129,264,141,light);
+    p.Poly(navy,277,97,282,98,284,118,283,137,284,149,280,150,281,134,279,118);
+    p.Line(282,119,282,136,cloth);p.Line(283,139,284,148,light);
+    // Boot tops follow the two differently angled ankles.
+    p.Poly(hair,260,145,265,146,264,151,263,152,255,152,260,149);
+    p.Line(260,146,264,147,cloth);p.Line(264,149,264,152,rim);
+    p.Poly(hair,280,145,284,145,285,151,289,153,289,154,279,154);
+    p.Line(280,146,283,146,cloth);p.Line(285,150,289,153,rim);
+    p.Line(284,126,284,140,rim);p.Line(285,142,285,148,rim);
+    // Sheath angles down/back to the LEFT from the left hip, separate from coat.
+    p.Poly(ink,259,82,263,84,250,120,247,124,244,123,245,119);
+    p.Poly(hair,260,85,261,85,248,120,246,122,246,119);
+    p.Line(258,92,249,116,navy);p.Line(248,118,247,121,light);
+    p.Line(246,122,247,122,rim);
+    // Neck is tucked into a raised hanbok collar; no exposed front/face plane.
+    p.Poly(ink,268,39,277,39,279,48,272,52,266,47);
+    p.Poly(redlit,270,41,275,41,276,47,270,47);
+    p.Line(276,43,277,46,rim);
+    // Fitted, sloping back. Sleeves are independent bent shapes, not a box.
+    p.Poly(ink,267,46,274,46,280,49,285,53,286,61,283,75,284,85,277,89,265,85,262,76,260,62,258,54,261,50);
+    p.Poly(navy,267,48,273,48,279,51,282,55,283,63,280,74,282,83,276,86,267,82,265,73,263,59,261,54);
+    p.Poly(cloth,262,53,267,50,272,49,271,52,267,56,267,67,270,77,268,81,266,76,263,64);
+    p.Line(263,53,268,51,light);
+    p.Poly(hair,274,53,279,53,282,57,282,64,279,75,281,81,274,83,270,80,269,73,271,61);
+    p.Poly(navy,275,54,278,54,280,58,280,66,277,75,279,80,274,81,272,78,271,72,273,61);
+    p.Line(273,56,272,65,cloth);p.Line(272,76,274,79,cloth);
+    // Folded back collar and the seam descending from the turned shoulder.
+    p.Line(267,48,272,50,light);p.Line(272,50,278,50,cloth);
+    p.Line(279,51,282,54,light);
+    // Far left arm bends at the elbow, then turns inward onto the sword hilt.
+    // A background notch between upper arm and torso survives at y65..73.
+    p.Poly(ink,259,51,263,53,264,59,260,69,258,73,263,78,265,81,262,85,257,83,252,78,252,72,254,63,256,55);
+    p.Poly(navy,258,55,261,54,262,59,258,70,256,74,261,79,259,82,254,77,254,72,256,63);
+    p.Line(258,58,256,66,cloth);p.Line(255,71,255,75,cloth);
+    p.Line(255,76,259,79,light);p.Line(259,80,261,78,cloth);
+    // Near right sleeve falls lower, with a slight outward elbow and loose cuff.
+    p.Poly(ink,283,53,287,56,290,65,291,73,289,80,288,88,285,92,281,89,282,81,285,72,282,63,281,57);
+    p.Poly(navy,284,56,286,58,288,66,289,73,287,80,286,88,283,88,284,81,287,72,284,63);
+    p.Line(285,60,287,67,cloth);p.Line(288,72,286,79,light);
+    p.Line(286,81,285,87,cloth);p.Line(283,88,286,89,light);
+    p.Line(287,58,289,65,rim);p.Line(290,68,290,73,rim);
+    p.Line(288,79,287,86,rim);
+    // Wind-filled skirt: fitted above the sash, flared into three tapered gores.
+    // The concave notches and their dark outlines separate the rightward tails.
+    p.Poly(ink,265,83,281,85,286,91,290,97,298,101,306,103,315,103,311,108,303,111,296,110,290,107,294,113,302,116,311,116,306,121,298,123,290,120,283,115,286,123,281,127,277,125,274,120,271,124,265,126,259,123,259,117,261,104);
+    // Left outer skirt panel, pulled a little right across the free thigh.
+    p.Poly(navy,266,87,274,88,273,99,271,109,274,117,270,122,265,124,261,122,261,117,263,105);
+    p.Poly(cloth,266,91,268,92,266,106,264,117,264,121,262,121,263,111);
+    p.Line(266,98,264,109,light);p.Line(266,123,270,121,light);
+    // Centre split and inner fabric give the skirt depth without random texture.
+    p.Poly(hair,274,89,278,91,277,103,276,112,280,120,281,125,278,124,274,117,272,111,273,102);
+    p.Line(275,98,274,108,cloth);p.Line(276,114,279,120,light);
+    // Upper flying tail, then the lower tail. Both taper toward the right.
+    p.Poly(navy,278,88,281,88,284,93,288,99,296,103,305,105,312,104,309,107,302,109,296,108,289,105,284,102,279,96);
+    p.Poly(cloth,282,96,288,102,296,106,305,107,302,109,296,108,289,105,285,103);
+    p.Line(291,106,300,109,light);p.Line(303,109,309,107,rim);
+    p.Line(310,106,313,104,rim);
+    p.Poly(navy,278,96,283,101,287,109,293,115,301,118,307,117,304,120,298,121,291,118,284,113,281,108);
+    p.Poly(cloth,281,104,287,112,294,117,301,119,297,120,291,117,285,112);
+    p.Line(287,114,293,118,light);p.Line(298,122,305,120,rim);
+    p.Line(306,119,309,117,rim);
+    // Shorter inner gore also bends right, leaving a clean gap over the legs.
+    p.Poly(navy,277,108,280,110,282,116,284,122,281,125,279,123,277,117);
+    p.Line(281,119,283,122,light);p.Line(283,123,281,125,rim);
+    // Sash follows the tilted pelvis; two distinct ends stream to the RIGHT.
+    p.Poly(ink,264,81,272,82,282,82,284,85,281,89,270,88,264,86);
+    p.Line(265,82,273,83,redlit);p.Line(273,83,281,83,redlit);
+    p.Line(265,83,274,84,red);p.Line(274,84,282,84,red);
+    p.Line(265,84,275,85,red);p.Line(275,85,281,85,red);
+    p.Line(267,85,274,86,redlit);p.Line(274,86,281,86,redlit);
+    p.Poly(ink,280,83,286,85,294,86,303,84,301,88,294,90,286,89,281,87);
+    p.Line(283,85,291,87,redlit);p.Line(291,87,300,85,redlit);
+    p.Line(284,86,293,88,red);p.Line(293,88,300,86,red);
+    p.Poly(ink,281,86,287,88,293,92,303,92,300,95,292,95,285,91,280,89);
+    p.Line(283,88,292,93,red);p.Line(292,93,300,93,redlit);
+    // Left hand rests on the wrapped hilt, rather than hanging beside it.
+    p.Line(257,73,263,82,ink);p.Line(258,74,262,80,light);
+    p.Put(259,75,navy);p.Put(260,77,navy);p.Put(261,79,navy);
+    p.Line(257,84,265,80,ink);p.Line(258,83,264,80,light);
+    p.Poly(ink,261,77,264,78,265,80,263,83,260,82,259,80);
+    p.Poly(redlit,261,79,263,79,263,81,261,82,260,80);
+    p.Put(263,80,C("A37B70"));
+    // Relaxed right hand, kept separate from the flying fabric by dark edging.
+    p.Poly(ink,283,90,286,90,287,93,285,98,282,97,281,94);
+    p.Poly(redlit,283,91,285,91,285,94,284,96,283,95);
+    p.Line(286,92,285,96,rim);
+    // Two paper rectangles, each exactly 3x7 pale pixels before its 1px flutter.
+    // Each has one horizontal red stripe only, never glyphs or extra markings.
+    p.Poly(ink,268,87,272,87,272,91,273,95,269,96,268,92);
+    p.Rect(269,88,3,4,C("FFE5AD"));p.Rect(270,92,3,3,C("FFE5AD"));
+    p.Line(269,90,271,90,red);p.Line(272,92,272,94,paper);
+    p.Poly(ink,275,88,279,88,279,91,280,94,280,96,276,97,275,93);
+    p.Rect(276,89,3,3,C("FFE5AD"));p.Rect(277,92,3,4,C("FFE5AD"));
+    p.Line(276,91,278,91,red);p.Line(279,93,279,95,paper);
+    // Spiky black hair: small head, tilted left/down, with no facial features.
+    p.Poly(ink,266,27,263,23,269,25,272,24,274,27,279,25,278,29,282,28,281,32,282,35,280,39,277,42,271,43,267,41,265,38,263,36,260,36,263,33,260,31,265,31,263,28);
+    p.Poly(hair,267,28,267,26,270,28,273,27,275,30,278,28,277,31,280,31,279,37,276,40,271,41,268,39,267,35,264,34,267,33,265,31);
+    p.Line(270,29,272,28,navy);p.Line(274,31,276,30,navy);
+    // Tied short ponytail arcs right in the same wind as the sash and coat.
+    p.Poly(ink,280,29,284,28,287,30,290,31,295,30,293,33,297,35,294,36,291,35,293,39,289,37,286,34,282,34,280,35);
+    p.Poly(hair,282,30,285,30,288,32,292,32,290,33,293,35,290,34,287,33,284,32,282,33);
+    p.Put(281,31,red);p.Line(291,32,293,32,rim);
+    p.Line(292,35,294,35,rim);p.Put(290,37,rim);
+    // Strap wraps diagonally around the back; only a tiny cyan side glint.
+    p.Line(264,36,270,37,cyandark);p.Line(270,37,279,34,cyandark);
+    p.Line(265,36,270,36,cyan);p.Line(270,36,277,34,cyan);
+    p.Line(263,36,263,37,cyan);p.Put(264,38,redlit);
+    // One-pixel sun rims stay inside the one-pixel dark silhouette.
+    p.Line(278,30,280,30,rim);p.Line(280,33,280,35,rim);
+    p.Line(278,39,276,41,rim);p.Line(281,51,284,54,rim);
+  }
+  public static void Run(string root){
+    string dir=Path.Combine(root,"docs/design/concept/ending");
+    var source=Pic.Load(Path.Combine(dir,"ending_fresh_gemini.png"));
+    if(source.W!=1024||source.H!=572)throw new Exception("Source dimensions changed");
+    var swatch=Pic.Load(Path.Combine(root,"Assets/Art/Palette/number_palette.png"));
+    var original=swatch.P.Distinct().ToArray();
+    var extra=new string[]{"3D6090","66658F","906D91","C38592","E89B83","F5AC80","FFE5AD","DF63DD"}.Select(C).ToArray();
+    var palette=original.Concat(extra).Distinct().ToArray();
+    if(palette.Length>32)throw new Exception("Palette exceeds 32");
+    var p=Vote(source,palette);var sampled=p.Copy();
+    int orphans=Clean(p);
+    // Local removal mask exactly follows the former hero and sword. The city,
+    // hill silhouette, and all roofs remain source samples outside this mask.
+    int[] oldhero={263,19,271,20,280,25,284,20,290,19,290,23,297,24,298,31,295,34,294,42,288,40,284,42,283,46,291,50,294,57,294,69,297,79,296,95,294,105,299,128,295,133,295,147,294,152,282,154,281,149,281,135,273,136,271,154,269,157,254,157,254,153,259,149,259,134,256,131,256,116,258,108,253,107,252,103,252,96,254,85,246,73,246,69,249,69,257,81,259,62,260,53,264,50,271,47,268,44,266,40,265,36,261,36,261,31,260,28,265,27,262,24,266,24};
+    for(int y=18;y<158;y++)for(int x=245;x<300;x++)if(InPoly(x,y,oldhero)){
+      int bg;
+      if(y<67)bg=sampled.Get(308,y);
+      else if(y<80)bg=sampled.Get(318,y);
+      else if(y<111)bg=sampled.Get(307,y);
+      else if(y<143)bg=sampled.Get(304,y);
+      else bg=sampled.Get(x<279?251:301,y);
+      p.Put(x,y,bg);
+    }
+    // Remove any former hair/hilt pixels outside the traced main silhouette.
+    for(int y=19;y<=44;y++)for(int x=260;x<=299;x++)p.Put(x,y,sampled.Get(308,y));
+    for(int y=68;y<=81;y++)for(int x=245;x<=253;x++)p.Put(x,y,sampled.Get(243,y));
+    // Sun: bright disc at the existing right horizon, clipped by the original
+    // mountain silhouette. Two hard glow bands, no alpha or smooth gradients.
+    var skySet=new HashSet<int>(extra.Take(6));skySet.Add(C("D77E54"));skySet.Add(C("EFD0B6"));skySet.Add(C("D7B4A0"));
+    for(int y=62;y<=80;y++)for(int x=288;x<319;x++){
+      int c=sampled.Get(x,y);int d=(x-302)*(x-302)+(y-76)*(y-76);
+      if((skySet.Contains(c)||c==C("FFE5AD"))&&d<=169){
+        p.Put(x,y,d<=64?C("FFE5AD"):d<=100?C("F5AC80"):C("E89B83"));
+      }
+    }
+    // Remove only the former thin lower smoke stalk, sampling adjacent air.
+    // The upper source bend remains; the thicker lower plume now originates
+    // visibly at the broken tower's crown rather than the neighbouring pole.
+    for(int y=0;y<84;y++)for(int x=117;x<=122;x++)p.Put(x,y,sampled.Get(124,y));
+    p.Poly(C("62677D"),101,48,101,43,104,40,108,37,110,33,114,30,116,26,116,22,115,19,116,14,118,9,119,3,120,0,121,0,121,6,120,11,118,16,118,20,119,24,119,28,116,32,112,35,111,39,107,42,105,45,104,48);
+    p.Line(103,44,106,41,C("858A9B"));p.Line(110,37,113,33,C("858A9B"));
+    // Source neon signs retain positions, housing and glow, but no pseudo text.
+    p.Rect(34,109,14,5,C("DF63DD"));p.Rect(35,110,12,3,C("8D4094"));
+    p.Rect(116,111,6,1,C("42A9BD"));
+    p.Rect(179,105,4,1,C("7F1A22"));
+    p.Rect(182,134,2,10,C("42A9BD"));p.Line(182,135,182,143,C("6FFBF4"));
+    // Floating low red sign removed, replacing only its small envelope with
+    // the unlit building/fog plane. Other city structures are untouched.
+    p.Poly(navy,150,141,157,142,165,145,165,151,151,150);
+    p.Line(151,150,164,151,light);
+    // Same sign now mounted flush on the nearest tall building's left wall,
+    // with a wall-colour frame. Plain luminous panel, never text-like marks.
+    p.Poly(ink,169,138,174,138,174,148,169,148);
+    p.Rect(170,139,3,8,C("7F1A22"));p.Line(170,139,172,139,C("D77E54"));p.Line(170,140,170,146,C("F21C2A"));
+    // Watermark at (292,151), removed with a quiet contiguous rock plane.
+    p.Poly(ink,287,146,293,145,297,148,297,154,294,157,287,155,285,151);
+    p.Poly(navy,287,148,291,147,294,149,292,150,288,151);
+    p.Line(289,154,294,154,hair);
+    var before=p.Copy();BeforeHero(before);
+    var oldMask=new Pic(320,180);BeforeHero(oldMask);
+    // A few source-sampled outline/rim pixels abutted the former right sleeve.
+    // Include that actual old silhouette fringe, not a rectangular erase area.
+    var oldFringe=new Pic(320,180);
+    oldFringe.Put(292,52,ink);oldFringe.Put(293,53,ink);oldFringe.Put(293,54,ink);
+    oldFringe.Line(294,57,294,69,ink);oldFringe.Put(295,63,ink);
+    oldFringe.Line(295,68,295,72,ink);oldFringe.Put(296,75,ink);
+    oldMask.Blit(oldFringe,0,0);
+    var newMask=new Pic(320,180);Hero(newMask);
+    var skyColours=new HashSet<int>(extra.Take(7));
+    for(int y=0;y<180;y++)for(int x=0;x<320;x++){
+      int i=y*320+x;
+      if(oldMask.P[i]==0||newMask.P[i]!=0)continue;
+      // Repaint only exposed hero pixels. Keep all proper sky/fog/rock samples;
+      // clear residual source ink/rim against the flat surrounding sky bands.
+      if(oldFringe.P[i]!=0||(y<67&&!skyColours.Contains(p.P[i])))
+        p.Put(x,y,sampled.Get(y<67?308:318,y));
+    }
+    Hero(p);
+    int heroChanges=0,uncovered=0;
+    for(int i=0;i<p.P.Length;i++){
+      if(before.P[i]!=p.P[i]){
+        heroChanges++;
+        if(oldMask.P[i]==0&&newMask.P[i]==0)throw new Exception("Pixel changed outside old/new hero silhouettes");
+        if(oldMask.P[i]!=0&&newMask.P[i]==0)uncovered++;
+      }
+    }
+    // This original pixel digest was checked against the supplied PNG before
+    // overwriting it. Verify the stable old crop without depending on any output.
+    using(var sha=System.Security.Cryptography.SHA256.Create()){
+      string digest=BitConverter.ToString(sha.ComputeHash(before.P.SelectMany(BitConverter.GetBytes).ToArray())).Replace("-", "");
+      if(digest!="9BA6299F0D563D178BA6041C54CDD9D84AD876F1D4388B418D62C8651998C1C3")throw new Exception("Original ending pixels changed");
+    }
+    if(p.P.Any(c=>!palette.Contains(c)))throw new Exception("Off-palette pixel");
+    if(p.P.Distinct().Count()>32||p.P.Any(c=>((uint)c>>24)!=255))throw new Exception("Palette or alpha check");
+    string native=Path.Combine(dir,"ending_final_320x180.png");p.Save(native);
+    p.Scale(3).Save(Path.Combine(dir,"ending_final_960x540.png"));
+    var comparison=new Pic(640,180);
+    // Left: raw source sampled at centres of exactly the same square grid.
+    for(int y=0;y<180;y++)for(int x=0;x<320;x++)comparison.Put(x,y,source.Get((int)((x+.5)*3.2),(int)((y+.5)*3.2)-2));
+    comparison.Blit(p,320,0);comparison.Scale(3).Save(Path.Combine(dir,"ending_final_compare.png"));
+    // Stable OLD | NEW crop, regenerated from the two native-grid renderers.
+    var heroCompare=new Pic(161,144,ink);
+    heroCompare.Blit(before.Crop(240,17,80,144),0,0);
+    heroCompare.Blit(p.Crop(240,17,80,144),81,0);
+    heroCompare.Scale(8).Save(Path.Combine(dir,"hero_before_after_8x.png"));
+    File.Copy(native,Path.Combine(root,"Assets/Resources/DraftUi/ending_illustration.png"),true);
+    if(!File.ReadAllBytes(native).SequenceEqual(File.ReadAllBytes(Path.Combine(root,"Assets/Resources/DraftUi/ending_illustration.png"))))throw new Exception("Resource bytes differ");
+    var saved=Pic.Load(native);if(saved.W!=320||saved.H!=180)throw new Exception("Native dimensions");
+    var checkCompare=Pic.Load(Path.Combine(dir,"ending_final_compare.png"));
+    if(checkCompare.W!=1920||checkCompare.H!=540)throw new Exception("Comparison dimensions");
+    for(int y=0;y<540;y++)for(int x=0;x<960;x++){
+      if(checkCompare.Get(x,y)!=source.Get((int)(((x/3)+.5)*3.2),(int)(((y/3)+.5)*3.2)-2))throw new Exception("Source comparison differs");
+      if(checkCompare.Get(x+960,y)!=p.Get(x/3,y/3))throw new Exception("Result comparison differs");
+    }
+    var big=Pic.Load(Path.Combine(dir,"ending_final_960x540.png"));
+    for(int y=0;y<540;y++)for(int x=0;x<960;x++)if(big.Get(x,y)!=p.Get(x/3,y/3))throw new Exception("3x nearest mismatch");
+    Console.WriteLine("PASS: 320x180 opaque; "+p.P.Distinct().Count()+" colours; exact 3x nearest; identical resource copy.");
+    Console.WriteLine("Hero: "+heroChanges+" changed pixels, "+uncovered+" restored background pixels; zero changes outside old/new hero silhouettes.");
+    Console.WriteLine("Background single-pixel orphans removed: "+orphans+" (one pass only).");
+    Console.WriteLine("Added: "+string.Join(" ",extra.Select(c=>"#"+(c&0xffffff).ToString("X6"))));
+    Console.WriteLine("Source city geometry preserved; local hero/sun/smoke/sign/rock corrections only.");
+  }
+}
+'@
+Add-Type -TypeDefinition $code -ReferencedAssemblies System.Drawing
+[NumberEndingFinal]::Run((Get-Location).Path)
+
+
+
+
