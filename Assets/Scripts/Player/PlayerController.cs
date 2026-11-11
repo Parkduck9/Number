@@ -129,10 +129,9 @@ public class PlayerController : MonoBehaviour
     bool pendingGrapple;      // pressed during a hit-stop
     readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
-    int swingDamaged;                   // blows that did damage since the last reset (CounterLanded / StrikeEnemy)
+    int swingDamaged;                   // blows that did damage since the last reset (StrikeEnemy)
 
     // DECISIONS 18 lucky dice hooks
-    public event System.Action CounterLanded; // a Shift counter that damaged something (dice charge)
     public Rigidbody2D Body => rb;
 
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
@@ -1100,7 +1099,6 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < n; i++)
             HitEnemy(enemyHits[i].GetComponentInParent<TestEnemy>(), enemyHits[i], AttackCenter(), false);
         dashTargetCol = null;
-        if (swingDamaged > 0) CounterLanded?.Invoke();
     }
 
     void DoAttackHit()
@@ -1135,6 +1133,7 @@ public class PlayerController : MonoBehaviour
         bool damaged = enemy.ReceivePlayerHit(info);
         if (!damaged) return false;
         swingDamaged++;
+        LuckyDice.AddHitCharge(); // lucky dice: +1 per landed hit (skill strikes are filtered inside)
         Sfx.Play(SfxId.Hit);
         Vector2 contactPoint = col.ClosestPoint(from);
         PlayHitSpark(contactPoint, Facing);

@@ -26,7 +26,7 @@ public class ControlHints : MonoBehaviour
         } },
         { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {
-            new[] { "ctrl_key_e", "E", "Lucky dice · 3 parries = 1 roll", "점괘 주사위 · 패링 3번 = 굴림 1번" },
+            new[] { "ctrl_key_e", "E", "Lucky dice · 7 hits = 1 roll", "점괘 주사위 · 적중 7번 = 굴림 1번" },
         } },
     };
 

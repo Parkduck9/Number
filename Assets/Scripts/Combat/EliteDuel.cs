@@ -154,7 +154,6 @@ public class EliteDuel : MonoBehaviour
     {
         Vector2 c = Contact();
         player.DuelClash(false, height);
-        PlayerController.ParryCount++; // dice charge, same as a normal parry
         SpriteFx.Play("parry_talisman", c, face > 0, 102); // a blow from the left (elite on the left, face > 0): flipped
         Sfx.Play(SfxId.Parry, 1f, Semitone(k));
         Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);

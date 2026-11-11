@@ -13,7 +13,7 @@ public class Stg02DiceGift : MonoBehaviour
     const string Talk =
         "@mode talk\n" +
         "helper | 거기 서. 나도 한때 숫자를 쫓던 사람이야. 이걸 가져가. | Hold on. I chased numbers once myself. Take this.\n" +
-        "helper | 행운의 주사위야. 패링이나 반격을 세 번 성공하면 한 번 굴릴 수 있어. | A lucky die. Three parries or counters charge one roll.\n" +
+        "helper | 행운의 주사위야. 적을 일곱 번 베면 한 번 굴릴 수 있어. | A lucky die. Seven hits on enemies charge one roll.\n" +
         "helper | E를 누르면 굴러. 나온 눈이 곧 네 도술이야. | Press E to roll. The face you roll is the spell you cast.\n" +
         "yudo | 숫자를 직접 굴린다라. 마음에 들어요. | Rolling my own number. I like that.\n";
 

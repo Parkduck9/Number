@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Lucky dice HUD (DECISIONS 18), bottom-left in the old shockwave icon slot: 24 px die at 2x (48 reference px) + 3 charge pips (8 px at 2x).
+// Lucky dice HUD (DECISIONS 18), bottom-left in the old shockwave icon slot: 24 px die at 2x (48 reference px) + 7 charge pips (lucky seven) (8 px at 2x).
 // dice_off while uncharged / busy, dice_face_6 lit when a roll is ready (one talisman-yellow pulse when it becomes ready).
 // Hidden until unlocked (STG-02 gift), like the shockwave HUD was.
 public class LuckyDiceHud : MonoBehaviour
@@ -40,7 +40,7 @@ public class LuckyDiceHud : MonoBehaviour
         die = UiKit.FilledImage(UiKit.Rect("Die", canvas.transform, origin, DieCenter, new Vector2(Die, Die)), Color.white);
         for (int i = 0; i < pips.Length; i++)
         {
-            var pos = new Vector2(16f + Die + 8f + Pip * 0.5f + i * (Pip + 4f), DieCenter.y);
+            var pos = new Vector2(16f + Die + 8f + Pip * 0.5f + i * (Pip + 2f), DieCenter.y);
             pips[i] = UiKit.FilledImage(UiKit.Rect("Pip", canvas.transform, origin, pos, new Vector2(Pip, Pip)), Color.white);
         }
 

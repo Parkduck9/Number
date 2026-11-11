@@ -18,7 +18,7 @@ using UnityEngine;
 //               (pulses gold while it can be hit): LMB swings, RMB issen (PlayerController.IssenAlt) and the dice hurt it. Then it pulls back.
 // HP is never shown: phase 2 / 3 darken + crack the body. Phase 3 overlaps C with A / B. HP 0: the hologram shatters, the body stops,
 // the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice work here (DECISIONS 31):
-// LuckyDice.BossSkill -> SkillHit (DiceDamage by face); slam clangs and reflected shots charge them like parries.
+// LuckyDice.BossSkill -> SkillHit (DiceDamage by face); no parry / reflect charge; melee hits (OnSwing, IssenHit) call LuckyDice.AddHitCharge.
 // Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (dice skills, dialogue).
 public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 {
@@ -390,7 +390,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         return true;
     }
 
-    public void IssenHit(Vector2 at) => Damage(CoreIssenDamage, core, at);
+    public void IssenHit(Vector2 at) { Damage(CoreIssenDamage, core, at); LuckyDice.AddHitCharge(); }
 
     // The one entry point for skill damage (dice: LuckyDice.BossSkill with DiceDamage(face)). Hits whether or not the core is out;
     // the core flashes when it is out, else the whole body does. fxAt = where the hit spark / ring plays.
@@ -661,7 +661,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         int face = player.transform.position.x >= zx ? 1 : -1;
         Vector2 c = new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y + ParryRing.Offset(h));
         player.DuelClash(false, h, c);
-        PlayerController.ParryCount++; // dice charge, like EliteDuel's clangs (DECISIONS 31)
         ring.Flash();
         SpriteFx.Play("parry_talisman", c, face > 0, 102); // blade on the player's left (face > 0): flipped
         Sfx.Play(SfxId.Parry);
@@ -807,6 +806,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         {
             coreHitAt = Time.time + CoreHitEvery;
             Damage(CoreHitDamage, core, core.Pos + Vector2.ClampMagnitude(centre - core.Pos, CoreHalf));
+            LuckyDice.AddHitCharge();
             player.DuelHitStop(Juice.HitStopHit);
             return;
         }
@@ -818,6 +818,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             mashHitAt = Time.time + CoreHitEvery;
             mashHits++;
             Damage(MashDamage, blade, new Vector2(Mathf.Clamp(centre.x, s.xMin, s.xMax), Mathf.Clamp(centre.y, s.yMin, s.yMax)));
+            LuckyDice.AddHitCharge();
             player.DuelHitStop(Juice.HitStopHit);
             return;
         }
@@ -825,6 +826,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         var arm = new Rect(bugArm.Pos.x - 1.5f, bugArm.Pos.y, 3f, 5.5f); // the slumped palm + lower arm
         if (Mathf.Abs(centre.x - arm.center.x) > (size.x + arm.width) * 0.5f || Mathf.Abs(centre.y - arm.center.y) > (size.y + arm.height) * 0.5f) return;
         Damage(ArmHitDamage, bugArm, new Vector2(Mathf.Clamp(centre.x, arm.xMin, arm.xMax), Mathf.Clamp(centre.y, arm.yMin, arm.yMax)));
+        LuckyDice.AddHitCharge();
         player.DuelHitStop(Juice.HitStopHit);
     }
 

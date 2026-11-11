@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// DECISIONS 18 / 31: E = lucky dice (replaces the 8-A shockwave slot). 3 successful parries / Shift counters charge one roll (max 1 stored).
+// DECISIONS 18 / 31: E = lucky dice (replaces the 8-A shockwave slot). 7 landed hits on enemies / the boss charge one roll (lucky number 7; parries do not) (max 1 stored).
 // E throws a die (DiceRollView, ~0.7 s under GameFlow.InputLocked), the face 1..6 picks a dosa skill (SkillN.Run). Unlocked at STG-03
 // (the Luddite). Boss fight (DECISIONS 31): BossSkill instead (no TestEnemies there). Added at runtime by PlayerController.
 [RequireComponent(typeof(PlayerController), typeof(PlayerInputReader))]
 public class LuckyDice : MonoBehaviour
 {
-    public const int ChargesPerRoll = 3;
+    public const int ChargesPerRoll = 7;
     const float CameraMargin = 0.5f; // (T) world units around the view that still count as "on camera"
 
     // Runtime-only unlock (no save). Survives scene loads, resets when the game restarts (TitleScreen).
@@ -26,8 +26,9 @@ public class LuckyDice : MonoBehaviour
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { Unlocked = false; UnlockChanged = null; Charges = 0; boss = null; }
+    static void ResetStatics() { Unlocked = false; UnlockChanged = null; Charges = 0; boss = null; current = null; }
 
+    static LuckyDice current; // the player's dice: its skills' strikes must not charge it
     static BossFight boss; // found per scene in Start
     public static bool BossActive => boss != null && boss.isActiveAndEnabled && !boss.Dead; // dead = the smash / collapse ending: field skills (they fizzle)
 
@@ -44,7 +45,6 @@ public class LuckyDice : MonoBehaviour
     bool pendingPress; // E during a hit-stop: fired on the first unfrozen frame instead of being dropped
     bool rolling, lockedByRoll;
     IEnumerator skill; // running SkillN.Run enumerator (disposed on disable so its finally blocks restore flags)
-    int lastParryCount;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     int debugFace; // 1..6 forces the next roll (editor / dev: number keys)
 #endif
@@ -54,7 +54,7 @@ public class LuckyDice : MonoBehaviour
         Player = GetComponent<PlayerController>();
         Health = GetComponent<PlayerHealth>();
         input = GetComponent<PlayerInputReader>();
-        lastParryCount = PlayerController.ParryCount;
+        current = this;
     }
 
     void Start()
@@ -65,11 +65,8 @@ public class LuckyDice : MonoBehaviour
         hud = LuckyDiceHud.Create(this);
     }
 
-    void OnEnable() { if (Player != null) Player.CounterLanded += OnCounterLanded; }
-
     void OnDisable()
     {
-        if (Player != null) Player.CounterLanded -= OnCounterLanded;
         if (skill is IDisposable d) d.Dispose(); // runs the skill's finally blocks (EnemiesHeld / InputLocked / invulnerability restore)
         skill = null;
         if (lockedByRoll) GameFlow.InputLocked = false;
@@ -82,20 +79,15 @@ public class LuckyDice : MonoBehaviour
         if (hud != null) Destroy(hud.gameObject);
     }
 
-    void OnCounterLanded() => AddCharge();
-
-    static void AddCharge()
+    // +1 per landed player hit (one per enemy hit; boss core / mash / arm hits). Dice-skill strikes and reflected shots do not count.
+    public static void AddHitCharge()
     {
-        if (Unlocked && Charges < ChargesPerRoll) Charges++;
+        if (!Unlocked || Charges >= ChargesPerRoll || (current != null && current.Busy)) return;
+        Charges++;
     }
 
     void Update()
     {
-        // Charge: every new successful parry (PlayerController.ParryCount is a running total; a reset just resyncs).
-        int parries = PlayerController.ParryCount;
-        if (parries > lastParryCount) for (int i = lastParryCount; i < parries; i++) AddCharge();
-        lastParryCount = parries;
-
         if (Time.timeScale == 0f) { pendingPress |= input.DicePressed; return; } // hit-stop / pause: keep the press
         if (GameFlow.InputLocked) { pendingPress = false; return; }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

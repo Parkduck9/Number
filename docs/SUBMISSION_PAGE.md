@@ -30,7 +30,7 @@ You are **Yudo**, a fortune-teller dosa who reads real luck, not the company's f
 - **Broadcast numbers change the whole street.** 3 makes every enemy fast and relentless, 7 overclocks them for seven seconds before they collapse exhausted, 0 makes the city hold its breath.
 - **Hack the boards.** Take a broadcast back for a few seconds and flip the fight. The AI will hack it back.
 - **Clash duels.** Strong enemies pull you into a zoomed-in duel: block every one of their N strikes and you shatter them.
-- **Roll your own luck.** Parries charge the lucky dice. Roll it (E) and the face you get is the spell you cast, 1 to 6.
+- **Roll your own luck.** Landing seven hits on enemies charges the lucky dice. Roll it (E) and the face you get is the spell you cast, 1 to 6.
 - **A fused machine boss** fills the whole background: a bug-husk arm, a giant blade arm and a chest gun bank, each telling you its strike count on a hologram.
 
 About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"Lucky Number"**. Text in English and Korean (switch in the pause menu).
@@ -58,7 +58,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 | Issen (flash strike): flash behind the enemy you aim at, only one roughly level with you; human enemies drop in one hit, androids and strong enemies are only passed; 5 s cooldown | Shift |
 | Interact / talk / hack a broadcast board | E (when near) |
 | Grapple rope: throw a neon rope at the mouse (walls, ledges, ceilings within ~9 m) and get pulled there; one per jump | Right mouse |
-| Lucky dice (given by the Luddite helper at the start of stage 2): 3 parries = 1 roll; the face (1-6) is the spell you cast | E |
+| Lucky dice (given by the Luddite helper at the start of stage 2): 7 hits = 1 roll; the face (1-6) is the spell you cast | E |
 | Pause / language | Esc or P |
 
 - Gamepad is not supported.
