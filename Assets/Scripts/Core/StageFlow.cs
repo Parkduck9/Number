@@ -46,6 +46,14 @@ public static class StageFlow
         else Debug.LogWarning($"[StageFlow] Scene '{TitleScene}' not found (not built yet or not in Build Settings); staying here.");
     }
 
+    // StageSkipKeys (hidden test shortcut). Also clears a pause menu's timeScale 0.
+    public static void LoadStage(string scene)
+    {
+        if (!Application.CanStreamedLevelBeLoaded(scene)) { Debug.LogWarning($"[StageFlow] Scene '{scene}' not in Build Settings."); return; }
+        Time.timeScale = 1f;
+        Load(scene);
+    }
+
     static void Load(string scene)
     {
         GameFlow.InputLocked = false;
