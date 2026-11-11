@@ -1,9 +1,0 @@
-﻿AI generated (Codex / PowerShell System.Drawing)
-Canvas: 48x48. Playback: 0,1,2,1. Point filter; integer scaling; PPU 16.
-Orphan definition: opaque pixel with no opaque neighbor in its 8-neighborhood.
-Big source: 16x exact pixel layout of frame 0, generated from the editable drawing instructions above.
-Frame 0: opaque colors=16; alpha=0,255; orphan pixels=0; height=32 px; fixed lower-leg/foot region differences=0
-Frame 1: opaque colors=16; alpha=0,255; orphan pixels=0; height=32 px; fixed lower-leg/foot region differences=0
-Frame 2: opaque colors=16; alpha=0,255; orphan pixels=0; height=32 px; fixed lower-leg/foot region differences=0
-Adjacent frames 0->1: changed pixels=12
-Adjacent frames 1->2: changed pixels=11

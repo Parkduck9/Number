@@ -1,8 +1,0 @@
-﻿Pass 2 completed: OFF base at both resolutions, 11 cropped neon PNGs, placement CSV, previews, and updated notes.
-
-- [Lit preview](/D:/Git/Unity/UnityGameJam/docs/design/concept/stg01/B_lit_composite_preview.png)
-- [50% brightness preview](/D:/Git/Unity/UnityGameJam/docs/design/concept/stg01/B_base_off_preview_50pct.png)
-- [Neon CSV](/D:/Git/Unity/UnityGameJam/docs/design/concept/stg01/neon_B/neon_list.csv)
-- [Notes and limitations](/D:/Git/Unity/UnityGameJam/docs/design/concept/stg01/B_clean_notes.md)
-
-Verified all 8 platform spans, exactly 48 colors, integer 2× scaling, binary alpha, and exact CSV reconstruction. Unity runtime remains untested. No commits or out-of-scope edits.
