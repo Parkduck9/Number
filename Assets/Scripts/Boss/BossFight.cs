@@ -77,7 +77,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float BugShotEvery = 1f, BugShotTell = 0.35f, BugShotSpeed = 8f, BugShotCrack = 0.35f, ConductSpeed = 7f;
     static readonly Vector2 ConductAmp = new Vector2(0.35f, 0.2f);
     // C: volleys of small shots; fan aimed at the player, phase 3 alternates with a spiral arc over the lower half
-    const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.3125f, FanSpread = 50f, SpiralStep = 0.045f;
+    const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.5f /* user 11-11: bigger, readable; visual now = the 0.5 u hitbox */, FanSpread = 50f, SpiralStep = 0.045f;
     const int FanShots = 5, SideFanShots = 3, SpiralShots = 9, MaxShots = 40; // MaxShots: live cap (WebGL)
     static readonly float[] VolleyEvery = { 0.7f, 0.6f, 0.5f }; // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
     // D bug rain (DECISIONS 38): a column warns RainWarn (red floor mark + faint lane), falls at RainSpeed as a RainLen clump, then
@@ -680,7 +680,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 hatchL.Glow = hatchR.Glow = bugAim = false;
                 Vector2 d = (Vector2)player.transform.position - HatchAt;
                 SpriteFx.Play("sniper-muzzle", HatchAt, d.x < 0f, 102);
-                Fire(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, BugShotSpeed, DraftSprites.BulletBug);
+                Fire(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, BugShotSpeed);
                 for (float t = 0f; t < 0.2f; t += Dt) { hatchOpen = BugShotCrack * (1f - t / 0.2f); yield return null; }
                 hatchOpen = 0f;
                 hatchHook = false;
@@ -976,13 +976,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         if (side) sideRunning = false;
     }
 
-    // art null = C's small gold shot; A's bug shots pass the bug bullet frames (full size)
-    void Fire(float deg, float speed = ShotSpeed, Sprite[] art = null)
+    // every boss shot (C fan/spiral and A's bug shots) shares one big gold square look (user 11-11: bug bullets were too small)
+    void Fire(float deg, float speed = ShotSpeed)
     {
         if (EnemyProjectile.Active.Count >= MaxShots) return;
         float r = deg * Mathf.Deg2Rad;
-        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * speed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot, art);
-        if (art == null) p.transform.localScale = new Vector3(BulletScale, BulletScale, 1f); // small shots (hitbox stays EnemyProjectile's 0.5)
+        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * speed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot);
+        p.transform.localScale = new Vector3(BulletScale, BulletScale, 1f); // visual only: hitbox stays EnemyProjectile's 0.5
         p.ReflectLife = ShotReflectLife;
         p.ReflectTarget = HatchAt; // reflected = a weakened lob that drops back into the hatch
     }

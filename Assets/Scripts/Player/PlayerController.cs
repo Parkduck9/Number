@@ -1019,7 +1019,20 @@ public class PlayerController : MonoBehaviour
             // The rope is as long as it is now (closer than the min: falls slack until taut). Never shorter than dist: SwingStep would
             // yank the overshoot back in one step (up to max speed toward the anchor, kept afterwards = a random bounce / a shove into a blocker).
             swingLen = Mathf.Max(dist, DashRules.GrappleSwingMin);
-            if (dist > 0.001f) { Vector2 r = toAnchor / dist; rb.linearVelocity -= r * Vector2.Dot(rb.linearVelocity, r); } // keep only the tangential part
+            // The pull is purely radial, so dropping the radial part left ~0 speed (playtest: sluggish). Redirect the zip speed along the
+            // arc instead, toward the horizontal travel (else held A/D, else facing): grabbing flings straight into a swing.
+            if (dist > 0.001f)
+            {
+                Vector2 v = rb.linearVelocity, r = toAnchor / dist, tan = new Vector2(-r.y, r.x);
+                float dir = Mathf.Abs(v.x) > 0.5f ? Mathf.Sign(v.x) : (input.MoveX != 0f ? Mathf.Sign(input.MoveX) : Facing);
+                if (tan.x * dir < 0f) tan = -tan;
+                if (Mathf.Abs(tan.x) < 0.2f && tan.y > 0f) tan = -tan; // level with the anchor: swing down, not up into it
+                float speed = Mathf.Clamp(v.magnitude * DashRules.GrappleSwingKeep, DashRules.GrappleSwingEntryMin, DashRules.GrappleSwingMaxSpeed);
+                // Scaled by how far off straight-below the grab is (full from 30 deg): a straight-up grab starts gently (EntryMin)
+                // instead of being flung to ~80 deg, an angled one keeps its momentum. Anchor not above: EntryMin.
+                float side = r.y > 0f ? Mathf.Clamp01(Mathf.Abs(r.x) * 2f) : 0f;
+                rb.linearVelocity = tan * Mathf.Lerp(DashRules.GrappleSwingEntryMin, speed, side);
+            }
             rope.Taut = true;
             return;
         }
@@ -1093,7 +1106,11 @@ public class PlayerController : MonoBehaviour
         {
             Vector2 r = off / d, tan = new Vector2(-r.y, r.x);
             if (tan.x < 0f) tan = -tan; // D pumps along the arc to the right, A to the left
-            v += tan * (input.MoveX * DashRules.GrappleSwingPump * dt);
+            // Pump only below the energy of max speed at the bottom of the arc: the speed cap alone let a held key keep pushing on
+            // the way up (pump 22: over the top of a hook, hard into a ceiling). Pumping against the motion (braking) always works.
+            float pump = input.MoveX * DashRules.GrappleSwingPump * dt;
+            float g = -Physics2D.gravity.y * gravityScale, max = DashRules.GrappleSwingMaxSpeed;
+            if (pump * Vector2.Dot(v, tan) <= 0f || v.sqrMagnitude + 2f * g * (swingLen + off.y) < max * max) v += tan * pump;
             if (d >= swingLen) // taut: no outward speed, and back onto the circle this step
             {
                 float outV = Vector2.Dot(v, r);

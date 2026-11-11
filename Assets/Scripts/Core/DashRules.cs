@@ -53,8 +53,10 @@ public static class DashRules
     // DECISIONS 39 rope swing (hooks: length = BossFight HangDrop; solid ceilings: GrappleSwingLen). Space / RMB = slingshot release, S = drop
     public const float GrappleSwingLen = 3.5f;     // (T) u: a ceiling rope stops zipping and swings at this length
     public const float GrappleSwingMin = 2f;       // (T) u: shortest swing rope (fired closer: falls slack until taut)
-    public const float GrappleSwingPump = 9f;      // (T) u/s^2 along the arc while A/D held
-    public const float GrappleSwingMaxSpeed = 16f; // (T) u/s swing speed cap
+    public const float GrappleSwingPump = 22f;     // (T) u/s^2 along the arc while A/D held (gravity along the arc peaks at ~39)
+    public const float GrappleSwingMaxSpeed = 16f; // (T) u/s swing speed cap (at the bottom of a 4u rope: an arc up to ~80 deg)
+    public const float GrappleSwingKeep = 0.8f;    // (T) share of the zip speed redirected along the arc when the swing starts
+    public const float GrappleSwingEntryMin = 6f;  // (T) u/s: a straight-up grab or a blocked / slow zip starts swinging this fast (full Keep speed from 30 deg off vertical)
     public const float GrappleSwingBoost = 1.15f;  // (T) release velocity multiplier
     public const float GrappleSwingLiftFrac = 0.35f; // (T) release: + this * jump speed upward
     public const float GrappleSwingCarryTime = 0.8f; // (T) s the release momentum eases into air control...
