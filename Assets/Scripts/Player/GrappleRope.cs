@@ -73,7 +73,7 @@ public class GrappleRope : MonoBehaviour
     void Draw()
     {
         segs.Begin();
-        Vector2 from = player.HandPosition;
+        Vector2 from = player.RopeHandPosition;
         float ext = DashRules.GrappleExtendTime, since = Mathf.Max(0f, t - ext);
         // Out over GrappleExtendTime; a miss then comes back over GrappleRetractTime.
         float back = !hit ? Mathf.Clamp01(since / DashRules.GrappleRetractTime) : 0f;

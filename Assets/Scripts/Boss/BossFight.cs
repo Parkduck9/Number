@@ -11,7 +11,8 @@ using UnityEngine.UI;
 //               (DECISIONS 36). Then the arm slumps on the floor SlumpTime: LMB swings on it hurt the boss.
 //   B blade arm: red danger zone at the player, N slams with the ParryRing tell (LMB in the window = clang, no damage); the last one
 //               sticks in the bridge: mash window (DECISIONS 36), the arm jerks to pull free while LMB swings on the steel hurt
-//               (MashDamage each, up to MashCap); then it rips out and reattaches.
+//               (MashDamage each, up to MashCap); then it rips out and reattaches. Every unparried slam sends two low ground
+//               shockwaves left / right to the edges (DECISIONS 42): jump, a roof chunk or a hook clears them.
 //   B' blade sweep (DECISIONS 29 / 36): the arm leaves the screen, then N horizontal sweeps that carry the whole arm past the far edge,
 //               LOW (jump) or HIGH (stay down / dash); red warning band first. Then the arm flies back and clamps onto its socket.
 //   C chest hatch: hatch opens, yellow aim dots, N volleys of small shots in a fan (phase 3: fan / spiral arc alternate).
@@ -71,6 +72,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8); the blade lies along the band centre
     // Blade hitbox (feedback 11-11): the steel of boss_blade_arm(_lit), 44 x 202 px up from the pivot (= the tip). Slams and sweeps hurt only here.
     const float BladeLen = 6.3125f, BladeHalfW = 0.6875f;
+    // B slam shockwave (DECISIONS 42): each unparried slam sends a low ground wave left and right from the tip to the room edges.
+    // ShockH tall (a jump, a roof chunk or a hook clears it), 1 unparryable hit per wave. Two slots per pair; a wave lives up to
+    // ~2.9 s and slams come ~0.9 s apart, so three pairs can be live. The waves leave ShockDelay after the impact (the floor flash
+    // is the tell): someone standing right beside the blade gets time to jump, and a late parry cancels them before they show.
+    const int ShockSlots = 6, ShockCols = 7;
+    const float ShockH = 0.9f, ShockColW = 4f * Px, ShockHitBack = 0.5f, ShockDustEvery = 2.5f, SlamFlashTime = 0.15f, ShockDelay = SlamFlashTime;
+    static readonly float[] ShockSpeed = { 10f, 11f, 12f }; // by phase, u/s
+    static readonly float[] ShockProfile = { 0.55f, 0.9f, 1f, 0.75f, 0.5f, 0.3f, 0.15f }; // column heights x ShockH, front to tail
     // A: while walls fly, the chest hatch glows and cracks open with the aim dots for BugShotTell, then fires one bug bullet at the
     // player (parryable; parried = back into the hatch like C's shots). Skipped while a side barrage owns the hatch. DECISIONS 34 / 36.
     // The bug arm conducts meanwhile: figure-8 sway ConductAmp around its rest spot.
@@ -162,6 +171,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     bool hatchHook, hatchLatched, wasHookable; // hatchHook: an attack holds the hatch open for the rope; latched: the rope is on its way
     float hookCd, hookOpenedAt;
 
+    // slam shockwaves (DECISIONS 42)
+    readonly float[] shockX = new float[ShockSlots], shockDir = new float[ShockSlots], shockAge = new float[ShockSlots], shockDust = new float[ShockSlots];
+    readonly bool[] shockOn = new bool[ShockSlots], shockHit = new bool[ShockSlots];
+    readonly SpriteRenderer[] shockBody = new SpriteRenderer[ShockSlots * ShockCols], shockCap = new SpriteRenderer[ShockSlots * ShockCols];
+    SpriteRenderer slamFlash;
+    float slamFlashT, shockSpeed;
+    int shockA = -1, shockB = -1; // the pair the latest slam launched (a late parry cancels it)
+
     SpriteRenderer zoneFloor, zoneLane, white, sweepFill; // DECISIONS 40: no red lines (sweep centre line, danger lane side lines)
     float sweepY = -1f; // band centre while the B' warning shows, < 0 = off
     BossDebris debris; // DECISIONS 40: falling roof chunks to ride / rope
@@ -248,6 +265,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         zoneLane.enabled = zoneFloor.enabled = false;
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
         sweepFill.enabled = false;
+        for (int i = 0; i < shockBody.Length; i++)
+        {
+            shockBody[i] = Make("ShockWave", ParryFx.Square, "FX", 34, Vector2.zero);
+            shockCap[i] = Make("ShockCrest", ParryFx.Square, "FX", 35, Vector2.zero);
+            shockBody[i].enabled = shockCap[i].enabled = false;
+        }
+        slamFlash = Make("SlamFlash", ParryFx.Square, "FX", 33, Vector2.zero);
+        slamFlash.transform.localScale = new Vector3(3.5f, 6f * Px, 1f);
+        slamFlash.enabled = false;
         debris = gameObject.AddComponent<BossDebris>();
         debris.Setup(this, debrisArt);
         for (int i = 0; i < aimDots.Length; i++)
@@ -340,6 +366,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         if (player == null || Held) return; // dice face 4: frozen in place, nothing redrawn
         UpdateWaves(Dt);
         UpdateRain(Dt);
+        UpdateShock(Dt);
         hookCd -= Dt;
         bool hk = HatchHookable;
         if (hk && !wasHookable) // DECISIONS 38 cue: a cyan ring off the hatch + a soft chime; the cyan corners (DrawBracket) snap on
@@ -768,10 +795,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 SpriteFx.Play("land-dust", new Vector2(zx - 0.9f, Floor), true, 101);
                 SpriteFx.Play("land-dust", new Vector2(zx + 0.9f, Floor), false, 101);
                 if (last) { SpriteFx.Play("kill-burst", new Vector2(zx, Floor + 0.3f), false, 102); Juice.Shake(Juice.ShakeKillAmp, 0.3f, Vector2.down); }
+                if (!(inZone && parried)) LaunchShock(zx, inZone); // a clang stops the blade: no shockwave
+                else shockA = shockB = -1;
             }
             if (struck && (parried || tt > s + WindowLate))
             {
-                if (inZone && parried) Clang(zx, h);
+                if (inZone && parried) { Clang(zx, h); CancelShock(); } // late parry (after the impact frame): take the waves back
                 else if (inZone) player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(zx, player.transform.position.y), Unparryable = true });
                 if (!inZone || !parried) ring.Hide();
                 k++;
@@ -883,6 +912,96 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         zoneFloor.enabled = zoneLane.enabled = on;
         zoneFloor.transform.position = new Vector3(zx, Floor + 0.125f, 0f);
         zoneLane.transform.position = new Vector3(zx, Floor + 4f, 0f);
+    }
+
+    // ---- B slam shockwave (DECISIONS 42): two low pixel waves run from the tip to the room edges; jump / chunk / hook to clear ----
+    // slamOwns: the player is under the blade at impact -> the slam itself judges them, the waves start already spent for them
+    void LaunchShock(float zx, bool slamOwns)
+    {
+        shockSpeed = ShockSpeed[Phase - 1];
+        slamFlashT = SlamFlashTime;
+        slamFlash.transform.position = new Vector3(zx, Floor + 3f * Px, 0f);
+        slamFlash.enabled = true;
+        shockA = shockB = -1;
+        for (int k = 0; k < 2; k++)
+        {
+            int w = -1; // a free slot, else the oldest wave (never the slot just taken)
+            for (int i = 0; i < ShockSlots; i++)
+            {
+                if (i == shockA) continue;
+                if (w < 0 || (shockOn[w] && (!shockOn[i] || shockAge[i] > shockAge[w]))) w = i;
+            }
+            float dir = k == 0 ? -1f : 1f;
+            StopShock(w, false); // a reused slot: hide its old columns until the new wave leaves
+            shockOn[w] = true;
+            shockHit[w] = slamOwns;
+            shockDir[w] = dir;
+            shockAge[w] = -ShockDelay;
+            shockDust[w] = ShockDustEvery;
+            shockX[w] = zx + dir * BladeHalfW;
+            if (k == 0) shockA = w; else shockB = w;
+        }
+    }
+
+    void CancelShock()
+    {
+        if (shockA >= 0) StopShock(shockA, true);
+        if (shockB >= 0) StopShock(shockB, true);
+        shockA = shockB = -1;
+        slamFlash.enabled = false;
+    }
+
+    void StopShock(int w, bool puff)
+    {
+        if (puff && shockOn[w] && shockAge[w] >= 0f) SpriteFx.Play("land-dust", new Vector2(shockX[w], Floor), shockDir[w] < 0f, 101);
+        shockOn[w] = false;
+        for (int i = w * ShockCols; i < (w + 1) * ShockCols; i++) shockBody[i].enabled = shockCap[i].enabled = false;
+    }
+
+    void UpdateShock(float dt)
+    {
+        if (slamFlash.enabled) // impact: a pale floor flash that shrinks and fades
+        {
+            slamFlashT -= dt;
+            float f = Mathf.Clamp01(slamFlashT / SlamFlashTime);
+            slamFlash.color = new Color(1f, 0.97f, 0.8f, f);
+            slamFlash.transform.localScale = new Vector3(Snap(1.5f + 2f * f), 6f * Px, 1f);
+            if (slamFlashT <= 0f) slamFlash.enabled = false;
+        }
+        Vector2 pp = player.transform.position; // player centre = feet + 0.85..1, same box as the bug walls / rain
+        float feet = pp.y - 0.85f;
+        int flick = Time.frameCount / 3;
+        for (int w = 0; w < ShockSlots; w++)
+        {
+            if (!shockOn[w]) continue;
+            shockAge[w] += dt;
+            if (shockAge[w] < 0f) continue; // ShockDelay: still under the floor flash
+            float dir = shockDir[w], step = shockSpeed * dt;
+            shockX[w] += dir * step;
+            float x = shockX[w];
+            if (x < -1f || x > RoomW + 1f) { StopShock(w, false); continue; } // the tail (ShockCols x ShockColW) is off-screen too
+            shockDust[w] -= step;
+            if (shockDust[w] <= 0f) { shockDust[w] = ShockDustEvery; SpriteFx.Play("land-dust", new Vector2(x - dir * 0.3f, Floor), dir < 0f, 101); }
+            // hit: the tall front part (ShockHitBack u behind the front), feet below the crest; dash i-frames (Dodged) keep it live
+            float rel = dir * (pp.x - x); // > 0: ahead of the front
+            if (!shockHit[w] && dt > 0f && rel < 0.35f && rel > -ShockHitBack - 0.35f && feet < Floor + ShockH &&
+                player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, pp.y), Unparryable = true }) == HitResult.Hit)
+                shockHit[w] = true;
+            for (int c = 0; c < ShockCols; c++) // pixel crest: columns stepping down behind the front, a white cap on each, 1-px flicker
+            {
+                int i = w * ShockCols + c;
+                float h = Mathf.Max(2f * Px, Snap(ShockH * ShockProfile[c]) + (c > 0 && ((c + flick) & 1) == 0 ? Px : 0f));
+                float cx = Snap(x - dir * (c + 0.5f) * ShockColW);
+                float a = 1f - c * 0.11f;
+                shockBody[i].transform.position = new Vector3(cx, Floor + h * 0.5f, 0f);
+                shockBody[i].transform.localScale = new Vector3(ShockColW, h, 1f);
+                shockBody[i].color = new Color(1f, 0.86f, 0.42f, 0.85f * a);
+                shockCap[i].transform.position = new Vector3(cx, Floor + h - Px, 0f);
+                shockCap[i].transform.localScale = new Vector3(ShockColW, 2f * Px, 1f);
+                shockCap[i].color = new Color(1f, 1f, 0.92f, a);
+                shockBody[i].enabled = shockCap[i].enabled = true;
+            }
+        }
     }
 
     // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
@@ -1134,6 +1253,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
+        for (int w = 0; w < ShockSlots; w++) StopShock(w, false); // DECISIONS 42: slam shockwaves gone
+        slamFlash.enabled = false;
         hatchHook = hatchLatched = false; // DECISIONS 38: no rope window, no pending strike; rain columns gone
         for (int c = 0; c < RainCols; c++) { rainStage[c] = 0; rainLane[c].enabled = rainMark[c].enabled = false; }
         for (int i = 0; i < rainBugs.Length; i++) rainBugs[i].enabled = false;

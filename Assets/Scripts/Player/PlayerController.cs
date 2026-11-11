@@ -176,7 +176,10 @@ public class PlayerController : MonoBehaviour
     public bool LungingDown => lunging && lungeDir.y < -0.2f; // TestEnemy Android guard: a downward lunge counts as "from above"
     public Vector2 DashStart { get; private set; } // where the current dash began (TestEnemy: a dash-behind that left the hitbox before the strike still counts as a dash-through)
     public LayerMask EnemyMask => enemyMask;
-    public Vector2 HandPosition => (Vector2)transform.position + new Vector2(Facing * 0.35f, 0.25f); // dice skill FX / GrappleRope start
+    public Vector2 HandPosition => (Vector2)transform.position + new Vector2(Facing * 0.35f, 0.25f); // dice skill FX / grapple shot ray origin
+    // Visual rope start = the front hand, from the 64px hero frames (PPU 32, feet pivot 2px up, sprite 1u below the root): grapple pose fist
+    // at px (55,19) = (0.72, 0.34); firing pose (jump/run frame 0 front fist ~ px (43..46, 28..31)) = (0.40, 0.0). x mirrors with Facing.
+    public Vector2 RopeHandPosition => (Vector2)transform.position + (state == State.Grapple ? new Vector2(Facing * 0.72f, 0.34f) : new Vector2(Facing * 0.40f, 0f));
 
     void Awake()
     {
