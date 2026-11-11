@@ -1,0 +1,342 @@
+/* DRAFT FOR USER APPROVAL. Run from any directory:
+ * node docs/design/concept/citizen_walk_v2/draw_citizen_walk.txt
+ * Node.js built-ins only. No generation API, downloads or paid services.
+ * AI assistance: Codex, explicit native-grid pixel drawing and source cutouts.
+ * Existing art attribution: repository CREDITS.md. No external art introduced.
+ * Only the three requested preview/sprite files beside this script are written.
+ *
+ * Theory supported by inspection: old poses 2/4 differ by only 116 pixels,
+ * near arm remains behind the body, and the long closed hem hides the knees.
+ * Remedy: six explicit poses, opposing articulated sleeves, open moving coat.
+ * Coordinates below are zero-based. Sole row 61; rows 62/63 stay transparent.
+ * Source meta: PPU 32, custom pivot (0.5,0.03125). PNG contains no Unity pivot
+ * metadata; the identical 64x64 cell registration preserves that convention.
+ * Head/rigid gat are an exact source cutout translated vertically by bob only.
+ * Neutral crown row 3. Contact/down/passing crown rows 3/4/2, repeated.
+ * The hip/ankle interval remains the original character's, with no flight.
+ *
+ * FRAME       NEAR LEG          FAR LEG           NEAR HAND  BOB HEM LAG
+ * 1 contact   forward heel      back toe-off      (22,41)     0    0
+ * 2 down      loaded front      back recovery     (26,42)    +1   +2
+ * 3 passing   planted under hip crosses forward   (33,41)    -1   +1
+ * 4 contact   back toe-off      forward heel      (40,39)     0    0
+ * 5 down      back recovery     loaded front      (36,42)    +1   -2
+ * 6 passing   crosses forward   planted under hip (29,42)    -1   -1
+ * Far arm uses opposite pose, offset to the far shoulder, and darker cloth.
+ * Contact heel separation is 16px; both feet remain close enough for a walk.
+ * Hem offsets [0,2,1,0,-2,-1] are the previous frame's leg direction * 2.
+ * No interpolation, bitmap rotation or resampling of source art.
+ * Only previews use exact integer nearest-neighbour replication.
+ *
+ * GIF stores centiseconds, so exact 125ms frames are unrepresentable.
+ * Alternating 120/130ms gives exactly 750ms/cycle: average 8fps.
+ */
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const zlib = require('node:zlib');
+const crypto = require('node:crypto');
+const assert = require('node:assert/strict');
+const OUT = __dirname;
+const ROOT = path.resolve(OUT, '../../../..');
+const SOURCE = path.join(ROOT, 'Assets/Resources/DraftSprites/citizen_walk_4f.png');
+const PALETTE = path.join(ROOT, 'Assets/Art/Palette/number_palette.png');
+const BG = '#0b1026';
+const rgba = h => [...Buffer.from(h.replace('#',''), 'hex'), 255];
+const C = Object.fromEntries(Object.entries({
+  ink:'080b14', deep:'1a1d33', coat:'2d3050', light:'3f4a6e',
+  white:'d6d7d0', skin:'efd0b6', grey:'858a9b', robe:'b8bec8',
+  metal:'62677d', skinShade:'d7b4a0'
+}).map(([k,v]) => [k,rgba(v)]));
+
+function crc(buf) {
+  let c=0xffffffff;
+  for(const v of buf) { c^=v; for(let k=0;k<8;k++) c=(c>>>1)^((c&1)?0xedb88320:0); }
+  return (c^0xffffffff)>>>0;
+}
+function chunk(tag,data) {
+  const t=Buffer.from(tag), n=Buffer.alloc(4), c=Buffer.alloc(4);
+  n.writeUInt32BE(data.length); c.writeUInt32BE(crc(Buffer.concat([t,data])));
+  return Buffer.concat([n,t,data,c]);
+}
+function canvas(w=64,h=64,color=null) {
+  const im={w,h,p:Buffer.alloc(w*h*4)};
+  if(color) for(let i=0;i<im.p.length;i+=4) im.p.set(color,i);
+  return im;
+}
+function readPNG(filename) {
+  const data=fs.readFileSync(filename), parts=[];
+  let pos=8,w,h,channels;
+  assert.equal(data.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+  while(pos<data.length) {
+    const n=data.readUInt32BE(pos), tag=data.toString('ascii',pos+4,pos+8);
+    const b=data.subarray(pos+8,pos+8+n);
+    if(tag==='IHDR') {
+      w=b.readUInt32BE(0); h=b.readUInt32BE(4);
+      assert.equal(b[8],8);assert(b[9]===2||b[9]===6);
+      assert.deepEqual([...b.subarray(10)],[0,0,0]);channels=b[9]===2?3:4;
+    }
+    if(tag==='IDAT') parts.push(b);
+    pos+=n+12;
+  }
+  const im=canvas(w,h), raw=zlib.inflateSync(Buffer.concat(parts)), decoded=Buffer.alloc(w*h*channels);
+  for(let y=0;y<h;y++) {
+    const f=raw[y*(w*channels+1)]; assert(f<=4);
+    for(let x=0;x<w*channels;x++) {
+      const a=x>=channels?decoded[y*w*channels+x-channels]:0, b=y?decoded[(y-1)*w*channels+x]:0;
+      const c=y&&x>=channels?decoded[(y-1)*w*channels+x-channels]:0, p=a+b-c;
+      const ds=[Math.abs(p-a),Math.abs(p-b),Math.abs(p-c)];
+      const pred=[0,a,b,Math.floor((a+b)/2),[a,b,c][ds.indexOf(Math.min(...ds))]][f];
+      decoded[y*w*channels+x]=(raw[y*(w*channels+1)+x+1]+pred)&255;
+    }
+  }
+  for(let i=0;i<w*h;i++)im.p.set(channels===4?decoded.subarray(i*4,i*4+4):[...decoded.subarray(i*3,i*3+3),255],i*4);
+  return im;
+}
+function encodePNG(im) {
+  const ih=Buffer.alloc(13), rows=Buffer.alloc((im.w*4+1)*im.h);
+  ih.writeUInt32BE(im.w); ih.writeUInt32BE(im.h,4); ih[8]=8; ih[9]=6;
+  for(let y=0;y<im.h;y++) im.p.copy(rows,y*(im.w*4+1)+1,y*im.w*4,(y+1)*im.w*4);
+  return Buffer.concat([Buffer.from('89504e470d0a1a0a','hex'),chunk('IHDR',ih),
+    chunk('IDAT',zlib.deflateSync(rows,{level:9})),chunk('IEND',Buffer.alloc(0))]);
+}
+function get(im,x,y) { return [...im.p.subarray((y*im.w+x)*4,(y*im.w+x)*4+4)]; }
+function put(im,x,y,color) {
+  assert(Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<im.w&&y>=0&&y<im.h);
+  im.p.set(color,(y*im.w+x)*4);
+}
+function paste(dst,src,dx,dy) {
+  for(let y=0;y<src.h;y++) for(let x=0;x<src.w;x++) {
+    const c=get(src,x,y); if(c[3]) put(dst,x+dx,y+dy,c);
+  }
+}
+function poly(im,pts,color) {
+  // Integer vertices and pixel-centre scan fill; no fractional output pixels.
+  for(let y=Math.min(...pts.map(p=>p[1]));y<=Math.max(...pts.map(p=>p[1]));y++)
+    for(let x=Math.min(...pts.map(p=>p[0]));x<=Math.max(...pts.map(p=>p[0]));x++) {
+      let inside=false;
+      for(let i=0,j=pts.length-1;i<pts.length;j=i++) {
+        const [ax,ay]=pts[i], [bx,by]=pts[j];
+        if((ay>y+.5)!==(by>y+.5) && x+.5<(bx-ax)*(y+.5-ay)/(by-ay)+ax) inside=!inside;
+      }
+      if(inside) put(im,x,y,color);
+    }
+}
+function line(im,pts,color,width=1) {
+  for(let i=1;i<pts.length;i++) {
+    let [x,y]=pts[i-1]; const [bx,by]=pts[i];
+    const dx=Math.abs(bx-x), sx=x<bx?1:-1, dy=-Math.abs(by-y), sy=y<by?1:-1;
+    let e=dx+dy;
+    while(true) {
+      for(let yy=-Math.floor(width/2);yy<Math.ceil(width/2);yy++)
+        for(let xx=-Math.floor(width/2);xx<Math.ceil(width/2);xx++) put(im,x+xx,y+yy,color);
+      if(x===bx&&y===by) break;
+      const t=2*e; if(t>=dy){e+=dy;x+=sx;} if(t<=dx){e+=dx;y+=sy;}
+    }
+  }
+}
+function shape(im,points,color) { poly(im,points,color); line(im,[...points,points[0]],C.ink); }
+function shifted(pts,x,y) { return pts.map(([a,b])=>[a+x,b+y]); }
+function enlarge(im,n) {
+  const big=canvas(im.w*n,im.h*n);
+  for(let y=0;y<big.h;y++) for(let x=0;x<big.w;x++) put(big,x,y,get(im,Math.floor(x/n),Math.floor(y/n)));
+  return big;
+}
+function opaqueColors(im) {
+  const colors=new Set();
+  for(let i=0;i<im.p.length;i+=4) if(im.p[i+3]) colors.add(im.p.subarray(i,i+3).toString('hex'));
+  return colors;
+}
+
+// Six hand-authored skeletons. Ankles stay in ground coordinates; hip bob is
+// applied to the hips, not the soles. The supporting leg therefore compresses.
+const POSES = [
+  {phase:'contact',bob:0, near:[[32,44],[35,51],[39,58]],far:[[29,44],[26,51],[24,57]],ns:'heel',fs:'toe',lag:0},
+  {phase:'down',bob:1, near:[[32,44],[35,52],[35,58]],far:[[29,44],[27,51],[25,55]],ns:'flat',fs:'lift',lag:2},
+  {phase:'passing',bob:-1, near:[[32,44],[31,51],[30,58]],far:[[29,44],[34,49],[35,55]],ns:'flat',fs:'swing',lag:1},
+  {phase:'contact',bob:0, near:[[32,44],[27,51],[24,57]],far:[[29,44],[34,51],[39,58]],ns:'toe',fs:'heel',lag:0},
+  {phase:'down',bob:1, near:[[32,44],[28,51],[25,55]],far:[[29,44],[33,52],[35,58]],ns:'lift',fs:'flat',lag:-2},
+  {phase:'passing',bob:-1, near:[[32,44],[35,49],[35,55]],far:[[29,44],[30,51],[30,58]],ns:'swing',fs:'flat',lag:-1}
+];
+// Every shoe is outlined at the native grid. Offsets relative to the ankle.
+const SHOES = {
+  heel:[[-2,-1],[1,-1],[3,0],[6,0],[7,1],[6,2],[1,3],[-2,3]],
+  toe:[[-3,-1],[0,-1],[1,0],[2,2],[5,3],[5,4],[1,4],[-1,2],[-3,1]],
+  flat:[[-3,-1],[1,-1],[2,1],[6,1],[7,2],[7,3],[-3,3]],
+  lift:[[-2,-1],[1,-1],[2,1],[5,2],[5,3],[-1,3],[-3,1]],
+  swing:[[-2,-1],[1,-1],[2,0],[3,1],[5,2],[5,3],[1,3],[-2,1]]
+};
+const ARMS = [
+  {elbow:[24,34],hand:[22,41]},
+  {elbow:[25,35],hand:[26,42]},
+  {elbow:[29,35],hand:[33,41]},
+  {elbow:[35,33],hand:[40,39]},
+  {elbow:[33,35],hand:[36,42]},
+  {elbow:[28,35],hand:[29,42]}
+];
+// Explicit pixel contours keep the sleeve cap rounded in stepped pixels and
+// the wide cuff tapered. These are drawn contours, not thick vector strokes.
+const SLEEVES = [
+  [[28,26],[31,27],[30,31],[27,35],[25,40],[20,40],[19,38],[21,33],[24,29],[26,26]],
+  [[28,26],[31,27],[32,31],[29,35],[29,41],[23,41],[22,35],[24,30],[26,27]],
+  [[28,26],[31,27],[32,32],[36,38],[36,40],[31,42],[27,36],[25,31],[26,28]],
+  [[28,26],[31,27],[37,32],[43,36],[43,40],[38,41],[33,37],[28,33],[25,29]],
+  [[28,26],[31,27],[35,32],[39,39],[39,41],[34,43],[30,38],[27,33],[25,29]],
+  [[28,26],[31,27],[32,33],[32,41],[26,42],[25,35],[25,30],[26,28]]
+];
+
+function leg(pose,which) {
+  const im=canvas(), pts=pose[which].map(p=>p.slice());
+  pts[0][1]+=pose.bob;
+  line(im,pts,C.ink,6);
+  line(im,pts,which==='near'?C.coat:C.deep,4);
+  // Subtle lit shin edge; the one-pixel dark outline separates crossing legs.
+  line(im,shifted(pts.slice(1),1,0),C.light);
+  const [x,y]=pts[2], type=pose[which==='near'?'ns':'fs'];
+  shape(im,shifted(SHOES[type],x,y),which==='near'?C.coat:C.deep);
+  if(type==='heel') line(im,[[x,y],[x+3,y+1],[x+5,y+1]],which==='near'?C.grey:C.light);
+  if(type==='flat') line(im,[[x-1,y+1],[x+4,y+1]],which==='near'?C.metal:C.coat);
+  if(type==='toe') line(im,[[x-2,y],[x,y+1],[x+1,y+2]],which==='near'?C.light:C.coat);
+  return im;
+}
+function arm(index,far,bob) {
+  const im=canvas(), p=ARMS[index], dx=far?3:0;
+  const shoulder=[29+dx,27+bob], elbow=[p.elbow[0]+dx,p.elbow[1]+bob];
+  const hand=[p.hand[0]+dx,p.hand[1]+bob];
+  const wrist=[hand[0],hand[1]-3];
+  // Long loose sleeves, restrained civilian swing, no pumping runner fists.
+  shape(im,shifted(SLEEVES[index],dx,bob),far?C.deep:C.coat);
+  line(im,[[shoulder[0]-1,shoulder[1]+1],[elbow[0]-1,elbow[1]]],far?C.coat:C.light);
+  const cuff=shifted([[-2,-1],[2,-1],[2,1],[-2,1]],...wrist);
+  poly(im,cuff,far?C.metal:C.robe);
+  shape(im,shifted([[-2,-1],[1,-1],[2,0],[2,2],[-1,2],[-2,1]],...hand),far?C.skinShade:C.skin);
+  return im;
+}
+function coat(p) {
+  const im=canvas(), b=p.bob, t=p.lag;
+  const P=(pts,color)=>shape(im,shifted(pts,0,b),color);
+  // Pale inner robe stays a large, quiet colour mass inside the dark overcoat.
+  P([[29,37],[36,37],[38+t,49],[37+t,53],[26+t,53],[25+t,49]],C.robe);
+  poly(im,shifted([[30,39],[34,39],[36+t,51],[29+t,52]],0,b),C.white);
+  line(im,shifted([[29,42],[29+t,48],[28+t,51]],0,b),C.grey);
+  // Rear skirt: a delayed corner and angled hem, rather than a rigid rectangle.
+  P([[27,36],[31,38],[29,43],[28+t,49],[25+t,53],[20+t,52],[18+t,50],[22,43]],C.coat);
+  poly(im,shifted([[26,40],[28,40],[25+t,49],[23+t,51],[21+t,50]],0,b),C.deep);
+  line(im,shifted([[26,40],[24,44],[22+t,48]],0,b),C.light);
+  line(im,shifted([[25+t,51],[23+t,52],[21+t,51]],0,b),C.deep);
+  // Front panel opens at the knee, showing the two separately outlined shins.
+  P([[35,37],[37,38],[38,44],[39+t,50],[38+t,53],[35+t,52],[34,46],[33,41]],C.coat);
+  line(im,shifted([[36,41],[37,46],[38+t,50]],0,b),C.light);
+  line(im,shifted([[35,47],[36+t,51]],0,b),C.deep);
+  return im;
+}
+function makeFrame(index,source) {
+  const p=POSES[index], im=canvas();
+  paste(im,leg(p,'far'),0,0);
+  paste(im,arm((index+3)%6,true,p.bob),0,0);
+  paste(im,leg(p,'near'),0,0);
+  paste(im,coat(p),0,0);
+  // Original chest, collar, narrow pale lapel and belt are exact source pixels.
+  const spans=[[28,33],[29,34],[30,35],[30,35],[30,36],[30,36],[29,36],[28,36],
+    [28,36],[28,36],[27,37],[27,37],[26,37],[26,37],[26,37],[26,37]];
+  // Restore the small torso region previously covered by the fixed back arm.
+  shape(im,shifted([[28,24],[32,24],[36,27],[37,38],[27,39],[27,29]],0,p.bob),C.coat);
+  for(let y=24;y<=39;y++) for(let x=spans[y-24][0];x<=spans[y-24][1];x++) {
+    const c=get(source,x,y); if(c[3])put(im,x,y+p.bob,c);
+  }
+  paste(im,arm(index,false,p.bob),0,0);
+  // Face, badge, gat crown, rigid brim and hat cords stay registered together.
+  for(let y=3;y<=23;y++) for(let x=0;x<64;x++) {
+    const c=get(source,x,y); if(c[3])put(im,x,y+p.bob,c);
+  }
+  return im;
+}
+
+function gifBuffer(frames,delays) {
+  const palette=[...new Set(frames.flatMap(im=>[...opaqueColors(im)]))];
+  assert(palette.length<=256);
+  const colors=new Map(palette.map((v,i)=>[v,i])), table=Buffer.alloc(768);
+  palette.forEach((c,i)=>Buffer.from(c,'hex').copy(table,i*3));
+  const header=Buffer.alloc(7);header.writeUInt16LE(frames[0].w);header.writeUInt16LE(frames[0].h,2);header[4]=0xf7;
+  const out=[Buffer.from('GIF89a'),header,table,Buffer.from('21ff0b4e45545343415045322e300301000000','hex')];
+  frames.forEach((im,f)=>{
+    const values=[];
+    for(let i=0;i<im.p.length;i+=4) values.push(colors.get(im.p.subarray(i,i+3).toString('hex')));
+    // Literal LZW blocks with clear codes keep the code width at exactly 9.
+    const codes=[];for(let i=0;i<values.length;i+=200)codes.push(256,...values.slice(i,i+200));codes.push(257);
+    const packed=[];let acc=0,bits=0;
+    for(const code of codes){acc|=code<<bits;bits+=9;while(bits>=8){packed.push(acc&255);acc>>>=8;bits-=8;}}
+    if(bits)packed.push(acc&255);
+    out.push(Buffer.from([0x21,0xf9,4,4,delays[f],0,0,0]));
+    const desc=Buffer.alloc(10);desc[0]=0x2c;desc.writeUInt16LE(im.w,5);desc.writeUInt16LE(im.h,7);
+    out.push(desc,Buffer.from([8]));
+    for(let i=0;i<packed.length;i+=255){const b=Buffer.from(packed.slice(i,i+255));out.push(Buffer.from([b.length]),b);}
+    out.push(Buffer.from([0]));
+  });
+  out.push(Buffer.from([0x3b]));return Buffer.concat(out);
+}
+function verifyGIF(data,frames,delays) {
+  assert.equal(data.toString('ascii',0,6),'GIF89a');
+  const w=data.readUInt16LE(6),h=data.readUInt16LE(8), palette=data.subarray(13,781);
+  let pos=781,count=0,delay;
+  function blocks(){const b=[];while(data[pos]){const n=data[pos++];b.push(data.subarray(pos,pos+n));pos+=n;}pos++;return Buffer.concat(b);}
+  while(data[pos]!==0x3b){
+    const tag=data[pos++];
+    if(tag===0x21){const kind=data[pos++],b=blocks();if(kind===0xf9)delay=b.readUInt16LE(1);continue;}
+    assert.equal(tag,0x2c);assert.equal(data.readUInt16LE(pos+4),w);assert.equal(data.readUInt16LE(pos+6),h);pos+=9;
+    const minimum=data[pos++], payload=blocks(), clear=1<<minimum, end=clear+1;
+    let table,next,width=minimum+1,previous,bit=0;const decoded=[];
+    while(true){
+      let code=0;for(let k=0;k<width;k++)code|=((payload[Math.floor((bit+k)/8)]>>((bit+k)%8))&1)<<k;
+      bit+=width;
+      if(code===clear){table=Array.from({length:clear},(_,i)=>[i]);next=end+1;width=minimum+1;previous=null;continue;}
+      if(code===end)break;
+      const entry=table[code]||(code===next&&previous?[...previous,previous[0]]:null);assert(entry);
+      decoded.push(...entry);
+      if(previous){table[next++]=[...previous,entry[0]];if(next===(1<<width)&&width<12)width++;}
+      previous=entry;
+    }
+    assert.equal(delay,delays[count]);assert.equal(decoded.length,w*h);
+    for(let i=0;i<decoded.length;i++)assert.deepEqual([...palette.subarray(decoded[i]*3,decoded[i]*3+3)],get(frames[count],i%w,Math.floor(i/w)).slice(0,3));
+    count++;
+  }
+  assert.equal(count,6);assert.equal(pos,data.length-1);
+}
+
+function main() {
+  const before=[SOURCE,PALETTE].map(p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'));
+  const source=readPNG(SOURCE), palette=readPNG(PALETTE);
+  assert.equal(source.w,256);assert.equal(source.h,64);
+  const allowed=opaqueColors(source), project=opaqueColors(palette);
+  const frames=POSES.map((_,i)=>makeFrame(i,source)), strip=canvas(384,64), bottoms=[];
+  frames.forEach((im,f)=>{
+    let bottom=0;
+    for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+      const c=get(im,x,y);assert(c[3]===0||c[3]===255);
+      if(c[3]){bottom=Math.max(bottom,y);assert(allowed.has(Buffer.from(c.slice(0,3)).toString('hex')));}
+    }
+    assert.equal(bottom,61);bottoms.push(bottom);
+    for(let y=3;y<=23;y++)for(let x=0;x<64;x++){
+      const c=get(source,x,y);if(c[3])assert.deepEqual(get(im,x,y+POSES[f].bob),c);
+    }
+    paste(strip,im,f*64,0);
+  });
+  assert.equal(new Set(frames.map(im=>crypto.createHash('sha256').update(im.p).digest('hex'))).size,6);
+  const preview=canvas(384,128,rgba(BG));paste(preview,source,0,0);paste(preview,strip,0,64);
+  const animated=frames.map(im=>{const bg=canvas(64,64,rgba(BG));paste(bg,im,0,0);return enlarge(bg,4);});
+  const delays=[12,13,12,13,12,13],gif=gifBuffer(animated,delays);
+  verifyGIF(gif,animated,delays);
+  const stripPath=path.join(OUT,'citizen_walk_6f.png');
+  fs.writeFileSync(stripPath,encodePNG(strip));
+  fs.writeFileSync(path.join(OUT,'citizen_walk_6f_preview_4x.png'),encodePNG(enlarge(preview,4)));
+  fs.writeFileSync(path.join(OUT,'citizen_walk_6f_preview.gif'),gif);
+  assert.deepEqual(readPNG(stripPath).p,strip.p);
+  assert.deepEqual([SOURCE,PALETTE].map(p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')),before);
+  console.log(JSON.stringify({dimensions:[strip.w,strip.h],bottoms,uniqueFrames:6,
+    sourceColors:allowed.size,outputColors:opaqueColors(strip).size,
+    sourceColorsOutsideProjectPalette:[...allowed].filter(c=>!project.has(c)),
+    crownRows:POSES.map(p=>3+p.bob),gifDelaysMs:delays.map(d=>d*10),cycleMs:750,
+    inputsUnchanged:true,approval:'DRAFT ONLY'},null,2));
+}
+if(require.main===module)main();
+module.exports={readPNG,encodePNG,enlarge,canvas,paste,get,makeFrame,POSES};

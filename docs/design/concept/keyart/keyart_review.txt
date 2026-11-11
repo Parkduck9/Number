@@ -1,0 +1,15 @@
+DRAFT ONLY - user approval required before integration.
+
+Background plate uses only the fixed 24-colour project palette; extra indigo shades: NONE. The broadcast is a separate three-colour sprite-style overlay.
+Background colours used: #080B14, #0B1026, #1A1D33, #2D3050, #3F4A6E, #46705F, #62677D, #7A3A3C, #7F1A22, #858A9B, #D77E54
+Original sprite / broadcast colours outside that palette: #3A0A2E, #9B7043, #B94445, #C2AE78, #C49A5C, #F2C94C, #FF3FB4, #FFC2E8, #FFD24A
+Full composite colours (28): #080B14, #0B1026, #1A1D33, #226076, #2D3050, #3A0A2E, #3F4A6E, #42A9BD, #46705F, #62677D, #7A3A3C, #7F1A22, #858A9B, #9B7043, #A37B70, #B8862E, #B94445, #C2AE78, #C49A5C, #D6D7D0, #D77E54, #D7B4A0, #EFD0B6, #F21C2A, #F2C94C, #FF3FB4, #FFC2E8, #FFD24A
+Hero: original frame 0, 64x64, unchanged pixels and colours; title origin (102,88). Logo: original 200x44, unchanged; title origin (12,44). No rim added.
+Screen: manually plotted opaque magenta 0, three colours from the real broadcast digit sheet; scanline is dark magenta.
+Cover: 210x166 native crop at (96,14), same 47x41 screen moved to (118,51), original hero at (30,74), original logo at (5,1), exact 3x then repeat bottom plate row twice, 630x500.
+No chromakey/background extraction required. Hero/logo alpha is validated as binary during compositing.
+Source dominant voting uses 4-bit RGB colour families to prevent source antialias noise winning ties, then chooses an actual source colour; nearest RGB project palette mapping follows.
+Repainted: watermark stone platform and housing, all five paper talismans, signal-box pseudo-text, foreground ridge/tiles, warm lantern, moon/sky planes, tower edges, street houses and roof planes. Upper-left eave traced into the top 40 native rows to make logo room. Removed conversion chatter and single-pixel islands before hand cleanup; large irregular regions were redrawn as deliberate pixel contours.
+Remaining limitations: broad source perspective and composition remain Gemini-derived; a few dark peripheral structural silhouettes still inherit its irregular contours. Cannot certify that every viewer will read this as non-AI art. No Unity Play-mode integration was performed (draft files only). Watermark and all identified talisman glyphs were fully repainted.
+Validation PASS: exported PNG dimensions, exact 3x nearest blocks, unchanged/unoccluded hero and logo pixels on both compositions, binary source alpha, opaque outputs, fixed background palette, and cover's two extended rows. Visual review: native, 960x540, 4x, cover and source comparison.
+Source provenance: provided Gemini background; compositing/pixel cleanup: Codex deterministic System.Drawing script. No new external assets or paid APIs. CREDITS intentionally untouched for draft.

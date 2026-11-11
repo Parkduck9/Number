@@ -1,7 +1,25 @@
 fileFormatVersion: 2
-guid: 5f390f9f9bbf44fa898b339400ce22aa
+guid: 9691b2365b9a449a8edad4ad8a1682e4
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: 3190781236019469808
+    second: logo_number_0
+  - first:
+      213: -7205512234712029138
+    second: logo_number_1
+  - first:
+      213: -6224275797580127522
+    second: logo_number_2
+  - first:
+      213: 7587484994060783995
+    second: logo_number_3
+  - first:
+      213: -7970751156490272962
+    second: logo_number_4
+  - first:
+      213: -6246706662893918281
+    second: logo_number_5
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -43,7 +61,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -110,89 +128,133 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: citizen_walk_4f_0
+      name: logo_number_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 64
-        height: 64
-      alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+        x: 8
+        y: 5
+        width: 22
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f188f01fc2e229670800000000000000
-      internalID: 8543942213633017887
+      spriteID: 0fd1ce0f0aee74c20800000000000000
+      internalID: 3190781236019469808
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: citizen_walk_4f_1
+      name: logo_number_1
       rect:
         serializedVersion: 2
-        x: 64
-        y: 0
-        width: 64
-        height: 64
-      alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+        x: 33
+        y: 5
+        width: 20
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ec2688ef7a8ea6950800000000000000
-      internalID: 6443218025134449358
+      spriteID: e2822498cc0e00c90800000000000000
+      internalID: -7205512234712029138
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: citizen_walk_4f_2
+      name: logo_number_2
       rect:
         serializedVersion: 2
-        x: 128
-        y: 0
-        width: 64
-        height: 64
-      alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+        x: 57
+        y: 5
+        width: 23
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 76f4bfb70d68d9f80800000000000000
-      internalID: -8098168324950896793
+      spriteID: ed2ec25c32eee99a0800000000000000
+      internalID: -6224275797580127522
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: citizen_walk_4f_3
+      name: logo_number_3
       rect:
         serializedVersion: 2
-        x: 192
-        y: 0
-        width: 64
-        height: 64
-      alignment: 9
-      pivot: {x: 0.5, y: 0.03125}
+        x: 83
+        y: 5
+        width: 22
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 4884fbc64123947b0800000000000000
-      internalID: -5239601628163651452
+      spriteID: b719991e6692c4960800000000000000
+      internalID: 7587484994060783995
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: logo_number_4
+      rect:
+        serializedVersion: 2
+        x: 108
+        y: 5
+        width: 20
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3ffc54dd04326190800000000000000
+      internalID: -7970751156490272962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: logo_number_5
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 5
+        width: 20
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b76426f26d3f49a0800000000000000
+      internalID: -6246706662893918281
       vertices: []
       indices: 
       edges: []
@@ -201,7 +263,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -210,11 +272,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      citizen_walk_4f_0: 8543942213633017887
-      citizen_walk_4f_1: 6443218025134449358
-      citizen_walk_4f_2: -8098168324950896793
-      citizen_walk_4f_3: -5239601628163651452
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

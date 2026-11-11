@@ -19,6 +19,7 @@ public class TitleScreen : MonoBehaviour
     static readonly Vector2 WindowSize = new Vector2(160f, 192f); // translucent hologram window behind the digit
     static readonly Color32 Gold = new Color32(0xFF, 0xD2, 0x4A, 0xFF);
     const byte WindowBorderAlpha = 0x50, WindowFillAlpha = 0x18;
+    static readonly Color BackdropTint = new Color(0.4f, 0.4f, 0.45f, 1f);
 
     GameObject controls;
 
@@ -37,6 +38,9 @@ public class TitleScreen : MonoBehaviour
         var t = UiTheme.Current;
         var canvas = UiKit.CreateCanvas("TitleCanvas", transform, 0);
         var center = new Vector2(0.5f, 0.5f);
+
+        Sprite bgArt = DraftHud.Ui("title_bg"); // 960x540 key art without logo, dimmed so the hologram, logo and menu stay on top
+        if (bgArt != null) UiKit.FilledImage(UiKit.Stretch("Backdrop", canvas.transform), BackdropTint).sprite = bgArt;
 
         // Hologram: gold window (border + fill) with the digit on top; all three flicker together.
         var window = UiKit.Rect("Hologram", canvas.transform, center, new Vector2(0f, NumberY), WindowSize);

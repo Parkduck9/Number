@@ -28,7 +28,7 @@ public static class DraftSprites
     public static Sprite[] HeroJump => heroJump ??= Load("hero_jump_4f", 4);                 // 0 rise, 1 rise->apex, 2 apex->fall, 3 fall
     public static Sprite[] HeroGrapple => heroGrapple ??= Load("hero_grapple_1f", 1);        // pulled by the rope (Codex); null = jump
     public static Sprite[] HeroParry => heroParry ??= Load("hero_parry_2f", 2);
-    public static Sprite[] CitizenWalk => citizenWalk ??= Load("citizen_walk_4f", 4);
+    public static Sprite[] CitizenWalk => citizenWalk ??= Load("citizen_walk_6f", 6);
     public static Sprite[] CitizenStunned => citizenStunned ??= Load("citizen_stunned_1f", 1);
     public static Sprite[] CitizenRangedWalk => citizenRangedWalk ??= Load("citizen_b_walk_4f", 4);
     public static Sprite[] AndroidWalk => androidWalk ??= Load("android_walk_4f", 4);
