@@ -26,11 +26,13 @@ public static class DashRules
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
     public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 
-    // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter). Unbound since playtest 11-11 (Shift = issen) ----
+    // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter). Unbound since playtest 11-11 (Shift = issen, else a plain dash) ----
     public const float ShiftAssistRange = 4f;   // u (centre to centre, horizontal): enemy this close on either side -> dash behind it and counter
     public const float ShiftAssistDy = 1.5f;    // max height difference (centres) for that search
     public const float ShiftStepDy = 0.5f;      // feet-level gap the dash may climb/drop onto the target's ground; larger stays horizontal
     public const float ShiftCooldown = 3.5f;    // s (was 2.0); bullet-dodge invulnerability is the dash itself, unchanged
+    // Playtest 11-11 (DECISIONS 35): Shift with no issen (no level target, or issen on cooldown) = plain dash, no attack, invulnerable (PlayerController.TryShift)
+    public const float ShiftDashCooldown = 0.6f; // (T) s, its own clock (the issen keeps IssenCooldown and the HUD slot)
 
     // ---- RMB neon grapple rope (DECISIONS 16, restored by playtest 11-11; PlayerController.TryGrapple / UpdateGrapple, GrappleRope visual) ----
     public const float GrappleRange = 9f;        // u, from the hand toward the mouse; ground, walls, ceilings and one-way platforms anchor, enemies don't

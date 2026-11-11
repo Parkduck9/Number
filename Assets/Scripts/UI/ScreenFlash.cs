@@ -2,16 +2,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // DECISIONS 26 hit vs parry readability, code-drawn (no asset): hurt = red vignette on the screen edges fading out over HurtTime;
-// parry = a very faint gold-white full-screen flash for ParryTime. Unscaled time, so it plays through the parry hit-stop.
-// One per scene, made on first use (PlayerController.ReceiveEnemyHit): one overlay canvas, two raycast-off Images, disabled when idle.
+// (the parry full-screen flash was removed in playtest 11-11, DECISIONS 35: the contact point glows instead, ParryFx.ContactGlow).
+// Unscaled time, so it plays through hit-stops.
+// One per scene, made on first use (PlayerController.ReceiveEnemyHit): one overlay canvas, one raycast-off Image, disabled when idle.
 public class ScreenFlash : MonoBehaviour
 {
     const float HurtTime = 0.25f, HurtAlpha = 0.6f;    // (T)
-    const float ParryTime = 0.06f, ParryAlpha = 0.12f; // (T)
     const float VignetteInner = 0.6f;                  // (T) 0 = centre, 1 = edge: the red starts here
     const int VignetteRes = 64;
     static readonly Color HurtColor = new Color(0.9f, 0.08f, 0.12f);
-    static readonly Color ParryColor = new Color(1f, 0.95f, 0.75f);
 
     static ScreenFlash inst;
     static Sprite vignette;
@@ -19,11 +18,10 @@ public class ScreenFlash : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { inst = null; vignette = null; } // Domain Reload is off
 
-    Image hurt, parry;
-    float hurtT = HurtTime, parryT = ParryTime;
+    Image hurt;
+    float hurtT = HurtTime;
 
     public static void Hurt() { Get().hurtT = 0f; inst.Tick(0f); }
-    public static void Parry() { Get().parryT = 0f; inst.Tick(0f); }
 
     static ScreenFlash Get()
     {
@@ -37,8 +35,7 @@ public class ScreenFlash : MonoBehaviour
         if (vignette == null) vignette = MakeVignette();
         hurt = UiKit.FilledImage(UiKit.Stretch("Hurt", canvas.transform), HurtColor);
         hurt.sprite = vignette;
-        parry = UiKit.FilledImage(UiKit.Stretch("Parry", canvas.transform), ParryColor);
-        hurt.enabled = parry.enabled = false;
+        hurt.enabled = false;
         return this;
     }
 
@@ -47,9 +44,7 @@ public class ScreenFlash : MonoBehaviour
     void Tick(float dt)
     {
         hurtT += dt;
-        parryT += dt;
         Fade(hurt, HurtColor, HurtAlpha * (1f - hurtT / HurtTime));
-        Fade(parry, ParryColor, ParryAlpha * (parryT < ParryTime ? 1f : 0f));
     }
 
     static void Fade(Image img, Color c, float a)

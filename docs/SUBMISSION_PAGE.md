@@ -51,6 +51,7 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 |---|---|
 | Move | A / D |
 | Jump | Space |
+| Drop through a ledge | S + Space |
 | Aim | Mouse (a crosshair locks onto an enemy in range) |
 | Attack: with a locked enemy within ~5 m, lunge through it and break it; otherwise swing in place | Left mouse |
 | Parry: left click while a bullet is incoming or you are inside an enemy's attack (parry comes first) | Left mouse |

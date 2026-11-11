@@ -11,6 +11,7 @@ public class PlayerInputReader : MonoBehaviour
     InputAction move, jump, attack, issen, dice, grapple; // playtest 11-11: Shift (the asset's "Dash" action) = issen (DECISIONS 26), RMB = grapple rope (DECISIONS 16)
 
     public float MoveX { get; private set; }
+    public bool DownHeld { get; private set; } // S / Down: with Space on a one-way ledge = drop through it
     public bool JumpPressed { get; private set; }
     public bool JumpHeld { get; private set; }
     public bool AttackPressed { get; private set; }
@@ -39,10 +40,13 @@ public class PlayerInputReader : MonoBehaviour
         if (GameFlow.InputLocked) // blocking dialogue: no input
         {
             MoveX = 0f;
+            DownHeld = false;
             JumpPressed = JumpHeld = AttackPressed = DicePressed = IssenPressed = GrapplePressed = false;
             return;
         }
-        MoveX = move.ReadValue<Vector2>().x;
+        Vector2 mv = move.ReadValue<Vector2>();
+        MoveX = mv.x;
+        DownHeld = mv.y < -0.5f;
         JumpPressed = jump.WasPressedThisFrame();
         JumpHeld = jump.IsPressed();
         AttackPressed = attack.WasPressedThisFrame();

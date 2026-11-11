@@ -5,7 +5,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(PlayerInputReader), typeof(PlayerHealth))]
 public class PlayerController : MonoBehaviour
 {
-    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Issen, Grapple } // Issen: Shift flash strike follow-through (DECISIONS 26); Grapple: RMB rope pull (DECISIONS 16). Dash: unbound since playtest 11-11
+    public enum State { Locomotion, Attack, Parry, Dash, Hurt, Dead, Issen, Grapple } // Issen: Shift flash strike follow-through (DECISIONS 26); Grapple: RMB rope pull (DECISIONS 16). Dash: Shift with no issen (DECISIONS 35)
 
     [Header("Masks")]
     [SerializeField] LayerMask groundMask;
@@ -36,7 +36,7 @@ public class PlayerController : MonoBehaviour
     [Header("Dash (T)")]
     [SerializeField] float dashSpeed = 24f;
     [SerializeField] float dashDuration = 0.15f;
-    // cooldown: DashRules.ShiftCooldown (DECISIONS 13)
+    // cooldown: DashRules.ShiftDashCooldown (DECISIONS 35)
 
     // DECISIONS 11/13 / docs/design/impl/movement-assist.md (attack auto-approach replaced by the DECISIONS 12 lunge: DashRules, impl/dash-attack.md)
     [Header("Ledge probe (T)")]
@@ -52,7 +52,6 @@ public class PlayerController : MonoBehaviour
 
     [Header("Parry FX (T)")]
     [SerializeField] float hitStopTime = 0.06f;
-    [SerializeField] float parryFlashTime = 0.1f;
 
     [Header("Dash afterimage (T)")]
     [SerializeField] float afterimageInterval = 0.04f;
@@ -74,7 +73,6 @@ public class PlayerController : MonoBehaviour
     const float HurtPitch = 0.8f, ParryPitch = 1.3f;
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float hitStopEndedAt = -10f; // real time the last hit-stop ended (DashRules.HitStopGap)
-    float parryFlashUntil;
     float parryGuardUntil;
 
     Rigidbody2D rb;
@@ -88,6 +86,7 @@ public class PlayerController : MonoBehaviour
     bool grounded;
     ContactFilter2D groundFilter;
     readonly Collider2D[] groundHits = new Collider2D[8];
+    int groundHitCount;
     float lastGroundedAt = -999f;
     float jumpBufferedUntil = -999f;
     float attackBufferedUntil = -999f;
@@ -202,22 +201,23 @@ public class PlayerController : MonoBehaviour
     }
 
     // Elite clash duel (EliteDuel): input is locked, so the duel judges LMB itself. Begin drops any parry / guard / lunge (a missed duel
-    // strike must land as a hit) and faces the elite; Clash shows one clang pose (parry, or the hero's own counter swing) + the parry flash.
+    // strike must land as a hit) and faces the elite; Clash shows one clang pose (parry, or the hero's own counter swing) + the contact
+    // glow (DECISIONS 35). contact = where the blades met; null = the hero's front edge (Facing) at the strike height.
     Sprite duelPose;
-    float duelPoseUntil = -1f, duelFlashUntil = -1f;
+    float duelPoseUntil = -1f;
     public void DuelBegin(int face)
     {
         if (state != State.Locomotion) EnterState(State.Locomotion);
         Facing = face;
-        parryGuardUntil = parryFlashUntil = parryPoseUntil = -999f;
+        parryGuardUntil = parryPoseUntil = -999f;
     }
-    public void DuelClash(bool counter, ParryHeight height)
+    public void DuelClash(bool counter, ParryHeight height, Vector2? contact = null)
     {
+        ParryFx.ContactGlow(contact ?? (Vector2)transform.position + new Vector2(Facing * 0.45f, ParryRing.Offset(height)));
         if (!counter)
         {
             duelPoseUntil = -1f; // a counter pose still on screen must not hide the parry pose
             ShowParryPose(height, 0.15f, true);
-            duelFlashUntil = Time.time + parryFlashTime;
             return;
         }
         duelPose = DraftSprites.Pick(DraftSprites.HeroAttack, 2, DraftSprites.Hero);
@@ -274,7 +274,6 @@ public class PlayerController : MonoBehaviour
             float dt = Time.deltaTime;
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
-            parryFlashUntil += dt;
             parryGuardUntil += dt;
             jumpBufferedUntil += dt;
             attackBufferedUntil += dt;
@@ -299,7 +298,7 @@ public class PlayerController : MonoBehaviour
         if (!lunging && passedPlatforms.Count > 0) RestorePassedPlatforms(false);
         Vector2 feet = (Vector2)transform.position + feetOffset;
         groundFilter.SetLayerMask(groundMask);
-        int hitCount = Physics2D.OverlapBox(feet, feetSize, 0f, groundFilter, groundHits);
+        int hitCount = groundHitCount = Physics2D.OverlapBox(feet, feetSize, 0f, groundFilter, groundHits);
         grounded = false;
         for (int i = 0; i < hitCount && !grounded; i++) // a platform a down-lunge is still passing through is not ground
             grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f) && !passedPlatforms.Contains(groundHits[i]);
@@ -329,14 +328,7 @@ public class PlayerController : MonoBehaviour
                 break;
             case State.Dash:
                 SpawnAfterimage(now);
-                if (elapsed >= dashEndsAfter)
-                {
-                    // DECISIONS 13: end turned around (a held direction re-faces next frame); with a target, counter it right away.
-                    // Enemy strikes during the dash were already resolved as dodges (stagger / Android overload), so the counter comes after.
-                    EnterState(State.Locomotion);
-                    if (dashBehindActive) DoShiftCounter();
-                    else Facing = -Facing;
-                }
+                if (elapsed >= dashEndsAfter) EnterState(State.Locomotion); // DECISIONS 35: keeps facing the dash direction (13's turn-around and counter are off)
                 break;
             case State.Hurt:
                 if (elapsed >= hurtDuration) EnterState(health.IsDead ? State.Dead : State.Locomotion);
@@ -383,7 +375,7 @@ public class PlayerController : MonoBehaviour
     {
         if (Mathf.Abs(input.MoveX) > 0.01f) Facing = input.MoveX > 0f ? 1 : -1;
 
-        if (TryIssen(now)) return;
+        if (TryShift(now)) return;
         if (TryGrapple(now)) return;
         if (input.AttackPressed || now <= attackBufferedUntil)
         {
@@ -405,10 +397,31 @@ public class PlayerController : MonoBehaviour
     void TryJump(float now)
     {
         if (now > jumpBufferedUntil || now - lastGroundedAt > coyoteTime) return;
+        if (input.DownHeld && TryDropThrough()) { jumpBufferedUntil = -999f; lastGroundedAt = -999f; return; }
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpSpeed);
         jumpBufferedUntil = -999f;
         lastGroundedAt = -999f;
         jumpCut = false;
+    }
+
+    // S + Space on a one-way ledge: drop through it. Only when every ground under the feet is one-way (solid ground / a building = normal jump).
+    // Reuses the down-lunge pass-through: collision is given back by RestorePassedPlatforms once the body no longer overlaps the ledge.
+    bool TryDropThrough()
+    {
+        if (!grounded || groundHitCount == 0) return false;
+        for (int i = 0; i < groundHitCount; i++)
+        {
+            Collider2D c = groundHits[i];
+            if (!c.usedByEffector) return false;
+            PlatformEffector2D fx = c.GetComponent<PlatformEffector2D>();
+            if (fx == null || !fx.useOneWay) return false;
+        }
+        for (int i = 0; i < groundHitCount; i++)
+            if (!passedPlatforms.Contains(groundHits[i])) { SetPlatformPass(groundHits[i], true); passedPlatforms.Add(groundHits[i]); }
+        rb.position += Vector2.down * 0.1f; // sink into the ledge so the overlap guard holds the pass until the body is below it
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, Mathf.Min(rb.linearVelocity.y, -1f));
+        grounded = false;
+        return true;
     }
 
     // variable jump: release while rising halves the upward speed once (any state that keeps gravity)
@@ -455,18 +468,9 @@ public class PlayerController : MonoBehaviour
             case State.Dash:
                 rb.gravityScale = 0f;
                 DashStart = rb.position;
-                dashBehindActive = TryPlanDashBehind(out Vector2 behindOffset);
-                if (dashBehindActive)
-                {
-                    dashEndsAfter = Mathf.Clamp(Mathf.Abs(behindOffset.x) / dashSpeed, dashMinDuration, 0.25f);
-                    dashVelocity = behindOffset / dashEndsAfter; // lands on the spot
-                }
-                else
-                {
-                    dashTarget = null;
-                    dashEndsAfter = dashDuration;
-                    dashVelocity = new Vector2(Facing * dashSpeed, 0f);
-                }
+                // DECISIONS 35 plain dash (Shift with no issen): Facing direction, horizontal, walls stop the body. No dash-behind counter.
+                dashEndsAfter = dashDuration;
+                dashVelocity = new Vector2(Facing * dashSpeed, 0f);
                 rb.linearVelocity = dashVelocity;
                 PlayDashBurst(dashVelocity.x);
                 Sfx.Play(SfxId.Dash);
@@ -752,14 +756,28 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
     }
 
-    // DECISIONS 26 issen (Shift since playtest 11-11): flash to just behind the aimed enemy (FindIssenTarget) in one frame, leaving a ghost streak, and cut it.
-    // Humans (citizen / sniper) die in one hit; androids, the elite and bugs take nothing (just passed). Nothing else on the path is hit.
-    // On cooldown, or no target / no free spot: nothing (a faint swish when it was off cooldown). Then the Issen pose (DashRules.IssenPoseTime).
-    bool TryIssen(float now)
+    // DECISIONS 35: a Shift press (live, buffered or held over a hit-stop) is an issen when one can land, else a plain dash in the
+    // facing (= held) direction (DashRules.ShiftDashCooldown; the old DECISIONS 13 dash-behind counter stays off). Both on cooldown: a faint swish.
+    bool TryShift(float now)
     {
         if (!(input.IssenPressed || pendingIssen || now <= issenBufferedUntil)) return false;
         issenBufferedUntil = -999f;
-        if (now < issenReadyAt) return false;
+        if (now >= issenReadyAt && TryIssen(now)) return true;
+        if (now < dashCooldownUntil)
+        {
+            Sfx.Play(SfxId.Swing, 0.3f); // fail cue
+            return false;
+        }
+        dashCooldownUntil = now + DashRules.ShiftDashCooldown;
+        EnterState(State.Dash);
+        return true;
+    }
+
+    // DECISIONS 26 issen (Shift since playtest 11-11): flash to just behind the aimed enemy (FindIssenTarget) in one frame, leaving a ghost streak, and cut it.
+    // Humans (citizen / sniper) die in one hit; androids, the elite and bugs take nothing (just passed). Nothing else on the path is hit.
+    // Then the Issen pose (DashRules.IssenPoseTime). false = no target / no free spot (TryShift dashes instead).
+    bool TryIssen(float now)
+    {
         Collider2D col = null;
         bool aimed = MouseCrosshair.MouseWorld(out Vector2 mouse);
         TestEnemy target = aimed ? FindIssenTarget(mouse, out col) : null;
@@ -768,11 +786,7 @@ public class PlayerController : MonoBehaviour
         if (target == null || !PlanIssen(target, col, out spot))
         {
             alt = aimed && IssenAlt != null && IssenAlt.PlanIssen(mouse, rb.position, out at, out spot);
-            if (!alt)
-            {
-                Sfx.Play(SfxId.Swing, 0.3f); // fail cue
-                return false;
-            }
+            if (!alt) return false;
         }
         else at = target.transform.position;
         issenReadyAt = now + DashRules.IssenCooldown;
@@ -1219,14 +1233,15 @@ public class PlayerController : MonoBehaviour
         {
             // No knockback for either side. Hit-stop + flash + parry FX. A guard parry during an attack must not abort the swing.
             if (state == State.Parry) EnterState(State.Locomotion);
-            parryFlashUntil = Time.time + parryFlashTime;
             parryGuardUntil = Time.time + parryGuardTime;
             ParryCount++;
-            Vector2 contact = (Vector2)transform.position + new Vector2(Facing * 0.45f, ParryRing.Offset(info.Height)); // where the ring merges (TestEnemy.ParryContact)
+            // Shot: where the bullet is. Melee: the hero's front edge at the strike height, where the ring merges (TestEnemy.ParryContact).
+            Vector2 contact = !Mathf.Approximately(info.TravelDirX, 0f) ? info.SourcePosition
+                : (Vector2)transform.position + new Vector2(Facing * 0.45f, ParryRing.Offset(info.Height));
             SpriteFx.Play("parry_talisman", contact, Facing < 0, 102); // pivot = contact point; art takes a blow from the right
+            ParryFx.ContactGlow(contact); // playtest 11-11: the contact glows, the hero no longer flashes white (DECISIONS 35)
             ShowParryPose(info.Height, ParryPoseTime, false);
             Sfx.Play(SfxId.Parry, 1f, ParryPitch); // DECISIONS 26: high clang (hurt is low)
-            ScreenFlash.Parry();
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
             return HitResult.Parried;
@@ -1263,7 +1278,7 @@ public class PlayerController : MonoBehaviour
         else if (state == State.Hurt) c = new Color(1f, 0.35f, 0.35f); // hurt flash
         else if (health.HurtInvulnerable && Mathf.FloorToInt(now * 20f) % 2 == 0) c.a = 0.3f;
         if (hurtBlink) SpriteFlash.Apply(visual, c, true, HurtRed, HurtRed);
-        else SpriteFlash.Apply(visual, c, now < parryFlashUntil || now < duelFlashUntil, Color.white, Juice.ParryPlayerTint); // flash shader: solid white; else the tint
+        else SpriteFlash.Apply(visual, c, false, Color.white, c); // no parry flash on the hero (DECISIONS 35); resets the shader flash
     }
 
     // DraftSprites: one hero frame per state (walk strip is the fallback when another strip is missing). Art faces right; flipX handles left.

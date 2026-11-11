@@ -8,7 +8,7 @@ using UnityEngine;
 // counter at S_k + gap/2 that the elite parries (second clang, presentation only). Clang pitch +1 semitone per exchange.
 // All N parried: finisher (blink through, shatter, hit-stop, shake), a kill. Any miss: a normal hit, duel over, the elite back to its AI.
 // Scene object built on demand. Scaled time (a hit-stop freezes it); the bars and the camera ease on real time.
-// The foe is an IDuelFoe: the elite (TestEnemy) or the final boss's stuck blade arm (BossBladeFoe, boss-v2).
+// The foe is an IDuelFoe: the elite (TestEnemy). (The boss stuck blade used it too until DECISIONS 36 made it a mash window.)
 public interface IDuelFoe
 {
     Transform transform { get; }       // body centre (feet + 1, like TestEnemy)

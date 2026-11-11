@@ -18,7 +18,6 @@ public static class Juice
     public static readonly UnityEngine.Vector2 KillKnockback = new UnityEngine.Vector2(6f, 3.5f); // was (3, 2)
 
     // Sprite tints. A tint multiplies the sprite, and the draft sprites are white, so a "white flash" changes nothing: use colours.
-    public static readonly UnityEngine.Color ParryPlayerTint = new UnityEngine.Color(0.3f, 0.95f, 0.85f); // player on a successful parry (#4CE8D8-ish)
     public static readonly UnityEngine.Color ParryEnemyTint = new UnityEngine.Color(0.35f, 0.75f, 1f);    // enemy whose strike was parried
     public static readonly UnityEngine.Color BlockTint = new UnityEngine.Color(0.55f, 0.6f, 0.75f);       // Android blocks a hit (no damage)
     public const float ParryEnemyTintTime = 0.25f; // s (scaled: holds through the parry hit-stop)

@@ -4,11 +4,14 @@ using UnityEngine;
 
 // STG-05 final boss v2 (DECISIONS 23 / 21, docs/design/impl/boss-v2.md): a huge fused machine fills the room background; only its
 // parts attack. Director (coroutine): hologram shows attack icon + N, the part glows (tell) -> attack -> its opening -> rest -> next.
-//   A bug arm:  N swarm walls sweep the room left -> right, each with one gap (floor / jump height); dash goes through. Then the arm
-//               slumps on the floor SlumpTime: LMB swings on it hurt the boss.
+//   A bug arm:  N swarm walls sweep the room left -> right, each with one gap (floor / jump height); dash goes through. The arm stays
+//               lit and conducts (sways) until the last wall is gone, while the chest hatch fires telegraphed parryable bug shots
+//               (DECISIONS 36). Then the arm slumps on the floor SlumpTime: LMB swings on it hurt the boss.
 //   B blade arm: red danger zone at the player, N slams with the ParryRing tell (LMB in the window = clang, no damage); the last one
-//               sticks in the bridge: walk up to it -> EliteDuel with N exchanges (BossBladeFoe). Win = big damage.
-//   B' blade sweep (DECISIONS 29): N horizontal sweeps across the room, LOW (jump) or HIGH (stay down / dash); red warning band first.
+//               sticks in the bridge: mash window (DECISIONS 36), the arm jerks to pull free while LMB swings on the steel hurt
+//               (MashDamage each, up to MashCap); then it rips out and reattaches.
+//   B' blade sweep (DECISIONS 29 / 36): the arm leaves the screen, then N horizontal sweeps that carry the whole arm past the far edge,
+//               LOW (jump) or HIGH (stay down / dash); red warning band first. Then the arm flies back and clamps onto its socket.
 //   C chest hatch: hatch opens, yellow aim dots, N volleys of small shots in a fan (phase 3: fan / spiral arc alternate).
 //               A parried shot flies back; reaching the hatch hurts.
 //   Core (DECISIONS 31): in the rest after every attack the hatch opens and a glowing weak-point core drops on a cable to the bridge
@@ -16,7 +19,7 @@ using UnityEngine;
 // HP is never shown: phase 2 / 3 darken + crack the body. Phase 3 overlaps C with A / B. HP 0: the hologram shatters, the body stops,
 // the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice work here (DECISIONS 31):
 // LuckyDice.BossSkill -> SkillHit (DiceDamage by face); slam clangs and reflected shots charge them like parries.
-// Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (duel, dialogue).
+// Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (dice skills, dialogue).
 public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 {
     [Header("Art overrides (empty = temporary code-drawn BossArt)")]
@@ -30,7 +33,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     // ---- numbers (T) ----
     const int MaxHp = 60;                                   // phase 1 = 60..41, 2 = 40..21, 3 = 20..1 (45 before, DECISIONS 33: harder)
-    const int ArmHitDamage = 1, ReflectDamage = 1, DuelDamage = 6;
+    const int ArmHitDamage = 1, ReflectDamage = 1;
     const float StartX = 6.5f, StartAfter = 3f;             // fight starts when the player walks past x or after s
     // weak-point core (DECISIONS 31), replaces the 0.9 s rest between attacks: drop, open (hittable), pull back
     const int CoreHitDamage = 1, CoreIssenDamage = 2;
@@ -40,22 +43,31 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     const float WaveSpeed = 10.5f, WaveEvery = 1.1f, // was 9 / 1.3 (DECISIONS 33)
  WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
     static readonly float[] GapLows = { 2f, 3.8f };         // gap on the floor (stand) / at jump height
-    const float ZoneHalf = 1.5f, StuckTime = 3f, FirstSlam = 0.5f;
+    const float ZoneHalf = 1.5f, FirstSlam = 0.5f;
+    // Stuck blade = mash window (DECISIONS 36, replaces the EliteDuel exchange): StuckTime s, each LMB swing on the steel = MashDamage;
+    // MashCap hits (= the old duel's 6 damage) rip it out early. The arm tugs every TugEvery s (shorter as time runs out).
+    const int MashDamage = 1, MashCap = 6;
+    const float StuckTime = 2.5f, TugEvery = 0.4f, TugEveryEnd = 0.2f;
     const float WindowEarly = 0.25f, WindowLate = 0.1f, Lockout = 0.25f; // same LMB window as EliteDuel
     // B tracks (DECISIONS 29): after each slam the blade re-aims at the player's x, slides there in SlamShift, waits SlamAim, slams.
     // DECISIONS 33: while it waits it keeps following the player's x (TrackSpeed u/s) and locks only when the ring appears.
     const float SlamShift = 0.15f, RingLead = 0.6f, TrackSpeed = 9f; // ring always 0.6 s (DECISIONS 28), starts after the slide
     static readonly float[] SlamAim = { 0.85f, 0.8f, 0.75f };    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
     // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime; LOW = jump over, HIGH = stay down / dash
-    const float SweepWarn = 0.5f, // was 0.6 (DECISIONS 33)
- SweepArmTip = 7f, SweepFromX = 0.5f, SweepToX = RoomW - 0.5f; // arm half on screen at the ends
-    static readonly float[] SweepTime = { 0.7f, 0.6f, 0.5f };   // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
+    const float SweepWarn = 0.5f; // was 0.6 (DECISIONS 33)
+    static readonly float[] SweepTime = { 0.7f, 0.6f, 0.5f };   // by phase: s per RoomW - 1 u (the old edge-to-edge run; was 0.8 / 0.7 / 0.6, DECISIONS 33)
+    // DECISIONS 36: the whole arm leaves the screen. boss_blade_arm is 9 x 18 u with the pivot on the tip, so lying flat it trails
+    // BladeArmLen behind the tip. BladeOff: hanging, just off the right edge (where it leaves and comes back from).
+    const float BladeArmLen = 18f, ReattachTime = 0.45f, ReattachOver = 0.4f;
+    static readonly Vector2 BladeOff = new Vector2(RoomW + 5.5f, 10.5f), BladeWrist = new Vector2(0f, 8.5f); // clamp spark: the wrist at rest
     static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8); the blade lies along the band centre
     // Blade hitbox (feedback 11-11): the steel of boss_blade_arm(_lit), 44 x 202 px up from the pivot (= the tip). Slams and sweeps hurt only here.
     const float BladeLen = 6.3125f, BladeHalfW = 0.6875f;
-    // A: while walls fly, one bug at a time swells red for BugShotTell, then spits a bug bullet at the player (parryable). Skipped during
-    // a hatch barrage (aimOn) and from walls closer than BugShotMinDist (reaction time). Feedback 11-11: "too easy".
-    const float BugShotEvery = 1f, BugShotTell = 0.35f, BugShotSpeed = 8f, BugShotMinDist = 4f;
+    // A: while walls fly, the chest hatch glows and cracks open with the aim dots for BugShotTell, then fires one bug bullet at the
+    // player (parryable; parried = back into the hatch like C's shots). Skipped while a side barrage owns the hatch. DECISIONS 34 / 36.
+    // The bug arm conducts meanwhile: figure-8 sway ConductAmp around its rest spot.
+    const float BugShotEvery = 1f, BugShotTell = 0.35f, BugShotSpeed = 8f, BugShotCrack = 0.35f, ConductSpeed = 7f;
+    static readonly Vector2 ConductAmp = new Vector2(0.35f, 0.2f);
     // C: volleys of small shots; fan aimed at the player, phase 3 alternates with a spiral arc over the lower half
     const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.3125f, FanSpread = 50f, SpiralStep = 0.045f;
     const int FanShots = 5, SideFanShots = 3, SpiralShots = 9, MaxShots = 40; // MaxShots: live cap (WebGL)
@@ -71,7 +83,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     static readonly int[] PropKind = { 0, 1, 2, 0, 1, 0 };   // BossArt.Props: rack, screen, cables
 
     static readonly Color[] PhaseTint = { Color.white, new Color(0.8f, 0.8f, 0.86f), new Color(0.62f, 0.6f, 0.68f) };
-    static readonly Color Red = new Color32(0xFF, 0x3B, 0x3B, 0xFF), GoldShot = new Color32(0xF2, 0xC9, 0x4C, 0xFF), Cyan = new Color32(0x4C, 0xE0, 0xFF, 0xFF);
+    static readonly Color GoldShot = new Color32(0xF2, 0xC9, 0x4C, 0xFF), Cyan = new Color32(0x4C, 0xE0, 0xFF, 0xFF);
     // Unlit Sprites/Default. Pooled renderers share one material per texture (squares, bugs); every other renderer owns one:
     // the 2D renderer drew neighbouring same-material runtime sprites with ONE texture (the hologram showed the body).
     static Material squareMat, bugMat;
@@ -94,13 +106,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     PlayerInputReader input;
     Part body, bugArm, blade, hatchL, hatchR, core;
     SpriteRenderer crack1, crack2, hatchInside, holo, coreCable;
-    float hatchOpen, sink, coreHitAt;
+    float hatchOpen, sink, coreHitAt, mashHitAt, stuckX, conductT;
     bool coreOpen;
-    int hp = MaxHp, shownPhase = 1, bladePoseY;
-    bool started, dead, breakable, armVulnerable, sideRunning, duelWon, ownLock;
+    int hp = MaxHp, shownPhase = 1, mashHits;
+    bool started, dead, breakable, armVulnerable, sideRunning, ownLock;
     int playerMask, groundMask;
     ParryRing ring;
-    BossBladeFoe foe;
 
     public bool BladeStuck { get; private set; }
     public Transform CoreTransform => core.Sr.transform; // dice talismans fly here
@@ -126,7 +137,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     readonly SpriteRenderer[] aimDots = new SpriteRenderer[14];
     readonly SpriteRenderer[] coreBracket = new SpriteRenderer[8]; // gold lock-on corners around the open core (DECISIONS 32)
     float coreOpenedAt;
-    bool aimOn;
+    bool aimOn, bugAim; // aim dots: hatch barrage / bug shot tell
     readonly SpriteRenderer[] props = new SpriteRenderer[6];
     readonly bool[] propBroken = new bool[6];
     int propsLeft;
@@ -249,9 +260,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         playerMask = 1 << player.gameObject.layer;
         groundMask = LayerMask.GetMask("Ground");
         ring = ParryRing.For(gameObject);
-        foe = new GameObject("BladeDuelFoe").AddComponent<BossBladeFoe>();
-        foe.transform.SetParent(transform, false);
-        foe.Boss = this;
         StartCoroutine(Director());
     }
 
@@ -396,16 +404,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     // ---- A: bug swarm walls, then the arm slumps (opening) ----
     IEnumerator AttackA(int n, float tell)
     {
-        bugArm.Glow = true;
+        bugArm.Glow = true; // stays lit while it controls the swarm (DECISIONS 36)
         yield return Wait(tell);
-        bugArm.Glow = false;
         for (int i = 0; i < n; i++)
         {
             LaunchWave(GapLows[Random.Range(0, GapLows.Length)]);
             if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
-            if (i < n - 1) yield return Wait(WaveEvery);
+            if (i < n - 1) yield return Conduct(WaveEvery);
         }
-        yield return Wait(0.6f);
+        yield return Conduct(-1f);
+        bugArm.Glow = false;
         yield return Move(bugArm, BugSlump, 0.2f);
         Juice.Shake(Juice.ShakeHurtAmp, 0.25f);
         Sfx.Play(SfxId.Stunned);
@@ -435,42 +443,39 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         SpriteFx.Play("enemy-warp-in", bugArm.Pos + new Vector2(0f, 1f), false, 101); // the swarm bursts out of the palm
     }
 
+    // the bug arm conducts the swarm: figure-8 sway around its rest spot for s seconds (s < 0: until the last wall is gone)
+    IEnumerator Conduct(float s)
+    {
+        for (float t = 0f; s < 0f ? System.Array.IndexOf(waveOn, true) >= 0 : t < s; )
+        {
+            float dt = Dt;
+            t += dt;
+            conductT += dt * ConductSpeed;
+            bugArm.Pos = BugRest + Vector2.Scale(ConductAmp, new Vector2(Mathf.Sin(conductT), Mathf.Sin(2f * conductT)));
+            yield return null;
+        }
+    }
+
+    // DECISIONS 36: the bug shots come from the centre (chest hatch) with the hatch's tell: glow, a crack open, the aim dots
     IEnumerator BugShots()
     {
         yield return Wait(BugShotEvery * 0.5f);
         while (System.Array.IndexOf(waveOn, true) >= 0)
         {
-            int b = aimOn ? -1 : PickBugShooter();
-            if (b >= 0)
+            if (!sideRunning) // a side barrage owns the hatch (and keeps the screen busy)
             {
-                SpriteRenderer bug = bugs[b];
-                bug.color = Red; // tell: this bug swells red
-                bug.transform.localScale = new Vector3(4f, 4f, 1f);
+                hatchL.Glow = hatchR.Glow = bugAim = true;
                 Sfx.Play(SfxId.EnemyTell, 0.4f, 1.6f);
-                yield return Wait(BugShotTell);
-                bug.color = Color.white;
-                bug.transform.localScale = new Vector3(2f, 2f, 1f);
-                // the wall moved ~3.7 u during the tell: no point-blank shot
-                if (bug.enabled && EnemyProjectile.Active.Count < MaxShots && Mathf.Abs(bug.transform.position.x - player.transform.position.x) > 2f)
-                {
-                    Vector2 from = bug.transform.position;
-                    from.y = Mathf.Max(from.y, Floor + 0.5f); // a bug on the floor line would hit the ground at once
-                    Vector2 d = (Vector2)player.transform.position - from;
-                    EnemyProjectile.Spawn(from, d.normalized * BugShotSpeed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot, DraftSprites.BulletBug);
-                }
+                for (float t = 0f; t < BugShotTell; t += Dt) { hatchOpen = BugShotCrack * t / BugShotTell; yield return null; }
+                hatchL.Glow = hatchR.Glow = bugAim = false;
+                Vector2 d = (Vector2)player.transform.position - HatchAt;
+                SpriteFx.Play("sniper-muzzle", HatchAt, d.x < 0f, 102);
+                Fire(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, BugShotSpeed, DraftSprites.BulletBug);
+                for (float t = 0f; t < 0.2f; t += Dt) { hatchOpen = BugShotCrack * (1f - t / 0.2f); yield return null; }
+                hatchOpen = 0f;
             }
             yield return Wait(BugShotEvery);
         }
-    }
-
-    // a random bug of the first on-screen wall far enough from the player, -1 = none
-    int PickBugShooter()
-    {
-        float px = player.transform.position.x;
-        for (int w = 0; w < Waves; w++)
-            if (waveOn[w] && waveX[w] > 1f && waveX[w] < RoomW - 1f && Mathf.Abs(waveX[w] - px) > BugShotMinDist)
-                return w * BugsPerWave + Random.Range(0, BugsPerWave);
-        return -1;
     }
 
     void UpdateWaves(float dt)
@@ -579,21 +584,59 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             yield return null;
         }
         ShowZone(zx, false);
-        BladeStuck = true;
-        var live = EnemyProjectile.Active; // Fable review: shots frozen by the duel would land with no reaction time when it ends
+        // Mash window (DECISIONS 36): LMB swings on the steel hurt (OnSwing) while the arm jerks harder and harder to pull free
+        var live = EnemyProjectile.Active; // a clean window: no leftover barrage shots while the player stands at the blade
         for (int i = live.Count - 1; i >= 0; i--) { GameObject g = live[i].gameObject; g.SetActive(false); Destroy(g); }
-        blade.Glow = true; // "come here"
-        duelWon = false;
-        foe.transform.position = new Vector3(zx, Floor + 1f, 0f);
-        for (float t = 0f; t < StuckTime; t += Dt)
+        stuckX = zx;
+        mashHits = 0;
+        BladeStuck = true;
+        blade.Glow = true; // "hit me"
+        Vector2 stuck = new Vector2(zx, BladeStuckY);
+        float tugT = 0f, tugAmp = 0f;
+        for (float t = 0f; t < StuckTime && mashHits < MashCap; )
         {
-            if (EliteDuel.TryBegin(foe, n, player)) { while (foe.InDuel) yield return null; break; }
+            float dt = Dt;
+            t += dt;
+            tugT += dt;
+            float f = t / StuckTime;
+            if (tugT >= Mathf.Lerp(TugEvery, TugEveryEnd, f)) // a jerk upward: dust and grit off the bridge
+            {
+                tugT = 0f;
+                tugAmp = 0.15f + 0.35f * f;
+                SpriteFx.Play("land-dust", new Vector2(zx - 0.6f, Floor), true, 101);
+                SpriteFx.Play("land-dust", new Vector2(zx + 0.6f, Floor), false, 101);
+                Sfx.Play(SfxId.Hit, 0.25f + 0.25f * f, 0.5f);
+                Juice.Shake(Juice.ShakeHurtAmp * (0.4f + 0.6f * f), 0.1f, Vector2.up);
+            }
+            float jitter = (Time.frameCount / 2 % 2 == 0 ? 1f : -1f) * (0.03f + 0.09f * f) * (dt > 0f ? 1f : 0f);
+            blade.Pos = stuck + new Vector2(jitter, tugAmp * Mathf.Max(0f, 1f - tugT / 0.15f));
             yield return null;
         }
         BladeStuck = false;
         blade.Glow = false;
-        bladePoseY = 0;
-        yield return Move(blade, BladeRest, duelWon ? 0.25f : 0.7f); // won: recoils fast
+        blade.Pos = stuck;
+        // rips out: big dust burst, then flies back to its socket
+        SpriteFx.Play("kill-burst", new Vector2(zx, Floor + 0.3f), false, 102);
+        SpriteFx.Play("land-dust", new Vector2(zx - 0.9f, Floor), true, 101);
+        SpriteFx.Play("land-dust", new Vector2(zx + 0.9f, Floor), false, 101);
+        Sfx.Play(SfxId.Hit, 1f, 0.5f);
+        Juice.Shake(Juice.ShakeKillAmp, 0.35f, Vector2.up);
+        yield return Move(blade, new Vector2(zx, BladeHigh + 2f), 0.15f);
+        yield return ReattachBlade();
+    }
+
+    // The blade arm goes back onto its socket (DECISIONS 36): slides to the rest spot, overshoots a little, settles, clamps (spark + clank)
+    IEnumerator ReattachBlade()
+    {
+        Vector2 over = BladeRest + (BladeRest - blade.Pos).normalized * ReattachOver;
+        yield return Move(blade, over, ReattachTime);
+        yield return Move(blade, BladeRest, 0.08f);
+        blade.FlashUntil = Time.time + 0.06f;
+        Vector2 joint = BladeRest + BladeWrist;
+        SpriteFx.Play("parry-clash", joint, false, 101);
+        SpriteFx.Play("hit-spark", joint - new Vector2(12f, 16f) / SpriteFx.Ppu, false, 102);
+        Sfx.Play(SfxId.Parry, 0.6f, 0.55f); // low metal clank
+        Juice.Shake(Juice.ShakeHurtAmp, 0.12f, Vector2.up);
     }
 
     // the slam lands where the blade's steel will be (tip on the floor at zx); the red zone is only the wider tell
@@ -617,7 +660,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     {
         int face = player.transform.position.x >= zx ? 1 : -1;
         Vector2 c = new Vector2(player.transform.position.x - face * 0.45f, player.transform.position.y + ParryRing.Offset(h));
-        player.DuelClash(false, h);
+        player.DuelClash(false, h, c);
         PlayerController.ParryCount++; // dice charge, like EliteDuel's clangs (DECISIONS 31)
         ring.Flash();
         SpriteFx.Play("parry_talisman", c, face > 0, 102); // blade on the player's left (face > 0): flipped
@@ -637,30 +680,19 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         }
     }
 
-    // EliteDuel callbacks (BossBladeFoe)
-    public void BladeDuelPose(int frame, bool flash)
-    {
-        bladePoseY = frame == 1 ? 3 : frame == 2 ? -2 : 0;
-        if (flash) blade.FlashUntil = Time.time + 0.06f;
-    }
-
-    public void OnDuelEnded(bool won)
-    {
-        duelWon = won;
-        if (won) { body.FlashUntil = Time.time + 0.12f; Damage(DuelDamage, blade, foe.transform.position); }
-    }
-
     // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
-    // band and slides across; the blade's steel is the hitbox (feedback 11-11). The red band is only the warning ----
+    // band and slides across; the blade's steel is the hitbox (feedback 11-11). The red band is only the warning.
+    // DECISIONS 36: every sweep starts and ends with the whole arm off-screen; at the end it flies back and reattaches ----
     IEnumerator AttackSweep(int n, float tell)
     {
         blade.Glow = true;
-        yield return Move(blade, new Vector2(SweepToX, SweepArmTip), tell); // wind up on the right edge (first sweep goes right -> left)
+        yield return Move(blade, BladeOff, tell); // detaches and leaves the screen up-right (first sweep goes right -> left)
         bool low = Random.value < 0.5f;
         for (int i = 0; i < n; i++)
         {
             if (i > 0) low = Random.value < 0.7f ? !low : low; // mostly alternate (T)
-            float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? SweepToX : SweepFromX, x1 = dir < 0f ? SweepFromX : SweepToX;
+            // x = the tip; the arm trails BladeArmLen behind it, so x0 / x1 keep all of it outside the 0..RoomW view
+            float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? RoomW + 1f : -1f, x1 = dir < 0f ? -BladeArmLen - 1f : RoomW + BladeArmLen + 1f;
             float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * 90f; // rot: the hilt points back (-dir)
             sweepY = (bot + top) * 0.5f;
             sweepFill.transform.localScale = new Vector3(RoomW, top - bot, 1f);
@@ -668,13 +700,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             blade.Glow = true;
             blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
             Sfx.Play(SfxId.EnemyTell, 0.8f, low ? 0.8f : 1.25f); // low tell = low pitch
-            yield return Move(blade, new Vector2(x0, sweepY), SweepWarn); // the tip drops to the band during the warning
+            yield return Move(blade, new Vector2(x0, sweepY), SweepWarn); // off-screen: lines up behind the edge during the warning
             blade.Glow = false;
             sweepFill.enabled = false;
             Sfx.Play(SfxId.Swing, 1f, 0.6f);
             Juice.Shake(Juice.ShakeHurtAmp, 0.15f, new Vector2(dir, 0f));
             bool hit = false;
-            float time = SweepTime[Phase - 1], prevX = x0;
+            float time = SweepTime[Phase - 1] * Mathf.Abs(x1 - x0) / (RoomW - 1f), prevX = x0; // the old speed over the longer run
             for (float t = 0f; t < time; )
             {
                 float dt = Dt;
@@ -691,8 +723,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             sweepLine.enabled = false;
             sweepY = -1f;
         }
-        blade.Sr.transform.rotation = Quaternion.identity;
-        yield return Move(blade, BladeRest, 0.6f);
+        blade.Sr.transform.rotation = Quaternion.identity; // still off-screen: hang it again and bring it back from the right
+        blade.Pos = BladeOff;
+        yield return ReattachBlade();
     }
 
     // ---- C: hatch barrage of small-shot volleys; a parried shot flies back and hurts the hatch ----
@@ -707,7 +740,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         float every = VolleyEvery[Phase - 1];
         for (int i = 0; i < n; i++)
         {
-            if (side && BladeStuck) break; // the overlap barrage stops once the blade sticks (duel next)
+            if (side && BladeStuck) break; // the overlap barrage stops once the blade sticks (mash window next)
             Vector2 d = (Vector2)player.transform.position - HatchAt;
             float aimDeg = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
             Sfx.Play(SfxId.EnemyTell, 0.5f, 1.5f);
@@ -737,12 +770,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         if (side) sideRunning = false;
     }
 
-    void Fire(float deg)
+    // art null = C's small gold shot; A's bug shots pass the bug bullet frames (full size)
+    void Fire(float deg, float speed = ShotSpeed, Sprite[] art = null)
     {
         if (EnemyProjectile.Active.Count >= MaxShots) return;
         float r = deg * Mathf.Deg2Rad;
-        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * ShotSpeed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot);
-        p.transform.localScale = new Vector3(BulletScale, BulletScale, 1f); // small shots (hitbox stays EnemyProjectile's 0.5)
+        EnemyProjectile p = EnemyProjectile.Spawn(HatchAt, new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * speed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot, art);
+        if (art == null) p.transform.localScale = new Vector3(BulletScale, BulletScale, 1f); // small shots (hitbox stays EnemyProjectile's 0.5)
         p.ReflectLife = ShotReflectLife;
         p.ReflectTarget = HatchAt; // reflected = a weakened lob that drops back into the hatch
     }
@@ -773,6 +807,17 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         {
             coreHitAt = Time.time + CoreHitEvery;
             Damage(CoreHitDamage, core, core.Pos + Vector2.ClampMagnitude(centre - core.Pos, CoreHalf));
+            player.DuelHitStop(Juice.HitStopHit);
+            return;
+        }
+        if (BladeStuck) // mash window (DECISIONS 36): a swing touching the stuck steel; CoreHitEvery is the same per-swing safety
+        {
+            Rect s = BladeBox(new Vector2(stuckX, BladeStuckY), 0f);
+            if (Time.time < mashHitAt || mashHits >= MashCap ||
+                Mathf.Abs(centre.x - s.center.x) > (size.x + s.width) * 0.5f || Mathf.Abs(centre.y - s.center.y) > (size.y + s.height) * 0.5f) return;
+            mashHitAt = Time.time + CoreHitEvery;
+            mashHits++;
+            Damage(MashDamage, blade, new Vector2(Mathf.Clamp(centre.x, s.xMin, s.xMax), Mathf.Clamp(centre.y, s.yMin, s.yMax)));
             player.DuelHitStop(Juice.HitStopHit);
             return;
         }
@@ -868,13 +913,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     {
         dead = true;
         StopAllCoroutines();
-        armVulnerable = BladeStuck = aimOn = sideRunning = coreOpen = false;
+        armVulnerable = BladeStuck = aimOn = bugAim = sideRunning = coreOpen = false;
         core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
         ShowZone(0f, false);
         sweepFill.enabled = sweepLine.enabled = false;
         sweepY = -1f;
         blade.Sr.transform.rotation = Quaternion.identity; // killed mid-sweep: hang the arm down again
+        if (blade.Pos.x < 1f || blade.Pos.x > RoomW - 1f) blade.Pos = BladeRest; // killed while the arm was off-screen (sweep / reattach, DECISIONS 36): the ending must drop it in view
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
@@ -892,7 +938,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     IEnumerator Ending()
     {
-        while (GameFlow.InputLocked) yield return null; // the duel finisher hold
+        while (GameFlow.InputLocked) yield return null; // a dice skill still holding the input
         StartCoroutine(Move(bugArm, BugSlump, 0.8f));
         StartCoroutine(Move(blade, new Vector2(blade.Pos.x, BladeStuckY), 0.8f));
         yield return Wait(1.2f);
@@ -961,7 +1007,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         crack1.transform.position = crack2.transform.position = new Vector3(BodyAt.x, Snap(BodyAt.y - sink), 0f);
         hatchInside.transform.position = new Vector3(HatchAt.x, Snap(HatchAt.y - sink), 0f);
         Show(bugArm, tint, now, blink, bob);
-        Show(blade, tint, now, blink, bob + bladePoseY * Px);
+        Show(blade, tint, now, blink, bob);
         float open = Smooth(hatchOpen) * 1.75f;
         hatchL.Pos = HatchAt + new Vector2(-1f - open, 0f);
         hatchR.Pos = HatchAt + new Vector2(1f + open, 0f);
@@ -998,10 +1044,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             sweepLine.color = new Color(1f, 0.23f, 0.23f, !sweepFill.enabled ? 0.35f : blink ? 0.95f : 0.45f); // fill off = slashing
         }
         Vector2 aimTo = player.transform.position;
+        bool aim = (aimOn || bugAim) && !dead;
         for (int i = 0; i < aimDots.Length; i++)
         {
-            aimDots[i].enabled = aimOn && !dead;
-            if (!aimOn) continue;
+            aimDots[i].enabled = aim;
+            if (!aim) continue;
             Vector2 p = Vector2.Lerp(HatchAt, aimTo, (i + 1f) / (aimDots.Length + 1f));
             aimDots[i].transform.position = new Vector3(Snap(p.x), Snap(p.y), 0f);
             aimDots[i].color = new Color(GoldShot.r, GoldShot.g, GoldShot.b, blink ? 0.9f : 0.5f);
