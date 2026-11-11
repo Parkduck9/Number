@@ -26,13 +26,29 @@ public static class DashRules
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
     public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 
-    // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter) ----
+    // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter). Unbound since playtest 11-11 (Shift = issen) ----
     public const float ShiftAssistRange = 4f;   // u (centre to centre, horizontal): enemy this close on either side -> dash behind it and counter
     public const float ShiftAssistDy = 1.5f;    // max height difference (centres) for that search
     public const float ShiftStepDy = 0.5f;      // feet-level gap the dash may climb/drop onto the target's ground; larger stays horizontal
     public const float ShiftCooldown = 3.5f;    // s (was 2.0); bullet-dodge invulnerability is the dash itself, unchanged
 
-    // ---- RMB issen flash strike (DECISIONS 26, PlayerController.TryIssen / FindIssenTarget / PlanIssen) ----
+    // ---- RMB neon grapple rope (DECISIONS 16, restored by playtest 11-11; PlayerController.TryGrapple / UpdateGrapple, GrappleRope visual) ----
+    public const float GrappleRange = 9f;        // u, from the hand toward the mouse; ground, walls, ceilings and one-way platforms anchor, enemies don't
+    public const float GrappleExtendTime = 0.06f; // s: rope flies out (the body hangs still meanwhile), then the pull starts
+    public const float GrappleRetractTime = 0.1f; // s: a missed rope snaps back
+    public const float GrapplePullSpeed = 22f;   // u/s toward the anchor, gravity off
+    public const float GrappleReleaseDist = 0.8f; // release this close (u, body centre to anchor)
+    public const float GrappleMaxPull = 0.6f;    // s: the pull never lasts longer
+    public const float GrapplePopFrac = 0.8f;    // release with the anchor above: vy >= this * jump speed (slingshot onto the ledge)
+    public const float GrappleCarryTime = 0.4f;  // s after release the horizontal momentum eases into normal air control instead of snapping to it
+    public const float GrappleAirAccel = 40f;    // u/s^2: how fast that carried momentum blends to the held direction
+    public const float GrappleMissCooldown = 0.25f; // s before another rope after a miss
+    public const float GrappleCooldown = 0.4f;   // s before another rope after a release (ground ropes refill at once)
+    public const float GrappleLedgeSnap = 2f;    // u: a wall hit within this below a ledge top anchors on the top corner instead
+    // Uses: 1 per airtime (an attached rope spends it), refilled on landing.
+
+    // ---- Issen flash strike (DECISIONS 26; on Shift since playtest 11-11, PlayerController.TryIssen / FindIssenTarget / PlanIssen) ----
+    public const float IssenMaxDy = 1f;          // (T) u, player centre to the target centre: only enemies roughly level with the player ("1자", playtest 11-11)
     public const float IssenCooldown = 5f;       // (T) s after a strike; a press on cooldown does nothing
     public const float IssenRange = 9f;          // (T) u, player centre to the target centre (also the aim line length)
     public const float IssenMouseRadius = 1.5f;  // (T) u: no lunge lock -> the enemy collider nearest the mouse within this

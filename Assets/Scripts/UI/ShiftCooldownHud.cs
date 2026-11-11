@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// Radial cooldowns for the Shift dodge-counter (DashRules.ShiftCooldown, DECISIONS 13) and the RMB issen (DashRules.IssenCooldown, DECISIONS 26). Self-bootstrapping: one HUD per scene that has a
+// Radial cooldown for the Shift issen (DashRules.IssenCooldown, DECISIONS 26; on Shift since playtest 11-11, the RMB grapple has no slot). Self-bootstrapping: one HUD per scene that has a
 // PlayerController (none on Title). Dark overlay shrinks clockwise to empty; when ready a frame pulses once (scale 1 -> 1.6, fade, 0.35 s).
 public class ShiftCooldownHud : MonoBehaviour
 {
@@ -24,7 +24,7 @@ public class ShiftCooldownHud : MonoBehaviour
     }
 
     PlayerController player;
-    Slot shift, issen;
+    Slot issen;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Init()
@@ -54,10 +54,9 @@ public class ShiftCooldownHud : MonoBehaviour
             whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
         }
 
-        // Bottom-left, stacked above the lucky dice HUD (die 16..64 px); the face HUD is not in this corner. RMB issen (DECISIONS 26) to its right.
+        // Bottom-left, stacked above the lucky dice HUD (die 16..64 px); the face HUD is not in this corner.
         var canvas = UiKit.CreateCanvas("ShiftCooldownCanvas", transform, 38);
-        shift = MakeSlot(canvas, new Vector2(16f + Size * 0.5f, 80f + Size * 0.5f), "ctrl_key_shift", "SHIFT", () => player.DashCooldownRemaining, DashRules.ShiftCooldown);
-        issen = MakeSlot(canvas, new Vector2(16f + Size * 1.5f + 8f, 80f + Size * 0.5f), "ctrl_mouse_right", "RMB", () => player.IssenCooldownRemaining, DashRules.IssenCooldown);
+        issen = MakeSlot(canvas, new Vector2(16f + Size * 0.5f, 80f + Size * 0.5f), "ctrl_key_shift", "SHIFT", () => player.IssenCooldownRemaining, DashRules.IssenCooldown);
     }
 
     static Slot MakeSlot(Canvas canvas, Vector2 pos, string iconName, string key, System.Func<float> remaining, float total)
@@ -102,7 +101,6 @@ public class ShiftCooldownHud : MonoBehaviour
     void Update()
     {
         if (player == null) { Destroy(gameObject); return; }
-        Tick(shift);
         Tick(issen);
     }
 

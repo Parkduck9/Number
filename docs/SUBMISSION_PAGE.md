@@ -50,14 +50,14 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 | Action | Key |
 |---|---|
 | Move | A / D |
-| Jump | W / Space |
+| Jump | Space |
 | Aim | Mouse (a crosshair locks onto an enemy in range) |
 | Attack: with a locked enemy within ~5 m, lunge through it and break it; otherwise swing in place | Left mouse |
 | Parry: left click while a bullet is incoming or you are inside an enemy's attack (parry comes first) | Left mouse |
-| Dodge + counter (invulnerable dash behind the nearest enemy within ~4 m, then turn and strike it; with no enemy near, a fixed-distance dash that ends facing back; 3.5 s cooldown) | Shift |
+| Issen (flash strike): flash behind the enemy you aim at, only one roughly level with you; human enemies drop in one hit, androids and strong enemies are only passed; 5 s cooldown | Shift |
 | Interact / talk / hack a broadcast board | E (when near) |
-| Issen (flash strike): flash behind the enemy you aim at; human enemies drop in one hit, androids and strong enemies are only passed; 5 s cooldown | Right mouse |
-| Lucky dice (given by the Luddite helper at the start of stage 2): 3 parries / counters = 1 roll; the face (1-6) is the spell you cast | E |
+| Grapple rope: throw a neon rope at the mouse (walls, ledges, ceilings within ~9 m) and get pulled there; one per jump | Right mouse |
+| Lucky dice (given by the Luddite helper at the start of stage 2): 3 parries = 1 roll; the face (1-6) is the spell you cast | E |
 | Pause / language | Esc or P |
 
 - Gamepad is not supported.

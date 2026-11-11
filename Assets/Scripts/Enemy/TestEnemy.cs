@@ -559,12 +559,12 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
                 PlayerController pc = col.GetComponentInParent<PlayerController>();
                 if (pc != null)
                 {
-                    // Dodged also covers post-hit invulnerability/Dead; only an actual dash counts for the stagger.
-                    dashedThrough = pc.CurrentState == PlayerController.State.Dash;
+                    // Dodged also covers post-hit invulnerability/Dead; only an actual dash (or the Shift issen that replaced it, 11-11) counts for the stagger.
+                    dashedThrough = pc.CurrentState == PlayerController.State.Dash || pc.CurrentState == PlayerController.State.Issen;
                     result = pc.ReceiveEnemyHit(hit);
                 }
             }
-            else if (player.CurrentState == PlayerController.State.Dash)
+            else if (player.CurrentState == PlayerController.State.Dash || player.CurrentState == PlayerController.State.Issen)
             {
                 // Dash-behind (DECISIONS 11): the dash began inside this hitbox and carried the player out before the strike landed.
                 // Still a dash-through (last-strike stagger, Android 7th-strike overload); the strike itself is a whiff (Dodged).

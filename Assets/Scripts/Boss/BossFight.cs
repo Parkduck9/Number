@@ -48,9 +48,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     static readonly float[] SlamAim = { 0.85f, 0.8f, 0.75f };    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
     // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime; LOW = jump over, HIGH = stay down / dash
     const float SweepWarn = 0.5f, // was 0.6 (DECISIONS 33)
- SweepArmTip = 7f, SweepHeadHalf = 0.75f, SweepTrailW = 5f, SweepFromX = 0.5f, SweepToX = RoomW - 0.5f; // arm half on screen at the ends
+ SweepArmTip = 7f, SweepFromX = 0.5f, SweepToX = RoomW - 0.5f; // arm half on screen at the ends
     static readonly float[] SweepTime = { 0.7f, 0.6f, 0.5f };   // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
-    static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8)
+    static readonly float[] SweepBand = { 2f, 3.1f, 4.2f, 5.4f }; // low bottom / top, high bottom / top (standing top = 3.8); the blade lies along the band centre
+    // Blade hitbox (feedback 11-11): the steel of boss_blade_arm(_lit), 44 x 202 px up from the pivot (= the tip). Slams and sweeps hurt only here.
+    const float BladeLen = 6.3125f, BladeHalfW = 0.6875f;
+    // A: while walls fly, one bug at a time swells red for BugShotTell, then spits a bug bullet at the player (parryable). Skipped during
+    // a hatch barrage (aimOn) and from walls closer than BugShotMinDist (reaction time). Feedback 11-11: "too easy".
+    const float BugShotEvery = 1f, BugShotTell = 0.35f, BugShotSpeed = 8f, BugShotMinDist = 4f;
     // C: volleys of small shots; fan aimed at the player, phase 3 alternates with a spiral arc over the lower half
     const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.3125f, FanSpread = 50f, SpiralStep = 0.045f;
     const int FanShots = 5, SideFanShots = 3, SpiralShots = 9, MaxShots = 40; // MaxShots: live cap (WebGL)
@@ -114,7 +119,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     readonly SpriteRenderer[] bugs = new SpriteRenderer[Waves * BugsPerWave];
     readonly Vector2[] bugOff = new Vector2[Waves * BugsPerWave];
 
-    SpriteRenderer zoneFloor, zoneLane, white, sweepFill, sweepLine, sweepHead, sweepTrail;
+    SpriteRenderer zoneFloor, zoneLane, white, sweepFill, sweepLine;
     float sweepY = -1f; // band centre while the B' warning / slash shows, < 0 = off
     readonly SpriteRenderer[] zoneEdge = new SpriteRenderer[2];           // FX: blinking side lines of the danger lane
     static readonly int FlashId = Shader.PropertyToID("_Flash");
@@ -176,9 +181,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         }
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
         sweepLine = Make("SweepLine", ParryFx.Square, "World", 6, Vector2.zero);
-        sweepTrail = Make("SweepTrail", ParryFx.Square, "FX", 42, Vector2.zero);
-        sweepHead = Make("SweepHead", ParryFx.Square, "FX", 43, Vector2.zero);
-        sweepFill.enabled = sweepLine.enabled = sweepTrail.enabled = sweepHead.enabled = false;
+        sweepFill.enabled = sweepLine.enabled = false;
         for (int i = 0; i < aimDots.Length; i++)
         {
             aimDots[i] = Make("AimDot", ParryFx.Square, "FX", 30, Vector2.zero);
@@ -399,6 +402,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         for (int i = 0; i < n; i++)
         {
             LaunchWave(GapLows[Random.Range(0, GapLows.Length)]);
+            if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
             if (i < n - 1) yield return Wait(WaveEvery);
         }
         yield return Wait(0.6f);
@@ -429,6 +433,44 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         }
         Sfx.Play(SfxId.EnemyTell, 0.6f);
         SpriteFx.Play("enemy-warp-in", bugArm.Pos + new Vector2(0f, 1f), false, 101); // the swarm bursts out of the palm
+    }
+
+    IEnumerator BugShots()
+    {
+        yield return Wait(BugShotEvery * 0.5f);
+        while (System.Array.IndexOf(waveOn, true) >= 0)
+        {
+            int b = aimOn ? -1 : PickBugShooter();
+            if (b >= 0)
+            {
+                SpriteRenderer bug = bugs[b];
+                bug.color = Red; // tell: this bug swells red
+                bug.transform.localScale = new Vector3(4f, 4f, 1f);
+                Sfx.Play(SfxId.EnemyTell, 0.4f, 1.6f);
+                yield return Wait(BugShotTell);
+                bug.color = Color.white;
+                bug.transform.localScale = new Vector3(2f, 2f, 1f);
+                // the wall moved ~3.7 u during the tell: no point-blank shot
+                if (bug.enabled && EnemyProjectile.Active.Count < MaxShots && Mathf.Abs(bug.transform.position.x - player.transform.position.x) > 2f)
+                {
+                    Vector2 from = bug.transform.position;
+                    from.y = Mathf.Max(from.y, Floor + 0.5f); // a bug on the floor line would hit the ground at once
+                    Vector2 d = (Vector2)player.transform.position - from;
+                    EnemyProjectile.Spawn(from, d.normalized * BugShotSpeed, playerMask, groundMask, new HitInfo { Damage = 1 }, GoldShot, DraftSprites.BulletBug);
+                }
+            }
+            yield return Wait(BugShotEvery);
+        }
+    }
+
+    // a random bug of the first on-screen wall far enough from the player, -1 = none
+    int PickBugShooter()
+    {
+        float px = player.transform.position.x;
+        for (int w = 0; w < Waves; w++)
+            if (waveOn[w] && waveX[w] > 1f && waveX[w] < RoomW - 1f && Mathf.Abs(waveX[w] - px) > BugShotMinDist)
+                return w * BugsPerWave + Random.Range(0, BugsPerWave);
+        return -1;
     }
 
     void UpdateWaves(float dt)
@@ -554,10 +596,21 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         yield return Move(blade, BladeRest, duelWon ? 0.25f : 0.7f); // won: recoils fast
     }
 
-    bool InZone(float zx)
+    // the slam lands where the blade's steel will be (tip on the floor at zx); the red zone is only the wider tell
+    bool InZone(float zx) => PlayerIn(BladeBox(new Vector2(zx, Floor), 0f));
+
+    // World box of the blade's steel. rotZ 0 = hanging down (slams), +-90 = lying flat, hilt trailing (sweeps). Only right angles: exact.
+    static Rect BladeBox(Vector2 tip, float rotZ)
+    {
+        Vector2 up = Quaternion.Euler(0f, 0f, rotZ) * Vector2.up; // tip -> hilt
+        Vector2 far = tip + up * BladeLen, side = new Vector2(Mathf.Abs(up.y), Mathf.Abs(up.x)) * BladeHalfW;
+        return Rect.MinMaxRect(Mathf.Min(tip.x, far.x) - side.x, Mathf.Min(tip.y, far.y) - side.y, Mathf.Max(tip.x, far.x) + side.x, Mathf.Max(tip.y, far.y) + side.y);
+    }
+
+    bool PlayerIn(Rect r) // player centre = feet + 1, box 0.9 x 2 (hit test a little smaller, like the bug walls)
     {
         Vector2 pp = player.transform.position;
-        return Mathf.Abs(pp.x - zx) < ZoneHalf + 0.35f && pp.y - 1f < BladeHigh;
+        return pp.x + 0.35f > r.xMin && pp.x - 0.35f < r.xMax && pp.y + 0.8f > r.yMin && pp.y - 0.85f < r.yMax;
     }
 
     void Clang(float zx, ParryHeight h)
@@ -597,7 +650,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         if (won) { body.FlashUntil = Time.time + 0.12f; Damage(DuelDamage, blade, foe.transform.position); }
     }
 
-    // ---- B': blade sweeps (DECISIONS 29). The arm slides along above the room; a code-drawn slash band at LOW / HIGH is the hitbox ----
+    // ---- B': blade sweeps (DECISIONS 29). The arm lies flat (rotated 90, tip leading, hilt trailing) with the blade along the LOW / HIGH
+    // band and slides across; the blade's steel is the hitbox (feedback 11-11). The red band is only the warning ----
     IEnumerator AttackSweep(int n, float tell)
     {
         blade.Glow = true;
@@ -607,18 +661,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         {
             if (i > 0) low = Random.value < 0.7f ? !low : low; // mostly alternate (T)
             float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? SweepToX : SweepFromX, x1 = dir < 0f ? SweepFromX : SweepToX;
-            float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3];
+            float bot = SweepBand[low ? 0 : 2], top = SweepBand[low ? 1 : 3], rot = dir * 90f; // rot: the hilt points back (-dir)
             sweepY = (bot + top) * 0.5f;
             sweepFill.transform.localScale = new Vector3(RoomW, top - bot, 1f);
-            sweepHead.transform.localScale = new Vector3(SweepHeadHalf * 2f, top - bot, 1f);
-            sweepTrail.transform.localScale = new Vector3(SweepTrailW, (top - bot) * 0.6f, 1f);
             sweepFill.enabled = sweepLine.enabled = true;
             blade.Glow = true;
+            blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
             Sfx.Play(SfxId.EnemyTell, 0.8f, low ? 0.8f : 1.25f); // low tell = low pitch
-            yield return Wait(SweepWarn);
+            yield return Move(blade, new Vector2(x0, sweepY), SweepWarn); // the tip drops to the band during the warning
             blade.Glow = false;
             sweepFill.enabled = false;
-            sweepHead.enabled = sweepTrail.enabled = true;
             Sfx.Play(SfxId.Swing, 1f, 0.6f);
             Juice.Shake(Juice.ShakeHurtAmp, 0.15f, new Vector2(dir, 0f));
             bool hit = false;
@@ -628,20 +680,18 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
                 float dt = Dt;
                 t += dt;
                 float x = Mathf.Lerp(x0, x1, t / time);
-                blade.Pos = new Vector2(x, SweepArmTip);
-                sweepHead.transform.position = new Vector3(Snap(x), Snap(sweepY), 0f);
-                sweepTrail.transform.position = new Vector3(Snap(x - dir * (SweepHeadHalf + SweepTrailW * 0.5f)), Snap(sweepY), 0f);
-                Vector2 pp = player.transform.position; // feet / top like the bug walls
-                if (!hit && dt > 0f && pp.x > Mathf.Min(prevX, x) - SweepHeadHalf - 0.35f && pp.x < Mathf.Max(prevX, x) + SweepHeadHalf + 0.35f
-                    && pp.y - 0.85f < top && pp.y + 0.8f > bot)
-                    hit = player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, pp.y), Unparryable = true }) == HitResult.Hit; // one hit per sweep; dash i-frames (Dodged) pass through
+                blade.Pos = new Vector2(x, sweepY);
+                Rect a = BladeBox(new Vector2(prevX, sweepY), rot), b = BladeBox(blade.Pos, rot); // swept: a long frame must not skip the player
+                if (!hit && dt > 0f && PlayerIn(Rect.MinMaxRect(Mathf.Min(a.xMin, b.xMin), b.yMin, Mathf.Max(a.xMax, b.xMax), b.yMax)))
+                    hit = player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x - dir, player.transform.position.y), Unparryable = true }) == HitResult.Hit; // one hit per sweep; dash i-frames (Dodged) pass through
                 prevX = x;
                 yield return null;
             }
-            blade.Pos = new Vector2(x1, SweepArmTip);
-            sweepHead.enabled = sweepTrail.enabled = sweepLine.enabled = false;
+            blade.Pos = new Vector2(x1, sweepY);
+            sweepLine.enabled = false;
             sweepY = -1f;
         }
+        blade.Sr.transform.rotation = Quaternion.identity;
         yield return Move(blade, BladeRest, 0.6f);
     }
 
@@ -822,8 +872,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
         ShowZone(0f, false);
-        sweepFill.enabled = sweepLine.enabled = sweepHead.enabled = sweepTrail.enabled = false;
+        sweepFill.enabled = sweepLine.enabled = false;
         sweepY = -1f;
+        blade.Sr.transform.rotation = Quaternion.identity; // killed mid-sweep: hang the arm down again
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
@@ -944,9 +995,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             sweepFill.transform.position = sweepLine.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY), 0f);
             sweepLine.transform.localScale = new Vector3(RoomW, 2f * Px, 1f);
             sweepFill.color = new Color(1f, 0.23f, 0.23f, blink ? 0.22f : 0.1f);
-            sweepLine.color = new Color(1f, 0.23f, 0.23f, sweepHead.enabled ? 0.35f : blink ? 0.95f : 0.45f);
-            sweepHead.color = blink ? Color.white : new Color(1f, 0.85f, 0.85f);
-            sweepTrail.color = new Color(1f, 0.23f, 0.23f, 0.55f);
+            sweepLine.color = new Color(1f, 0.23f, 0.23f, !sweepFill.enabled ? 0.35f : blink ? 0.95f : 0.45f); // fill off = slashing
         }
         Vector2 aimTo = player.transform.position;
         for (int i = 0; i < aimDots.Length; i++)

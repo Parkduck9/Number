@@ -121,8 +121,8 @@ public static class UiKit
     {
         var fill = Frame("Controls", parent, anchor, pos, new Vector2(600f, 104f), out _);
         Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
-            "A/D  Move      W / Space  Jump\nShift  Dodge + counter      E (when near)  Interact / hack\nLeft click  Attack / Parry      Right click  Issen (flash strike)\nE  Lucky dice (after unlock)      Esc / P  Pause",
-            "A/D  이동      W / Space  점프\nShift  회피 + 반격      E(가까이서)  상호작용 / 해킹\n좌클릭  공격 / 패링      우클릭  일섬\nE  점괘 주사위(해금 후)      Esc / P  일시정지",
+            "A/D  Move      Space  Jump\nShift  Issen (level enemy)      E (when near)  Interact / hack\nLeft click  Attack / Parry      Right click  Grapple rope\nE  Lucky dice (after unlock)      Esc / P  Pause",
+            "A/D  이동      Space  점프\nShift  일섬(같은 높이 적)      E(가까이서)  상호작용 / 해킹\n좌클릭  공격 / 패링      우클릭  갈고리 줄\nE  점괘 주사위(해금 후)      Esc / P  일시정지",
             18, UiTheme.Current.dim);
         return fill.parent.gameObject;
     }
