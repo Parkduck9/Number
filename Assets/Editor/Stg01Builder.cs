@@ -25,15 +25,15 @@ public static class Stg01Builder
     // SEG-A background: layered, animated street backdrop (StreetBackdropKit, DECISIONS 16-2). SEG-B: no background yet, the camera colour shows.
     const float GroundA = 2.25f; // GROUND-A top: where the backdrop's street surface sits
 
+    // Extra street props for climb 1 (DECISIONS 41): crate lid 3.25 at x 38.4~39.0 -> stall roof 4.75 at x 41.0~42.8 -> SH-A1-1 6.75 (x 42~46).
+    static readonly (string file, float x)[] ClimbSteps = { ("crates", 38.5f), ("stall_cyan", 42f) };
+
     static readonly Box[] Boxes = new[]
     {
         // ---- SEG-A street (x 0~34): tutorial (unchanged roles)
         new Box("GROUND-A", A, Kind.Solid, 0f, W, 0f, 2.25f),      // matches the street in the art (invisible)
-        // Low solid step for the first ranged 1: 0.6u above the floor so its horizontal shot still hits a standing player.
-        new Box("LEDGE-A1", A, Kind.Solid, 15f, 21f, 2.25f, 2.85f),
-        // ---- climb 1 (x 34~50): two roofs, then a zigzag shaft (5 ledges, +1.5 each) up to the tower roof 14.25
-        Building("BLD-A1", A, 34f, 38f, 3.75f),
-        Building("BLD-A2", A, 38f, 46f, 5.25f),
+        // Low tier = the drawn stall roofs (4.75) / crate lids (3.25), one-way floors from StreetBackdropKit (DECISIONS 41; LEDGE-A1, BLD-A1/A2 removed).
+        // ---- climb 1 (x 34~50): crates 38.5 (3.25) -> stall 42 (4.75) -> zigzag shaft (5 ledges, +1.5 each, first +2.0) up to the tower roof 14.25
         Building("TOWER-A1", A, 46f, 50f, 14.25f),
         // ---- high roof run (x 50~66, y 14.25): solid beam (no falling through), raised ridge for attacks from below
         Beam("ROOF-A1", A, 50f, 66f, 14.25f),
@@ -82,11 +82,11 @@ public static class Stg01Builder
     // the player walks on at the same height (shot is horizontal at feet + 1.3). Numbers capped at 4 (5+ only from late STG-02).
     static readonly Foe[] Foes =
     {
-        new Foe("E-A1",  A, 18f, 2.85f, 1, 0f,    10f, ranged: true),       // FIRST enemy on LEDGE-A1 (wakes at player x 8): parry the shot or dash past
+        new Foe("E-A1",  A, 18f, 2.25f, 1, 0f,    10f, ranged: true),       // FIRST enemy, on the street (LEDGE-A1 removed; wakes at player x 8): parry the shot or dash past
         new Foe("E-A2",  A, 27f, 2.25f, 2, 0f,    6f),                      // tutorial melee 1:1, fixed 2
         new Foe("E-A3",  A, 30f, 2.25f, 3, 0f,    9f),                      // fixed 3, wakes with E-A2 -> 2+3 pair
         new Foe("E-A4",  A, 33f, 2.25f, 1, 0f,    8f, ranged: true),        // ranged cover at the foot of the climb
-        new Foe("E-A5",  A, 44f, 9.75f, 0, 0.15f, 6f, cap: 4),              // shaft ledge (right): wakes early and may drop onto BLD-A2 (fight it there or from below)
+        new Foe("E-A5",  A, 44f, 9.75f, 0, 0.15f, 6f, cap: 4),              // shaft ledge (right): wakes early and may drop onto the stall / street (fight it there or from below)
         new Foe("E-A6",  A, 40f, 11.25f, 0, 0.15f, 6f, cap: 4),             // shaft ledge (left), one step higher
         new Foe("E-A7",  A, 55f, 14.25f, 0, 0.15f, 8f, cap: 4),             // roof run group: ground + ridge + ground + ranged
         new Foe("E-A8",  A, 57f, 15.75f, 0, 0.15f, 8f, cap: 4),
@@ -133,7 +133,7 @@ public static class Stg01Builder
             roots[i] = new GameObject(i == A ? "SEG-A" : "SEG-B").transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
         }
-        StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f); // camera x range of SEG-A = [15, W - 15]
+        StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f, ClimbSteps); // camera x range of SEG-A = [15, W - 15]
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);

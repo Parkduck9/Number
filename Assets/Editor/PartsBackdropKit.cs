@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -16,12 +17,37 @@ public static class PartsBackdropKit
     const string Parts = Stg01LayerImporter.PartsDir;
     const float Ppu = 32f;
     // camera-follow fractions (0 = world, 1 = screen): x like STG-01; y high enough that the layers stay in view while the camera climbs a tall segment
+    // The building row is world-fixed (DECISIONS 41: its roofs are floors), so only the rail keeps the old 0.3 / 0.5 building parallax.
     const float SkyX = 0.9f, SkylineX = 0.6f, WallX = 0.45f, BldX = 0.3f;
     const float FySky = 0.8f, FySkyline = 0.75f, FyWall = 0.6f, FyBld = 0.5f;
     const float DimSky = 0.85f, DimSkyline = 0.7f, DimWall = 0.65f, DimBld = 0.8f, DimProp = 0.9f;
-    // draw order inside the Background sorting layer (every "Background*" object goes there, AssignSortingLayers)
+    // draw order inside the Background sorting layer (every "Background*" object goes there, AssignSortingLayers).
+    // The rail (parallax, farther) draws behind the world-fixed fence / buildings: pillars ORail, track ORail + 2.
     const int OSkyFill = -130, OSky = -129, OFarFx = -128, OSkylineFill = -127, OSkyline = -126, OTwinkle = -125, OCeiling = -124, OFar = -123,
-        OWallFill = -122, OWall = -120, OBldFill = -118, OFence = -117, OBld = -115, ORail = -112, OProp = -108;
+        OWallFill = -122, OWall = -120, OBldFill = -118, ORail = -118, OFence = -117, OBld = -115, OProp = -108;
+
+    // Flat roof / lid spans the player stands on (DECISIONS 41), measured from the PNG alpha (top opaque px per column, flat runs only):
+    // (first px from the left, last px, height px above the part's bottom). Sloped roofs: only the flat ridge. wall_tile (fence) is handled
+    // by Buildings (floor only between buildings).
+    static readonly Dictionary<string, (int a, int b, int h)[]> Tops = new Dictionary<string, (int, int, int)[]>
+    {
+        { "buildings/shop_2f", new[] { (6, 29, 203), (70, 195, 232) } },     // left eave, roof
+        { "buildings/house_ac", new[] { (66, 139, 168) } },
+        { "buildings/ruin_hanok", new[] { (0, 21, 105), (66, 119, 128) } },  // left eave, roof (126..130 px, sagging)
+        { "buildings/factory_hall", new[] { (76, 135, 196) } },
+        { "buildings/watchtower", new[] { (16, 45, 170), (70, 97, 170) } },
+        { "props/vending_dancheong", new[] { (6, 61, 84) } },
+        { "props/crates_neon", new[] { (13, 53, 61) } },                     // lid only (the low lip at +1.06 ate ground-level enemy shots; Fable review)
+        { "props/server_cabinet", new[] { (10, 74, 76) } },
+        { "props/scanner_gate", new[] { (5, 65, 85) } },
+        { "props/robot_arm", new[] { (16, 37, 88), (46, 69, 82) } },
+    };
+    // Building overlays (looping frames at the same spot).
+    static readonly Dictionary<string, (string sheet, float fps)> BuildingFx = new Dictionary<string, (string, float)>
+    {
+        { "watchtower", ("buildings/watchtower_lamp_blink_2f", 2f) },
+    };
+    static bool walk; // Rooftops / Factory: world-fixed parts get one-way colliders on their Tops
     const float CompDrop = 6f / Ppu;   // manifest composition: the interior plate ends 6 px below the ground line
     const float FarRise = 142f / Ppu;  // ... and the 128 px far plate starts 142 px above the interior plate's bottom (they overlap)
 
@@ -39,14 +65,15 @@ public static class PartsBackdropKit
     // ------------------------------------------------------------------ stages (segment-local coordinates, Y0 = gameplay ground)
 
     // STG-02 SEG-A rooftops / SEG-B elevated rail: night city, buildings + vending / crates / lanterns on the street, rail on SEG-B.
-    public static void Rooftops(Transform root, float width, float top, float camMin, float camMax, bool rail)
+    // row = the building row, (part in buildings/, segment-local centre x), world-fixed with floors on the roofs (DECISIONS 41).
+    public static void Rooftops(Transform root, float width, float top, float camMin, float camMax, bool rail, (string part, float x)[] row)
     {
         Begin(root, width, top, 1f, camMin, camMax);
+        walk = true;
         float ySky = Y0 + 4f;
         Sky("far/rooftops_sky", ySky);
         Skyline("far/rooftops_skyline", null, 0f, "far/rooftop_window_twinkle_4f", 1f, ySky);
-        var shop = new Part("buildings/shop_2f", 48); var house = new Part("buildings/house_ac", 32); var ruin = new Part("buildings/ruin_hanok", 56);
-        Buildings(Y0, "buildings/wall_tile", rail ? new[] { ruin, house, ruin, shop } : new[] { shop, house, ruin, house });
+        Buildings(Y0, "buildings/wall_tile", row);
         if (rail) Rail();
         var p = Props();
         float lamp = Y0 + 4.5f; // hanging lanterns (top pivot)
@@ -54,8 +81,9 @@ public static class PartsBackdropKit
         {
             Put(p, "props/vending_dancheong", null, 0f, 4.5f, Y0, OProp);
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 12.5f, lamp, OProp);
-            Put(p, "props/crates_neon", null, 0f, 22f, Y0, OProp);
+            Put(p, "props/crates_neon", null, 0f, 16.5f, Y0, OProp); // steps onto the fence top (was x 22)
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 28.5f, lamp, OProp);
+            Put(p, "props/crates_neon", null, 0f, 29f, Y0, OProp);   // climb 1: crates -> fence -> ruin roof -> shaft
             // segment end (x 30..76) was bare
             Put(p, "props/vending_dancheong", null, 0f, 36f, Y0, OProp);
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 44.5f, lamp, OProp);
@@ -66,6 +94,7 @@ public static class PartsBackdropKit
         }
         else
         {
+            Put(p, "props/crates_neon", null, 0f, 7.5f, Y0, OProp); // steps onto the fence top (replaces STEP-B1/B2)
             Put(p, "props/vending_dancheong", null, 0f, 11.5f, Y0, OProp);
             Put(p, "props/crates_neon", null, 0f, 23f, Y0, OProp);
             Put(p, null, "props/lantern_hanji_sway_4f", 3f, 33f, lamp, OProp);
@@ -93,23 +122,25 @@ public static class PartsBackdropKit
     }
 
     // STG-04 SEG-A production line / SEG-B inspection hall: smoking stacks beyond the factory wall, halls and watchtowers, machines on the floor.
-    public static void Factory(Transform root, float width, float top, float camMin, float camMax, bool hall)
+    // row = the building row, (part in buildings/, segment-local centre x), world-fixed with floors on the roofs (DECISIONS 41).
+    public static void Factory(Transform root, float width, float top, float camMin, float camMax, bool hall, (string part, float x)[] row)
     {
         Begin(root, width, top, 1f, camMin, camMax);
+        walk = true;
         float ySky = Y0 + 5f;
         Sky("far/factory_sky", ySky);
         Skyline("far/factory_skyline", "far/smoke_stack_6f", 3f, null, 0f, ySky);
         Wall("interiors/factory_wall", Y0 - CompDrop, WallX, FyWall, DimWall, OWallFill, OWall, true,
             ("interiors/red_lamp_blink_2f", 1f), ("interiors/vat_bubbles_6f", 4f));
-        var factory = new Part("buildings/factory_hall", 64); var tower = new Part("buildings/watchtower", 96, "buildings/watchtower_lamp_blink_2f", 2f);
-        Buildings(Y0, "buildings/wall_tile", hall ? new[] { tower, factory, tower } : new[] { factory, tower, factory });
+        Buildings(Y0, "buildings/wall_tile", row);
         if (hall) Rail();
         var p = Props();
         var belt = new[] { new Part("props/conveyor", 0, "props/conveyor_scroll_4f", 5f) };
         float cable = Y0 + 6f; // hangs from the top of the wall
         if (!hall)
         {
-            Row(p, belt, Y0, 3f, 10f, OProp);
+            Row(p, belt, Y0, 3f, 6.5f, OProp);                           // ends before the crates (was 3..10)
+            Put(p, "props/crates_neon", null, 0f, 8f, Y0, OProp);        // steps onto the fence top (replaces CRATE-A1)
             Put(p, "props/robot_arm", null, 0f, 14f, Y0, OProp);
             Put(p, "props/cable_bundle", null, 0f, 20f, cable, OProp);
             Put(p, "props/crates_neon", null, 0f, 23.5f, Y0, OProp);
@@ -127,9 +158,9 @@ public static class PartsBackdropKit
         {
             Put(p, "props/server_cabinet", "props/server_cabinet_lights_4f", 3f, 6f, Y0, OProp);
             Put(p, "props/robot_arm", null, 0f, 12f, Y0, OProp);
-            Row(p, belt, Y0, 15f, 22f, OProp);
+            Row(p, belt, Y0, 20f, 23.5f, OProp);                         // after the crates (was 15..22)
+            Put(p, "props/crates_neon", null, 0f, 18.5f, Y0, OProp);     // steps onto the fence top (replaces CRATE-B1; was x 33)
             Put(p, "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 27f, Y0, OProp);
-            Put(p, "props/crates_neon", null, 0f, 33f, Y0, OProp);
             Put(p, "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 40f, Y0, OProp);
             Put(p, "props/robot_arm", null, 0f, 44f, Y0, OProp);
             // segment end (x 46..76) was bare
@@ -197,7 +228,7 @@ public static class PartsBackdropKit
 
     static void Begin(Transform root, float width, float top, float groundY, float camMinX, float camMaxX)
     {
-        R = root; Wd = width; Top = top; Y0 = groundY; CamMin = camMinX; CamMax = camMaxX;
+        R = root; Wd = width; Top = top; Y0 = groundY; CamMin = camMinX; CamMax = camMaxX; walk = false;
         Cx0 = camMinX; // the centre tile sits under the camera when it starts
         origin = new Vector2(root.position.x + camMinX, SegHeight * 0.5f);
         StreetBackdropKit.camMax = new Vector2(root.position.x + camMaxX, Mathf.Max(top - SegHeight * 0.5f, SegHeight * 0.5f));
@@ -225,9 +256,9 @@ public static class PartsBackdropKit
         return g;
     }
 
-    static Transform Props() // gameplay plane: world-fixed, no parallax
+    static Transform Props(string name = "Background (props)") // gameplay plane: world-fixed, no parallax
     {
-        var go = new GameObject("Background (props)").transform;
+        var go = new GameObject(name).transform;
         go.SetParent(R, false);
         dims.Add((go, DimProp));
         return go;
@@ -307,15 +338,33 @@ public static class PartsBackdropKit
         AddSquare(g, "Background (ceiling fill)", new Vector2(Wd * 0.5f, (yFrom + Top + 30f) * 0.5f), new Vector2(Wd + 4f, Top + 30f - yFrom), Edge(file, true), OCeiling);
     }
 
-    // Low fence strip (wall_tile, repeats edge to edge) with the building row in front, ground-coloured fill under both.
-    static Transform Buildings(float y, string fence, params Part[] row)
+    // World-fixed building row (DECISIONS 41): low fence strip (wall_tile, repeats edge to edge) with the buildings placed by hand in front
+    // (part in buildings/, centre x), lit like the props, one-way floors on their roofs (Tops) and on the fence top only in the gaps between
+    // buildings (the fence is drawn behind them: a floor there would look like standing inside a wall). Ground-coloured fill under both.
+    static void Buildings(float y, string fence, (string part, float x)[] row)
     {
-        FillBelow("Background (ground fill)", FyBld, DimBld, y, Edge(fence, false), OBldFill);
-        var g = Layer("Background (buildings)", BldX, FyBld, DimBld);
-        Range(BldX, CamMin, CamMax, out float min, out float max);
-        Row(g, new[] { new Part(fence, 0) }, y, min, max, OFence);
-        Row(g, row, y, min, max, OBld);
-        return g;
+        FillBelow("Background (ground fill)", 0f, DimProp, y, Edge(fence, false), OBldFill);
+        var g = Props("Background (buildings)");
+        Row(g, new[] { new Part(fence, 0) }, y, -1f, Wd + 1f, OFence);
+        var spans = new List<(float l, float r)>();
+        foreach (var (part, x) in row)
+        {
+            string file = "buildings/" + part;
+            var s = Load(file);
+            if (s == null) { Missing(file); continue; }
+            BuildingFx.TryGetValue(part, out var fx);
+            Put(g, file, fx.sheet, fx.fps, x, y, OBld);
+            float hw = s.rect.width * 0.5f / Ppu, snap = (((int)s.rect.width & 1) == 1) ? 0.5f / Ppu : 0f;
+            spans.Add((x + snap - hw, x + snap + hw));
+        }
+        var f = Load(fence);
+        if (f == null) return;
+        float from = 0f, fenceTop = y + f.rect.height / Ppu;
+        foreach (var (l, r) in spans.OrderBy(sp => sp.l).Append((Wd, Wd)))
+        {
+            if (l - from >= 0.5f) BuildCollider(R, Ledge($"TOP fence x{from:0.##}-{l:0.##}", 0, from, l, fenceTop), false);
+            from = Mathf.Max(from, r);
+        }
     }
 
     // Elevated rail: pillars every second pillar width, the track strip on top of them (the pillar's top sits under the track).
@@ -346,6 +395,7 @@ public static class PartsBackdropKit
             var s = Load(file);
             if (s == null) { Missing(file); return; }
             Sprite1(parent, "Background (" + Path.GetFileName(file) + ")", s, new Vector2(x, y), false, order);
+            if (walk && parent.GetComponent<Parallax>() == null && Tops.TryGetValue(file, out var spans)) TopColliders(R, file, s, x, y, spans);
         }
         if (sheet == null) return;
         var frames = Frames(sheet, Parts);

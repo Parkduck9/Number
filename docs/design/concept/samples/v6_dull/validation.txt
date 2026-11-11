@@ -1,0 +1,15 @@
+AI generated (Codex / image_gen)
+Selected A. Alternatives: alt_a = B; alt_b = C. Native canvas 80x80. Integer-factor majority sampling, material-aware 24-colour quantization, alpha threshold 128, isolated-pixel removal. No hand-plotted artwork.
+Playback 0,1,2,1. Generated upper body, hands, hem and red sash translated 0,-1,+1px. Feet and uncovered trouser source pixels fixed; sash occlusion changes where it moves. Head follows upper body.
+hero_idle_0.png: colours=18; nonbinary_alpha=0; orphan_8connected=0; height=62px
+hero_idle_1.png: colours=18; nonbinary_alpha=0; orphan_8connected=0; height=63px
+hero_idle_2.png: colours=18; nonbinary_alpha=0; orphan_8connected=0; height=61px
+hero_idle_alt_a.png: colours=18; nonbinary_alpha=0; orphan_8connected=0; height=60px
+hero_idle_alt_b.png: colours=20; nonbinary_alpha=0; orphan_8connected=0; height=62px
+Frame 1 lower legs/feet y>=56 changed pixels=0
+Frame 2 lower legs/feet y>=56 changed pixels=0
+Frame 1 stationary trousers outside moving garment coverage changed pixels=0
+Frame 2 stationary trousers outside moving garment coverage changed pixels=0
+Preview order: frame 0, frame 1, frame 2, actual reference crop. x4=1280x320; x8=2560x640; scale strip=480x270 (1x left, 2x right). Navy #0b1030. Reference cell retains source colours and is not palette limited.
+Orphan definition: opaque pixel with no opaque 8-connected neighbor. Big generated PNGs are source artwork, not native validated sprites.
+Weaknesses: reference detail compressed at 64px; tiny cracked-lens mark is not clearly legible at 1x. Shading/outline is approximate, not a mathematically enforced 3-shade ramp per material. Breathing uses rigid pixel translations with attachment seam reuse, not articulated animation.

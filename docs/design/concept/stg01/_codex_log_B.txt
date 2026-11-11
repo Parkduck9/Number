@@ -1,0 +1,8 @@
+﻿저장했습니다: [산출물 폴더](D:/Git/Unity/UnityGameJam/docs/design/concept/stg01).
+
+- 고해상도 3240×1080, 네이티브·마스크·가이드 1620×540
+- 48색, 마스크 알파 0/255, 발판선 8개 좌표 검증 통과
+- 재사용 스크립트: [pixelize_bg.cjs](D:/Git/Unity/UnityGameJam/tools/art/pixelize_bg.cjs)
+- 실제 측정값·근사 부분·재실행 방법: [B_clean_notes.md](D:/Git/Unity/UnityGameJam/docs/design/concept/stg01/B_clean_notes.md)
+
+ImageGen 원본은 2048×683이라 확대했습니다. 남은 접합 흔적과 배경 지붕 연장도 노트에 명시했습니다. 커밋하지 않았습니다.

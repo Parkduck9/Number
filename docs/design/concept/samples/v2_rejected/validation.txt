@@ -1,0 +1,10 @@
+Ahn Yudo | 32x40 | loop 0,1,2,1 | upper-left light
+Palette: 15 opaque colors + transparent
+idle_0: rows=40 widths=32 palette=PASS colors=15 alpha=0/255 orphan=0 crack=1px bbox=(5,5)-(26,36) height=32px
+idle_1: rows=40 widths=32 palette=PASS colors=15 alpha=0/255 orphan=0 crack=1px bbox=(5,4)-(26,36) height=33px
+idle_2: rows=40 widths=32 palette=PASS colors=15 alpha=0/255 orphan=0 crack=1px bbox=(6,4)-(26,36) height=33px
+Lower body/feet: identical across all frames (y>=31 and x>=18,y>=25); changed pixels=0
+Motion: shoulders/head up 1px in frames 1/2; hem and goreum right 1px in frame 2; PASS
+Encoded native PNGs: pixel palette and binary alpha rechecked; PASS
+Sheet: 512x160; 4x nearest; cells 0,1,2,difference(0 vs 2); background #0b1030
+Difference key: muted=unchanged, ochre=frame0 only, teal=frame2 only, sand=changed color

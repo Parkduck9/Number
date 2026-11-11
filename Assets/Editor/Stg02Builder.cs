@@ -19,16 +19,24 @@ public static class Stg02Builder
     static readonly float[] SegH = { TallHeight, SegHeight * 1.5f }; // A climbs to y ~22, B to y ~11.5
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
 
+    // Low tier (y < ~8.5) = the drawn surfaces (DECISIONS 41): the building row is world-fixed and PartsBackdropKit puts one-way floors on
+    // its roofs, on the fence top between buildings and on the vending / crate lids. Top heights (Y0 1.0): crate lip 2.06, crate 2.91,
+    // vending 3.63, fence 3.69, ruin eave 4.28, ruin 5.0, house 6.25, shop eave 7.34, shop 8.25.
+    // Placement (part, centre x): x must stay on the 1/32 grid.
+    static readonly (string part, float x)[][] Row =
+    {
+        // SEG-A: fence run x 16~34.75 (E-A1), then crates 29 -> fence -> ruin eave / vending -> ruin roof 5.0 (x 36.8~38.5) -> SH-A1 5.5
+        new[] { ("shop_2f", 4.5f), ("house_ac", 12.5f), ("ruin_hanok", 38.0625f), ("house_ac", 45.5f), ("shop_2f", 54f), ("ruin_hanok", 62.5f), ("shop_2f", 71f) },
+        // SEG-B: crates 7.5 -> fence run x 7~28.4 (E-B1, the old low rail) -> ruin roof 5.0; the rest is backdrop behind the rising rail
+        new[] { ("house_ac", 3.5f), ("ruin_hanok", 31.75f), ("shop_2f", 40.25f), ("house_ac", 49.5f), ("ruin_hanok", 57.25f), ("house_ac", 65f), ("shop_2f", 72.65625f) },
+    };
+
     // Every step is <= StepUp (1.5u) with <= 1u horizontal gap. Nothing solid hangs over a shaft (a beam above a ledge = bonk-lock).
     static readonly Box[] Boxes = new[]
     {
-        // ---- SEG-A street (x 0~30): the old opening (low roofs over the street)
+        // ---- SEG-A street (x 0~30): the old opening; the low roofs (ROOF-A1/A2) are now the drawn fence / roofs (Row)
         new Box("GROUND-A", A, Kind.Solid, 0f, W, 0f, 1.0f),
-        Ledge("ROOF-A1", A, 6f, 16f, 2.5f),
-        Ledge("ROOF-A2", A, 18f, 28f, 3.8f),
-        // ---- climb 1 (x 30~46): two roofs, a 5-ledge shaft, tower roof 13.0
-        Building("BLD-A1", A, 30f, 34f, 2.5f),
-        Building("BLD-A2", A, 34f, 42f, 4.0f),
+        // ---- climb 1 (x 30~46): drawn steps (Row; BLD-A1/A2 removed), a 5-ledge shaft, tower roof 13.0
         Building("TOWER-A1", A, 42f, 46f, 13.0f),
         // ---- high roof run (x 46~64, y 13.0) with a ridge
         Beam("ROOF-A3", A, 46f, 64f, 13.0f),
@@ -42,11 +50,8 @@ public static class Stg02Builder
     .Concat(Walls("A", A, W, TallHeight))
     .Concat(new[]
     {
-        // ---- SEG-B street (x 0~44): steps onto the low rail (ends before the NUM-7 group, review 06 #5)
+        // ---- SEG-B street (x 0~44): crates onto the drawn fence run (Row; STEP-B1/B2 + RAIL-B removed), ends before the NUM-7 group (review 06 #5)
         new Box("GROUND-B", B, Kind.Solid, 0f, W, 0f, 1.0f),
-        Ledge("STEP-B1", B, 3f, 6f, 2.5f),
-        Ledge("STEP-B2", B, 5f, 8f, 3.8f),
-        Ledge("RAIL-B", B, 8f, 28f, 5.0f),
         // ---- rising rail (x 44~67): +1.5 every 6u to the right, then a switchback to the left
         Ledge("RAIL-B1", B, 44f, 49f, 2.5f),
         Ledge("RAIL-B2", B, 50f, 55f, 4.0f),
@@ -76,10 +81,10 @@ public static class Stg02Builder
     // bug = ranged AI bug (keeps moving on 0, DECISIONS 14), else ranged citizen. sniper = DECISIONS 15 sniper (19u line-of-sight laser).
     static readonly Foe[] Foes =
     {
-        new Foe("E-A1",  A, 22f, 3.8f,  0, 0.4f,  8f, cap: 4),               // on the roof above the street
+        new Foe("E-A1",  A, 22f, 3.6875f, 0, 0.4f, 8f, cap: 4),              // on the fence top above the street (was ROOF-A2 3.8)
         new Foe("E-A2",  A, 18f, 1.0f,  0, 0.4f,  8f, cap: 4),               // melee + ranged behind (one group with E-A1)
         new Foe("E-A3",  A, 24f, 1.0f,  1, 0f,    12f, ranged: true),
-        new Foe("E-A4",  A, 40f, 4.0f,  0, 0.4f,  8f, cap: 4),               // on BLD-A2, guards the shaft entrance
+        new Foe("E-A4",  A, 37.5f, 5.0f, 0, 0.4f, 8f, cap: 4),               // on the ruin roof (was BLD-A2 x 40), guards the shaft entrance
         new Foe("E-A5",  A, 36f, 10.0f, 0, 0.4f,  6f, cap: 4),               // shaft ledge (left)
         new Foe("E-A6",  A, 49f, 13.0f, 0, 0.45f, 8f, cap: 4),               // roof run group: roof + ridge + roof + ranged bug
         new Foe("E-A7",  A, 52f, 14.5f, 0, 0.45f, 8f, cap: 4),
@@ -87,7 +92,7 @@ public static class Stg02Builder
         new Foe("E-A9",  A, 62f, 13.0f, 1, 0f,    12f, ranged: true, bug: true), // first ranged AI bug
         new Foe("E-A10", A, 71f, 19.0f, 0, 0.5f,  6f, cap: 4),               // climb 2 ledge (right)
         new Foe("S-A1",  A, 66.5f, 14.5f, 1, 0f,  19f, sniper: true),        // on TOWER-A2, laser along the roof run
-        new Foe("E-B1",  B, 20f, 5.0f,  0, 0.6f,  8f, cap: 4),               // on the low rail
+        new Foe("E-B1",  B, 20f, 3.6875f, 0, 0.6f, 8f, cap: 4),              // on the fence top (was the low rail RAIL-B 5.0)
         new Foe("E-B2",  B, 30f, 1.0f,  0, 0.6f,  8f),                       // 5+ allowed from here (late STG-02)
         new Foe("E-B3",  B, 33f, 1.0f,  0, 0.6f,  8f),                       // pair with E-B2, ranged E-B5 behind
         new Foe("E-B5",  B, 38f, 1.0f,  1, 0f,    12f, ranged: true),
@@ -98,7 +103,7 @@ public static class Stg02Builder
         new Foe("E-B8",  B, 40f, 11.5f, 0, 0.7f,  8f),
         new Foe("E-B9",  B, 37f, 11.5f, 1, 0f,    12f, ranged: true, bug: true),
         new Foe("ELITE-B1", B, 60f, 1.0f, 0, 0.7f, 8f, elite: true),           // clash-duel elite on the open street under the rising rail (not respawned)
-        new Foe("ELITE-B2", B, 16f, 1.0f, 0, 0.4f, 8f, cap: 6, elite: true, minNumber: 3), // second elite (DECISIONS 22): early street under the low rail, 3~6, flat 8u each side
+        new Foe("ELITE-B2", B, 16f, 1.0f, 0, 0.4f, 8f, cap: 6, elite: true, minNumber: 3), // second elite (DECISIONS 22): early street below the fence run, 3~6, flat 8u each side
     };
 
     // Breakable spawner (DECISIONS 15): one per map, at the top of the last climb, watching only SEG-B enemies (doors are one way).
@@ -122,7 +127,7 @@ public static class Stg02Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, i == B); // layered parts (DECISIONS 17); camera x range [15, W - 15]
+            PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, i == B, Row[i]); // layered parts (DECISIONS 17); camera x range [15, W - 15]
         }
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
 

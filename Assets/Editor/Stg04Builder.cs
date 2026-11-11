@@ -19,15 +19,22 @@ public static class Stg04Builder
     static readonly float[] SegX = { 0f, 110f };
     static readonly string[] SegId = { "SEG-A", "SEG-B" };
 
-    // Colliders (all drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
+    // Low tier = the drawn surfaces (DECISIONS 41): the building row is world-fixed and PartsBackdropKit puts one-way floors on its roofs,
+    // on the fence top between buildings (3.69: the old catwalks CW-A1/A2/B1) and on the machine / crate lids (crate lip 2.06, crate 2.91,
+    // server 3.38, scanner 3.66, robot arm 3.56/3.75). Roofs: watchtower 6.31, factory hall 7.13. Placement (part, centre x) on the 1/32 grid.
+    static readonly (string part, float x)[][] Row =
+    {
+        // SEG-A: fence runs x 7.3~23.3 (CW-A1, E-A2) and 26.7~43.7 (CW-A2); crates 8 / 23.5 step onto them. Right half = backdrop behind the shaft / blocks.
+        new[] { ("factory_hall", 4f), ("watchtower", 25f), ("factory_hall", 47f), ("watchtower", 52f), ("factory_hall", 57f), ("watchtower", 62f), ("factory_hall", 67f), ("watchtower", 72f) },
+        // SEG-B: fence run x 17.2~31.2 (CW-B1, E-B3); crates 18.5 step onto it.
+        new[] { ("watchtower", 3f), ("factory_hall", 10.5f), ("watchtower", 15.5f), ("factory_hall", 34.5f), ("watchtower", 39.5f), ("factory_hall", 44.5f), ("watchtower", 49.5f), ("factory_hall", 54.5f), ("watchtower", 59.5f), ("factory_hall", 64.5f), ("watchtower", 69.5f), ("factory_hall", 74.5f) },
+    };
+
+    // Colliders (high tier drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
     static readonly Box[] Boxes = new[]
     {
-        // ---- SEG-A floor (x 0~45, y 1.0): old layout (group + catwalk, first android, board 7 for hacking)
+        // ---- SEG-A floor (x 0~45, y 1.0): old layout (group + catwalk, first android, board 7 for hacking); crates / catwalks = Row
         new Box("GROUND-A", A, Kind.Solid, 0f, W, 0f, 1.0f),
-        new Box("CRATE-A1", A, Kind.OneWay, 7f,  9f,  2.05f, 2.3f),
-        new Box("CW-A1",    A, Kind.OneWay, 10f, 22f, 3.35f, 3.6f),
-        new Box("CRATE-A2", A, Kind.OneWay, 24f, 26f, 2.05f, 2.3f),
-        new Box("CW-A2",    A, Kind.OneWay, 28f, 40f, 3.35f, 3.6f),
         // ---- SEG-A climb (x 46~56): stacked conveyor ledges 2.5 L .. 10.0 R, flush with the press roof
         Building("PRESS-A", A, 56f, 60f, 10.0f),                   // checkpoint CP-A1 on top; blocks the floor route
         // ---- SEG-A high run (x 60~72, y 10.0) -> crate stack -> sniper tower with the gate on top
@@ -38,10 +45,8 @@ public static class Stg04Builder
     .Concat(Zigzag("CONV-A", A, 46f, 56f, 2.5f, 6))                // 2.5 L, 4.0 R, 5.5 L, 7.0 R, 8.5 L, 10.0 R
     .Concat(new[]
     {
-        // ---- SEG-B floor (x 0~45, y 1.0): old layout, board 0 (people freeze, androids move)
+        // ---- SEG-B floor (x 0~45, y 1.0): old layout, board 0 (people freeze, androids move); crate / catwalk = Row
         new Box("GROUND-B", B, Kind.Solid, 0f, W, 0f, 1.0f),
-        new Box("CRATE-B1", B, Kind.OneWay, 17f, 19f, 2.05f, 2.3f),
-        new Box("CW-B1",    B, Kind.OneWay, 20f, 30f, 3.35f, 3.6f),
         // ---- SEG-B climb (x 46~56): inspection lift ledges 2.5 R .. 11.5 R, flush with the tower roof
         Building("TOWER-B", B, 56f, 62f, 11.5f),                   // checkpoint CP-B1 on top
         // ---- SEG-B high run (x 62~76, y 11.5) + gantry for the sniper; goal at the right end
@@ -67,7 +72,7 @@ public static class Stg04Builder
     {
         // SEG-A floor
         new Foe("E-A1", A, 16f, 1.0f, 0, 0.7f, 8f),
-        new Foe("E-A2", A, 19f, 3.6f, 0, 0.7f, 8f),                    // catwalk, above E-A1
+        new Foe("E-A2", A, 19f, 3.6875f, 0, 0.7f, 8f),                 // fence top (the catwalk), above E-A1
         new Foe("E-A6", A, 21f, 1.0f, 0, 0.7f, 8f),                    // third of the E-A1/E-A2 group
         new Foe("E-A3", A, 33f, 1.0f, 0, 0.7f, 8f),
         new Foe("E-A4", A, 38f, 1.0f, 3, 0f,   8f, android: true),     // first android, fixed 3: Shift dash-behind or parry the 3rd strike (from-above kill needs TestEnemy.AndroidAboveDy 2.0 -> 1.0, see LEVEL_STG04)
@@ -81,7 +86,7 @@ public static class Stg04Builder
         // SEG-B floor
         new Foe("E-B1", B, 15f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B2", B, 23f, 1.0f, 4, 0f,   8f, android: true),     // android 4 (androids 3 -> 4 -> 6, no 7 outside the boss)
-        new Foe("E-B3", B, 26f, 3.6f, 0, 0.8f, 8f),                    // catwalk
+        new Foe("E-B3", B, 26f, 3.6875f, 0, 0.8f, 8f),                 // fence top (the catwalk)
         new Foe("E-B4", B, 30f, 1.0f, 6, 0f,   8f, android: true),
         new Foe("E-B5", B, 34f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B6", B, 40f, 1.0f, 1, 0f,   12f, ranged: true),     // ranged citizen: freezes on 0
@@ -91,7 +96,7 @@ public static class Stg04Builder
         new Foe("E-B7", B, 66f, 11.5f, 0, 0.8f, 8f),
         new Foe("S-B1", B, 70.5f, 13.0f, 1, 0f, 19f, sniper: true),    // sniper on the gantry: frozen while the board shows 0, wakes if the player hacks it away
         // Elites (DECISIONS 22), 5~9, on the flat floor, not in the spawner list.
-        new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 9, elite: true, minNumber: 5), // under CW-A1 (overhead one-way), 3u from CRATE-A1
+        new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 9, elite: true, minNumber: 5), // under the fence run (overhead one-way, was CW-A1), 5u from the crates at x 8
         new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 9, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
     };
 
@@ -116,11 +121,10 @@ public static class Stg04Builder
         {
             roots[i] = new GameObject(SegId[i]).transform;
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
-            PartsBackdropKit.Factory(roots[i], W, H, 15f, W - 15f, i == B); // layered parts (DECISIONS 17); camera x range [15, W - 15]
-            foreach (var w in Walls(i == A ? "A" : "B", i, W, H)) BuildCollider(roots[i], w, true);
-
+            PartsBackdropKit.Factory(roots[i], W, H, 15f, W - 15f, i == B, Row[i]); // layered parts (DECISIONS 17); camera x range [15, W - 15]
+            foreach (var w in Walls(i == A ? "A" : "B", i, W, H)) BuildCollider(roots[i], w, false); // outside the camera range
         }
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, true);
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !b.id.StartsWith("GROUND")); // the floor matches the drawn ground line
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);

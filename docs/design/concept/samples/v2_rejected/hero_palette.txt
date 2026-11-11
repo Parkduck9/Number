@@ -1,0 +1,17 @@
+# Ahn Yudo concept palette. Dot = transparent; all other entries alpha 255.
+# AI authored using Codex; PowerShell 5.1 + System.Drawing; no external assets.
+A #101629
+B #35465B
+C #202B43
+D #354461
+E #53647A
+F #71818B
+G #424752
+H #777B80
+I #D9AD82
+J #99795D
+K #202D36
+L #46515A
+M #4EABB1
+N #8BADAA
+O #A2A398

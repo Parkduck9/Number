@@ -34,10 +34,22 @@ public static class StreetBackdropKit
         return all.Length > 0 ? all : null;
     }
 
+    // Flat stall roofs / crate lid (DECISIONS 41): (first px from the left, last px, height px above the part's bottom), from the PNG alpha.
+    static readonly Dictionary<string, (int a, int b, int h)[]> Tops = new Dictionary<string, (int, int, int)[]>
+    {
+        { "stall_magenta", new[] { (22, 73, 80) } },
+        { "stall_cyan", new[] { (22, 79, 80) } },
+        { "crates", new[] { (18, 34, 32) } },
+    };
+    static Transform walkRoot; // segment root that gets the one-way colliders (null = backdrop only, STG-00)
+
     // root = segment root (world origin of the segment must be x = root.position.x), width = segment width, top = segment height,
     // groundY = gameplay ground height (segment-local), camMinX..camMaxX = camera x range (segment-local) for the tile coverage.
-    public static void Build(Transform root, float width, float top, float groundY, float camMinX, float camMaxX)
+    // steps (STG-01 SEG-A, DECISIONS 41): extra stalls / crates (file, segment-local x) on the street; when given, every stall roof and crate lid
+    // in the segment also gets a one-way collider (low tier platforms = the drawn surfaces). Null = backdrop only (STG-00).
+    public static void Build(Transform root, float width, float top, float groundY, float camMinX, float camMaxX, (string file, float x)[] steps = null)
     {
+        walkRoot = steps != null ? root : null;
         foreach (string f in Directory.GetFiles(Dir, "*.png")) AssetDatabase.ImportAsset(f.Replace('\\', '/'), ImportAssetOptions.ForceSynchronousImport); // settings applied before loading
         var sky = Load("far_sky");
         var skyline = Load("far_skyline");
@@ -102,6 +114,7 @@ public static class StreetBackdropKit
         Prop(props, "holo_ring_8f", "holo_ring_8f", 8, px(121f), py(149f), OFx);
         Prop(props, "stone_lantern_2f", "stone_lantern_2f", 3, px(759f), py(GroundRow), OProp);
         Prop(props, "crates", null, 0, px(610f), py(GroundRow), OProp);
+        if (steps != null) foreach (var (file, x) in steps) Prop(props, file, null, 0, x, groundY, OProp);
         // drones cross the whole segment and wrap, bobbing 1 px
         Drone(props, "drone_scout_2f", 10f, px(110f), py(185f), 1.2f, width, OFx);
         Drone(props, "drone_delivery_2f", 10f, px(445f), py(178f), -0.8f, width, OFx);
@@ -192,6 +205,17 @@ public static class StreetBackdropKit
         if (s == null && frames == null) { Todo.Add("STG01_Layers part missing: " + file); return; }
         Transform t = Sprite1(parent, "Background (" + file + ")", s != null ? s : frames[0], new Vector2(x, y), false, order);
         if (frames != null) Loop(t.gameObject, frames, fps);
+        if (walkRoot != null && s != null && Tops.TryGetValue(file, out var spans)) TopColliders(walkRoot, file, s, x, y, spans);
+    }
+
+    // One-way colliders (same as StageBuildKit.Ledge) on the flat spans of a world-fixed part placed bottom-centre at segment-local (x, y),
+    // with Sprite1's pixel snap, so the floor sits exactly on the drawn roof line. spans = (first px, last px, height px) from the PNG.
+    internal static void TopColliders(Transform root, string file, Sprite s, float x, float y, (int a, int b, int h)[] spans)
+    {
+        int w = (int)s.rect.width;
+        float left = x + ((w & 1) == 1 ? 0.5f / Ppu : 0f) - w * 0.5f / Ppu;
+        foreach (var (a, b, h) in spans)
+            BuildCollider(root, Ledge($"TOP {Path.GetFileName(file)} x{x:0.##} px{a}", 0, left + a / Ppu, left + (b + 1) / Ppu, y + h / Ppu), false);
     }
 
     static void Drone(Transform parent, string sheet, float fps, float x, float y, float speed, float width, int order)
