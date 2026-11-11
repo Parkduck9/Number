@@ -14,13 +14,18 @@ using UnityEngine;
 //               LOW (jump) or HIGH (stay down / dash); red warning band first. Then the arm flies back and clamps onto its socket.
 //   C chest hatch: hatch opens, yellow aim dots, N volleys of small shots in a fan (phase 3: fan / spiral arc alternate).
 //               A parried shot flies back; reaching the hatch hurts.
+//   D bug rain (DECISIONS 38): N columns of bugs dive from the ceiling at the player's x (red floor mark first), land and scatter into a
+//               short floor carpet; then the bug arm slumps like A. Phase 3: A's walls also drop a column each.
+//   Rope (DECISIONS 38, PlayerController.IGrappleTarget): two ceiling hooks to hang from (over LOW sweeps / jump-gap walls / bug carpets,
+//               not HIGH sweeps / floor-gap walls), and the open hatch with the core still inside (cyan corners): RMB pulls the hero up
+//               for one HatchHookDamage hit. Bug attacks are weighted up in the director.
 //   Core (DECISIONS 31): in the rest after every attack the hatch opens and a glowing weak-point core drops on a cable to the bridge
 //               (pulses gold while it can be hit): LMB swings, RMB issen (PlayerController.IssenAlt) and the dice hurt it. Then it pulls back.
 // HP is never shown: phase 2 / 3 darken + crack the body. Phase 3 overlaps C with A / B. HP 0: the hologram shatters, the body stops,
 // the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice work here (DECISIONS 31):
 // LuckyDice.BossSkill -> SkillHit (DiceDamage by face); no parry / reflect charge; melee hits (OnSwing, IssenHit) call LuckyDice.AddHitCharge.
 // Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (dice skills, dialogue).
-public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
+public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerController.IGrappleTarget
 {
     [Header("Art overrides (empty = temporary code-drawn BossArt)")]
     [SerializeField] Sprite bodyArt;      // pivot bottom-left, placed at BodyAt (24 x 14 u)
@@ -72,6 +77,19 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     const float ShotSpeed = 7.5f, ShotReflectLife = 2.5f, HatchOpenAfter = 1f, BulletScale = 0.3125f, FanSpread = 50f, SpiralStep = 0.045f;
     const int FanShots = 5, SideFanShots = 3, SpiralShots = 9, MaxShots = 40; // MaxShots: live cap (WebGL)
     static readonly float[] VolleyEvery = { 0.7f, 0.6f, 0.5f }; // by phase (was 0.8 / 0.7 / 0.6, DECISIONS 33)
+    // D bug rain (DECISIONS 38): a column warns RainWarn (red floor mark + faint lane), falls at RainSpeed as a RainLen clump, then
+    // scatters into a floor carpet CarpetHalf wide, CarpetH high for CarpetTime. One hit per column, unparryable: step aside / dash / rope.
+    const int RainCols = 6, BugsPerCol = 10;
+    const float RainWarn = 0.6f, RainSpeed = 20f, RainLen = 3f, RainHalfW = 0.5f, RainTop = 18f, CarpetHalf = 1.6f, CarpetH = 0.6f, CarpetTime = 0.9f;
+    static readonly float[] RainEvery = { 0.6f, 0.5f, 0.42f }; // by phase: s between columns
+    // Rope targets (DECISIONS 38). Hanging body centre = hook - HangDrop = y 5.2: feet 4.35 clear the LOW sweep (top 3.1), a jump-gap
+    // wall's gap (3.8..6.8) and the bug carpet; top 6.0 is inside the HIGH sweep (4.2..5.4) and a floor-gap wall's bugs (gap 2..5).
+    static readonly Vector2[] Hooks = { new Vector2(8.5f, 9.25f), new Vector2(21.5f, 9.25f) }; // rope reach (9 u) covers the whole bridge
+    const float HangDrop = 4.05f, HookAim = 1.5f; // u hook -> hanging centre; u mouse radius around a hook / the hatch
+    // Hatch: open (or cracked) with the core still up inside -> rope latch, pulled to HatchStrikeBelow under it, HatchHookDamage, once per
+    // HatchHookEvery. Windows: VentTime at the start of every CoreWindow, C's open hatch, A's bug shot tells.
+    const int HatchHookDamage = 2;
+    const float HatchHookEvery = 2f, HatchStrikeBelow = 1.1f, HatchHookHalf = 1.1f, VentTime = 0.8f;
 
     // ---- layout (room 30 x 16.875, floor top y 2) ----
     const float Floor = 2f, RoomW = 30f, Px = 1f / 32f;
@@ -129,6 +147,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     readonly bool[] waveOn = new bool[Waves], waveHit = new bool[Waves];
     readonly SpriteRenderer[] bugs = new SpriteRenderer[Waves * BugsPerWave];
     readonly Vector2[] bugOff = new Vector2[Waves * BugsPerWave];
+    // bug rain pool (DECISIONS 38)
+    readonly float[] rainX = new float[RainCols], rainT = new float[RainCols];
+    readonly int[] rainStage = new int[RainCols]; // 0 off, 1 warning, 2 falling, 3 floor carpet
+    readonly bool[] rainHit = new bool[RainCols];
+    readonly SpriteRenderer[] rainBugs = new SpriteRenderer[RainCols * BugsPerCol], rainMark = new SpriteRenderer[RainCols], rainLane = new SpriteRenderer[RainCols];
+    readonly Vector2[] rainOff = new Vector2[RainCols * BugsPerCol];
+    // rope targets (DECISIONS 38)
+    readonly SpriteRenderer[] hookGlow = new SpriteRenderer[Hooks.Length];
+    bool hatchHook, hatchLatched, wasHookable; // hatchHook: an attack holds the hatch open for the rope; latched: the rope is on its way
+    float hookCd, hookOpenedAt;
 
     SpriteRenderer zoneFloor, zoneLane, white, sweepFill, sweepLine;
     float sweepY = -1f; // band centre while the B' warning / slash shows, < 0 = off
@@ -177,6 +205,36 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             bugs[i] = Make("Bug", BossArt.Bug, "FX", 40, Vector2.zero);
             bugs[i].transform.localScale = new Vector3(2f, 2f, 1f); // FX: 1-px bugs read as rain on the big boss; 2x pixels
             bugs[i].enabled = false;
+        }
+        for (int i = 0; i < rainBugs.Length; i++)
+        {
+            rainBugs[i] = Make("RainBug", BossArt.Bug, "FX", 40, Vector2.zero);
+            rainBugs[i].transform.localScale = new Vector3(2f, 2f, 1f); // same 2x pixels as the walls
+            rainBugs[i].enabled = false;
+        }
+        for (int c = 0; c < RainCols; c++)
+        {
+            rainLane[c] = Make("RainLane", ParryFx.Square, "World", 4, Vector2.zero);
+            rainLane[c].transform.localScale = new Vector3(RainHalfW * 2f + 0.4f, 16f, 1f);
+            rainMark[c] = Make("RainMark", ParryFx.Square, "World", 5, Vector2.zero);
+            rainMark[c].transform.localScale = new Vector3(RainHalfW * 2f + 0.4f, 0.25f, 1f);
+            rainLane[c].enabled = rainMark[c].enabled = false;
+        }
+        for (int i = 0; i < Hooks.Length; i++) // ceiling hooks: a thin cable from the top, a neon ring (diamond) with a soft pulsing glow
+        {
+            float top = 17f, y0 = Hooks[i].y + 0.22f;
+            SpriteRenderer cable = Make("HookCable", ParryFx.Square, "World", -4, new Vector2(Hooks[i].x, (top + y0) * 0.5f));
+            cable.transform.localScale = new Vector3(2f * Px, top - y0, 1f);
+            cable.color = new Color(0.55f, 0.6f, 0.7f, 0.6f);
+            for (int k = 0; k < 3; k++)
+            {
+                SpriteRenderer r = Make(k == 0 ? "HookGlow" : "Hook", ParryFx.Square, "World", -3 + k, Hooks[i]);
+                float size = k == 0 ? 0.9f : k == 1 ? 0.44f : 0.26f;
+                r.transform.localScale = new Vector3(size, size, 1f);
+                r.transform.rotation = Quaternion.Euler(0f, 0f, 45f);
+                r.color = k == 1 ? DiceSkillKit.Cyan : k == 2 ? (Color)new Color32(0x0B, 0x0F, 0x1E, 0xFF) : DiceSkillKit.A(DiceSkillKit.Cyan, 0.2f);
+                if (k == 0) hookGlow[i] = r;
+            }
         }
         zoneLane = Make("DangerLane", ParryFx.Square, "World", 4, Vector2.zero);
         zoneFloor = Make("DangerZone", ParryFx.Square, "World", 5, Vector2.zero);
@@ -263,12 +321,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         StartCoroutine(Director());
     }
 
-    void OnEnable() { PlayerController.Swung += OnSwing; PlayerController.IssenAlt = this; }
+    void OnEnable() { PlayerController.Swung += OnSwing; PlayerController.IssenAlt = this; PlayerController.GrappleAlt = this; }
     void OnDisable()
     {
         Held = false;
         PlayerController.Swung -= OnSwing;
         if (ReferenceEquals(PlayerController.IssenAlt, this)) PlayerController.IssenAlt = null;
+        if (ReferenceEquals(PlayerController.GrappleAlt, this)) PlayerController.GrappleAlt = null;
     }
 
     void OnDestroy()
@@ -281,6 +340,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     {
         if (player == null || Held) return; // dice face 4: frozen in place, nothing redrawn
         UpdateWaves(Dt);
+        UpdateRain(Dt);
+        hookCd -= Dt;
+        bool hk = HatchHookable;
+        if (hk && !wasHookable) // DECISIONS 38 cue: a cyan ring off the hatch + a soft chime; the cyan corners (DrawBracket) snap on
+        {
+            hookOpenedAt = Time.time;
+            DiceSkillKit.Ring(HatchAt, 0.5f, 2f * Px, DiceSkillKit.Cyan, 0.3f, 2.5f, 97);
+            Sfx.Play(SfxId.HackOk, 0.35f, 1.6f);
+        }
+        wasHookable = hk;
         if (!dead) CheckReflectedShots();
         Draw();
     }
@@ -301,25 +370,27 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             if (GameFlow.IsPlayerDead(player)) yield break; // respawn reload follows
             int ph = Phase;
             if (ph != shownPhase) yield return PhaseShift(ph);
-            // 0 A, 1 B, 2 C, 3 B' sweep. Phase 1 = A / B / B'. No repeats, and never two blade attacks in a row.
+            // 0 A, 1 B, 2 C, 3 B' sweep, 4 D bug rain. Phase 1 has no C; later phases weight the bug attacks double (DECISIONS 38).
+            // No repeats, and never two blade attacks in a row.
             int atk;
-            do atk = ph == 1 ? PhaseOnePool[Random.Range(0, PhaseOnePool.Length)] : Random.Range(0, 4);
+            int[] pool = ph == 1 ? PhaseOnePool : LaterPool;
+            do atk = pool[Random.Range(0, pool.Length)];
             while (last >= 0 && (atk == last || (IsBlade(atk) && IsBlade(last))));
             last = atk;
             int n = ph == 1 ? Random.Range(4, 6) : ph == 2 ? Random.Range(5, 8) : Random.Range(6, 9); // +1 each (DECISIONS 33)
             float tell = ph == 1 ? 0.8f : 0.65f; // was 1 / 0.8
-            BossArt.DrawHolo(atk == 3 ? BossArt.IconBlade : atk, n); // icon index == attack index (sweep reuses the blade)
+            BossArt.DrawHolo(atk == 3 ? BossArt.IconBlade : atk == 4 ? BossArt.IconBug : atk, n); // icon index == attack index (sweep / rain reuse blade / bug)
             Sfx.Play(SfxId.EnemyTell);
             if (atk != 2 && (ph == 3 ? atk == 1 || Random.value < 0.5f : ph == 2 && Random.value < 0.35f)) // overlap (phase 2 too, DECISIONS 33)
                 StartCoroutine(AttackC(Mathf.Max(3, n - 2), tell, true));
-            yield return atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : AttackC(n, tell, false);
+            yield return atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : atk == 4 ? AttackRain(n, tell) : AttackC(n, tell, false);
             BossArt.DrawHolo(-1, -1);
             while (sideRunning) yield return null;
             yield return CoreWindow();
         }
     }
 
-    static readonly int[] PhaseOnePool = { 0, 1, 3 };
+    static readonly int[] PhaseOnePool = { 0, 4, 1, 3 }, LaterPool = { 0, 0, 4, 4, 1, 2, 3 };
     static bool IsBlade(int atk) => atk == 1 || atk == 3;
 
     IEnumerator PhaseShift(int ph)
@@ -347,6 +418,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     // ---- Core (DECISIONS 31): the rest between attacks. Hatch opens, the core drops to the bridge, stays CoreOpen, pulls back ----
     IEnumerator CoreWindow()
     {
+        // DECISIONS 38 vent: the hatch opens first with the core still up inside (rope window, cyan corners), then the core drops
+        hatchHook = true;
+        for (float t = 0f; t < VentTime; t += Dt) { hatchOpen = Mathf.Max(hatchOpen, Mathf.Min(1f, t / 0.25f)); yield return null; }
+        hatchHook = false;
         // DECISIONS 32 tell: a gold ring bursts out of the hatch with a chime ("chance"); the lock-on corners snap on when it lands
         Sfx.Play(SfxId.HackOk, 0.7f, 1.2f);
         DiceSkillKit.Ring(HatchAt, 0.5f, 2f * Px, GoldShot, 0.35f, 3.5f, 97);
@@ -392,6 +467,42 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
 
     public void IssenHit(Vector2 at) { Damage(CoreIssenDamage, core, at); LuckyDice.AddHitCharge(); }
 
+    // ---- Rope targets (DECISIONS 38, PlayerController.IGrappleTarget): the hook or open hatch nearest the mouse within HookAim, in reach ----
+    bool HatchHookable => hatchHook && !dead && hookCd <= 0f && core.Pos.y >= HatchAt.y - 0.05f; // open, the core still up inside
+
+    public bool PlanGrapple(Vector2 mouse, Vector2 hand, out Vector2 anchor, out Vector2 pull, out bool hang)
+    {
+        anchor = pull = default;
+        hang = false;
+        float best = HookAim * HookAim;
+        bool hatch = HatchHookable && Nearer(mouse, hand, HatchAt, ref best);
+        if (hatch) { anchor = HatchAt; pull = HatchAt + Vector2.down * HatchStrikeBelow; }
+        foreach (Vector2 h in Hooks)
+            if (Nearer(mouse, hand, h, ref best)) { anchor = h; pull = h + Vector2.down * HangDrop; hang = true; hatch = false; }
+        if (hatch) { hatchLatched = true; hookCd = HatchHookEvery; } // the latch spends the window: the strike lands even if the hatch shuts meanwhile
+        return best < HookAim * HookAim;
+    }
+
+    static bool Nearer(Vector2 mouse, Vector2 hand, Vector2 at, ref float best)
+    {
+        float d = (mouse - at).sqrMagnitude;
+        if (d >= best || Vector2.Distance(hand, at) > DashRules.GrappleRange) return false;
+        best = d;
+        return true;
+    }
+
+    // The hero arrived under the latched hatch: one strong hit on the raised core (counts for the dice like any landed hit)
+    public bool GrappleStrike(Vector2 at)
+    {
+        if (dead || !hatchLatched) return false;
+        hatchLatched = false;
+        hatchL.FlashUntil = hatchR.FlashUntil = Time.time + 0.1f;
+        Damage(HatchHookDamage, core, HatchAt + Vector2.down * 0.3f); // core hit FX (ring + gold bits) at the hatch mouth
+        LuckyDice.AddHitCharge();
+        player.DuelHitStop(Juice.HitStopKill);
+        return true;
+    }
+
     // The one entry point for skill damage (dice: LuckyDice.BossSkill with DiceDamage(face)). Hits whether or not the core is out;
     // the core flashes when it is out, else the whole body does. fxAt = where the hit spark / ring plays.
     public void SkillHit(int dmg, Vector2 fxAt)
@@ -409,10 +520,17 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         for (int i = 0; i < n; i++)
         {
             LaunchWave(GapLows[Random.Range(0, GapLows.Length)]);
+            if (Phase == 3) LaunchColumn(player.transform.position.x); // DECISIONS 38: phase 3 drops a rain column with every wall
             if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
             if (i < n - 1) yield return Conduct(WaveEvery);
         }
         yield return Conduct(-1f);
+        yield return SlumpArm();
+    }
+
+    // A / D opening: the bug arm drops onto the bridge for SlumpTime (LMB swings on it hurt), then goes back up
+    IEnumerator SlumpArm()
+    {
         bugArm.Glow = false;
         yield return Move(bugArm, BugSlump, 0.2f);
         Juice.Shake(Juice.ShakeHurtAmp, 0.25f);
@@ -421,6 +539,99 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         yield return Wait(SlumpTime);
         armVulnerable = false;
         yield return Move(bugArm, BugRest, 0.6f);
+    }
+
+    // ---- D: bug rain (DECISIONS 38). The lit arm conducts while columns dive at the player's x, then slumps like A ----
+    IEnumerator AttackRain(int n, float tell)
+    {
+        bugArm.Glow = true;
+        yield return Conduct(tell);
+        SpriteFx.Play("enemy-warp-in", bugArm.Pos + new Vector2(0f, 1f), false, 101); // the swarm bursts up out of the palm
+        float every = RainEvery[Phase - 1];
+        for (int i = 0; i < n; i++)
+        {
+            LaunchColumn(player.transform.position.x);
+            yield return Conduct(every);
+        }
+        yield return Conduct(-1f);
+        yield return SlumpArm();
+    }
+
+    void LaunchColumn(float x)
+    {
+        int c = System.Array.IndexOf(rainStage, 0);
+        if (c < 0) return;
+        rainStage[c] = 1;
+        rainT[c] = 0f;
+        rainHit[c] = false;
+        rainX[c] = Snap(Mathf.Clamp(x, 1.5f, RoomW - 1.5f));
+        for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainOff[i] = new Vector2(Random.Range(-RainHalfW, RainHalfW), Random.value * RainLen);
+        rainLane[c].transform.position = new Vector3(rainX[c], Floor + 8f, 0f);
+        rainMark[c].transform.position = new Vector3(rainX[c], Floor + 0.125f, 0f);
+        rainLane[c].enabled = rainMark[c].enabled = true;
+        Sfx.Play(SfxId.EnemyTell, 0.5f, 1.3f);
+    }
+
+    void UpdateRain(float dt)
+    {
+        Vector2 pp = player.transform.position; // player centre = feet + 1, hit box like the walls
+        int flutter = Time.frameCount / 4;
+        bool blink = Mathf.FloorToInt(Time.time * 8f) % 2 == 0;
+        for (int c = 0; c < RainCols; c++)
+        {
+            if (rainStage[c] == 0) continue;
+            rainT[c] += dt;
+            float x = rainX[c];
+            if (rainStage[c] == 1)
+            {
+                rainMark[c].color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.5f);
+                rainLane[c].color = new Color(1f, 0.23f, 0.23f, blink ? 0.12f : 0.06f);
+                if (rainT[c] < RainWarn) continue;
+                rainStage[c] = 2;
+                rainT[c] = 0f;
+                rainLane[c].enabled = false;
+                for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainBugs[i].enabled = true;
+                Sfx.Play(SfxId.Swing, 0.5f, 1.4f);
+            }
+            float head = RainTop - RainSpeed * rainT[c];
+            if (rainStage[c] == 2 && head <= Floor) // landed: the clump scatters into a floor carpet
+            {
+                rainStage[c] = 3;
+                rainT[c] = 0f;
+                rainMark[c].enabled = false;
+                SpriteFx.Play("land-dust", new Vector2(x - 0.6f, Floor), true, 101);
+                SpriteFx.Play("land-dust", new Vector2(x + 0.6f, Floor), false, 101);
+                Sfx.Play(SfxId.Hit, 0.35f, 1.4f);
+            }
+            if (rainStage[c] == 3 && rainT[c] >= CarpetTime)
+            {
+                rainStage[c] = 0;
+                for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainBugs[i].enabled = false;
+                continue;
+            }
+            bool carpet = rainStage[c] == 3;
+            float half = carpet ? Mathf.Lerp(RainHalfW, CarpetHalf, Smooth(rainT[c] / 0.15f)) : RainHalfW;
+            if (!rainHit[c] && dt > 0f && Mathf.Abs(pp.x - x) < half + 0.35f &&
+                (carpet ? pp.y - 0.85f < Floor + CarpetH : pp.y - 0.85f < head + RainLen && pp.y + 0.8f > head) &&
+                player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(x, pp.y), Unparryable = true }) == HitResult.Hit)
+                rainHit[c] = true; // one hit per column (dash / i-frames pass through)
+            Color tint = new Color(1f, 1f, 1f, carpet ? Mathf.Clamp01((CarpetTime - rainT[c]) / 0.25f) : 1f);
+            for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++)
+            {
+                Vector2 o = rainOff[i];
+                float jx = ((i + flutter) % 3 - 1) * Px * (carpet ? 2f : 1f), jy = ((i + flutter) & 1) * Px;
+                Vector2 b = carpet ? new Vector2(x + o.x / RainHalfW * half, Floor + 0.15f + 2f * jy) : new Vector2(x + o.x, head + o.y);
+                rainBugs[i].transform.position = new Vector3(Snap(b.x + jx), Snap(b.y + jy), 0f);
+                rainBugs[i].color = tint;
+            }
+        }
+    }
+
+    bool BugsOut() // walls or rain columns still in the room
+    {
+        if (System.Array.IndexOf(waveOn, true) >= 0) return true;
+        foreach (int st in rainStage) if (st != 0) return true;
+        return false;
     }
 
     void LaunchWave(float lo)
@@ -443,10 +654,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         SpriteFx.Play("enemy-warp-in", bugArm.Pos + new Vector2(0f, 1f), false, 101); // the swarm bursts out of the palm
     }
 
-    // the bug arm conducts the swarm: figure-8 sway around its rest spot for s seconds (s < 0: until the last wall is gone)
+    // the bug arm conducts the swarm: figure-8 sway around its rest spot for s seconds (s < 0: until the last wall / rain column is gone)
     IEnumerator Conduct(float s)
     {
-        for (float t = 0f; s < 0f ? System.Array.IndexOf(waveOn, true) >= 0 : t < s; )
+        for (float t = 0f; s < 0f ? BugsOut() : t < s; )
         {
             float dt = Dt;
             t += dt;
@@ -464,7 +675,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         {
             if (!sideRunning) // a side barrage owns the hatch (and keeps the screen busy)
             {
-                hatchL.Glow = hatchR.Glow = bugAim = true;
+                hatchL.Glow = hatchR.Glow = bugAim = hatchHook = true; // the cracked hatch is a rope window too (DECISIONS 38)
                 Sfx.Play(SfxId.EnemyTell, 0.4f, 1.6f);
                 for (float t = 0f; t < BugShotTell; t += Dt) { hatchOpen = BugShotCrack * t / BugShotTell; yield return null; }
                 hatchL.Glow = hatchR.Glow = bugAim = false;
@@ -473,6 +684,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
                 Fire(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, BugShotSpeed, DraftSprites.BulletBug);
                 for (float t = 0f; t < 0.2f; t += Dt) { hatchOpen = BugShotCrack * (1f - t / 0.2f); yield return null; }
                 hatchOpen = 0f;
+                hatchHook = false;
             }
             yield return Wait(BugShotEvery);
         }
@@ -736,6 +948,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         for (float t = 0f; t < tell; t += Dt) { hatchOpen = Mathf.Min(1f, t / 0.3f); yield return null; }
         hatchOpen = 1f;
         hatchL.Glow = hatchR.Glow = false;
+        hatchHook = true; // open with the core inside: rope window until it closes (DECISIONS 38)
         float every = VolleyEvery[Phase - 1];
         for (int i = 0; i < n; i++)
         {
@@ -764,6 +977,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         }
         aimOn = false;
         yield return Wait(HatchOpenAfter);
+        hatchHook = false;
         for (float t = 0f; t < 0.3f; t += Dt) { hatchOpen = 1f - t / 0.3f; yield return null; }
         hatchOpen = 0f;
         if (side) sideRunning = false;
@@ -926,6 +1140,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
         ring.Hide();
         for (int w = 0; w < Waves; w++) waveOn[w] = false;
         for (int i = 0; i < bugs.Length; i++) bugs[i].enabled = false;
+        hatchHook = hatchLatched = false; // DECISIONS 38: no rope window, no pending strike; rain columns gone
+        for (int c = 0; c < RainCols; c++) { rainStage[c] = 0; rainLane[c].enabled = rainMark[c].enabled = false; }
+        for (int i = 0; i < rainBugs.Length; i++) rainBugs[i].enabled = false;
         var shots = EnemyProjectile.Active;
         for (int i = shots.Count - 1; i >= 0; i--) { GameObject g = shots[i].gameObject; g.SetActive(false); Destroy(g); }
         ShatterFx.Play(holo, Vector2.down, HoloAt, Cyan); // the number breaks
@@ -1027,6 +1244,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
             coreCable.color = new Color(Cyan.r, Cyan.g, Cyan.b, coreOpen && blink ? 0.95f : 0.6f);
         }
         DrawBracket(now);
+        for (int i = 0; i < hookGlow.Length; i++) // hooks: slow soft glow pulse
+            hookGlow[i].color = DiceSkillKit.A(DiceSkillKit.Cyan, 0.14f + 0.1f * Mathf.Sin(now * 3f + i * 1.7f));
         if (!dead)
         {
             bool glitch = shownPhase == 3 && Random.value < 0.12f; // phase 3: the hologram jitters
@@ -1061,14 +1280,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget
     }
 
     // Gold lock-on corners around the open core (DECISIONS 32): snap in from wide when it lands, then a 2 Hz squeeze.
+    // DECISIONS 38: the same corners in the rope's cyan around the hatch while it can be roped (core still inside).
     void DrawBracket(float now)
     {
-        bool on = coreOpen && core.Sr.enabled && !dead;
+        bool coreOn = coreOpen && core.Sr.enabled && !dead, on = coreOn || HatchHookable;
         const float Arm = 0.35f, W = 2f * Px;
-        float k = now - coreOpenedAt;
-        float r = CoreHalf + 0.2f + (k < 0.2f ? 1.2f * (1f - k / 0.2f) : 0.08f * (1f - Mathf.Repeat(now * 2f, 1f)));
-        Vector2 c = new Vector2(core.Pos.x, core.Pos.y - sink);
-        Color col = new Color(GoldShot.r, GoldShot.g, GoldShot.b, Mathf.FloorToInt(now * 8f) % 2 == 0 ? 1f : 0.7f);
+        float k = now - (coreOn ? coreOpenedAt : hookOpenedAt);
+        float r = (coreOn ? CoreHalf : HatchHookHalf) + 0.2f + (k < 0.2f ? 1.2f * (1f - k / 0.2f) : 0.08f * (1f - Mathf.Repeat(now * 2f, 1f)));
+        Vector2 c = coreOn ? new Vector2(core.Pos.x, core.Pos.y - sink) : new Vector2(HatchAt.x, HatchAt.y - sink);
+        Color col = DiceSkillKit.A(coreOn ? GoldShot : DiceSkillKit.Cyan, Mathf.FloorToInt(now * 8f) % 2 == 0 ? 1f : 0.7f);
         for (int i = 0; i < 4; i++)
         {
             float sx = i % 2 == 0 ? -1f : 1f, sy = i < 2 ? -1f : 1f;

@@ -48,6 +48,11 @@ public static class DashRules
     public const float GrappleCooldown = 0.4f;   // s before another rope after a release (ground ropes refill at once)
     public const float GrappleLedgeSnap = 2f;    // u: a wall hit within this below a ledge top anchors on the top corner instead
     // Uses: 1 per airtime (an attached rope spends it), refilled on landing.
+    // DECISIONS 38 boss-room rope targets (PlayerController.GrappleAlt = BossFight): hang from a ceiling hook / strike the open chest hatch
+    public const float GrappleHangMax = 2.5f;      // (T) s hanging from a hook, then it lets go (Space = jump off, S = drop, RMB = a fresh rope, LMB = swing)
+    public const float GrappleStrikeBounceX = 4f;  // (T) u/s sideways (back the way the hero came) after the hatch strike
+    public const float GrappleStrikeBounceY = 5f;  // (T) u/s upward pop off the hatch, then the fall
+    public const float GrappleStrikeSafe = 0.8f;   // (T) s of i-frames after a landed hatch strike (covers the fall back to the bridge)
 
     // ---- Issen flash strike (DECISIONS 26; on Shift since playtest 11-11, PlayerController.TryIssen / FindIssenTarget / PlanIssen) ----
     public const float IssenMaxDy = 1f;          // (T) u, player centre to the target centre: only enemies roughly level with the player ("1자", playtest 11-11)

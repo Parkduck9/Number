@@ -127,6 +127,13 @@ public class PlayerController : MonoBehaviour
     float grappleReadyAt;     // miss cooldown
     float grappleCarryUntil;  // after release: horizontal momentum eases into air control
     bool pendingGrapple;      // pressed during a hit-stop
+    // DECISIONS 38 boss-room targets (GrappleAlt): the body is pulled to grapplePull (= grappleAnchor for ground ropes)
+    Vector2 grapplePull;
+    bool grappleHang;         // a ceiling hook: hold at grapplePull until Space / S / RMB (re-rope) / LMB or GrappleHangMax
+    bool grappleStrike;       // the open hatch: strike on arrival, then bounce off and fall (GrappleStrikeSafe i-frames)
+    bool hanging;             // reached the hang point
+    float hangSince;
+    float grappleSafeUntil;   // i-frames after a landed hatch strike
     readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
     int swingDamaged;                   // blows that did damage since the last reset (StrikeEnemy)
@@ -137,7 +144,7 @@ public class PlayerController : MonoBehaviour
     // Dev readout (FrameStats, F3): parries tried (Parry state entered) vs. landed, and hits taken while a parry was up.
     public static int ParryTries, ParryCount, ParryFailHits;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; IssenAlt = null; } // Domain Reload is off
+    static void ResetParryStats() { ParryTries = ParryCount = ParryFailHits = 0; Swung = null; IssenAlt = null; GrappleAlt = null; } // Domain Reload is off
 
     // In-place LMB swing landed its hit box (centre, size): BossFight hits boss parts / machine props with it (they are not TestEnemies).
     public static event System.Action<Vector2, Vector2> Swung;
@@ -146,6 +153,10 @@ public class PlayerController : MonoBehaviour
     // centre in, the struck point and the landing spot (player centre) out; false = nothing to cut. Hit: the blow landed.
     public interface IIssenTarget { bool PlanIssen(Vector2 mouse, Vector2 from, out Vector2 at, out Vector2 spot); void IssenHit(Vector2 at); }
     public static IIssenTarget IssenAlt;
+    // DECISIONS 38: RMB rope targets that are not ground (BossFight: ceiling hooks, the open chest hatch), tried before the ground ray.
+    // anchor = where the rope bites, pull = where the body goes; hang = hold there (hook), else GrappleStrike on arrival (false = no hit).
+    public interface IGrappleTarget { bool PlanGrapple(Vector2 mouse, Vector2 hand, out Vector2 anchor, out Vector2 pull, out bool hang); bool GrappleStrike(Vector2 at); }
+    public static IGrappleTarget GrappleAlt;
 
     public int Facing { get; private set; } = 1;
     public State CurrentState => state;
@@ -280,6 +291,7 @@ public class PlayerController : MonoBehaviour
             issenReadyAt += dt;
             grappleReadyAt += dt;
             grappleCarryUntil += dt;
+            grappleSafeUntil += dt;
             health.ShiftInvulnerability(dt);
             if (state == State.Dash) { EnterState(State.Locomotion); rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); } // don't slide through teleports/dialogue
             EndLunge(); // same for a lunge (gravity back, velocity zeroed)
@@ -339,6 +351,7 @@ public class PlayerController : MonoBehaviour
         }
 
         pendingIssen = pendingGrapple = false; // replayed (or ignored by the current state, like a live press) this frame
+        if (now < grappleSafeUntil) SpawnAfterimage(now); // hatch strike fall: the i-frames show as the dash trail
         if (state == State.Locomotion || (state == State.Attack && !lunging) || state == State.Parry) UpdateJumpCut(); // an upward lunge is not a jump
         UpdateSpeedFx(now);
         UpdateVisual(now);
@@ -485,7 +498,7 @@ public class PlayerController : MonoBehaviour
             case State.Grapple:
                 rb.gravityScale = 0f;
                 rb.linearVelocity = Vector2.zero; // hangs still while the rope flies out, then the pull (FixedUpdate)
-                grappleAttached = false;
+                grappleAttached = hanging = false;
                 break;
         }
     }
@@ -505,9 +518,10 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = Vector2.zero;
                 break;
             case State.Grapple:
-                if (!grappleAttached) { rb.linearVelocity = Vector2.zero; break; }
-                Vector2 toAnchor = grappleAnchor - rb.position;
-                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * DashRules.GrapplePullSpeed : Vector2.zero; // full speed to the end (release keeps it)
+                if (!grappleAttached || hanging) { rb.linearVelocity = Vector2.zero; break; }
+                Vector2 toAnchor = grapplePull - rb.position;
+                float pull = grappleHang ? Mathf.Min(DashRules.GrapplePullSpeed, toAnchor.magnitude / Time.fixedDeltaTime) : DashRules.GrapplePullSpeed; // a hook stops on the hang point
+                rb.linearVelocity = toAnchor.sqrMagnitude > 0.0001f ? toAnchor.normalized * pull : Vector2.zero; // full speed to the end (release keeps it)
                 break;
             case State.Dash:
                 rb.linearVelocity = dashVelocity;
@@ -876,10 +890,25 @@ public class PlayerController : MonoBehaviour
         if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt || grappleUsed) return false;
         grappleBufferedUntil = -999f;
         Vector2 hand = HandPosition;
-        Vector2 aim = MouseCrosshair.MouseWorld(out Vector2 mouse) ? mouse - hand : new Vector2(Facing, 0f);
+        bool aimed = MouseCrosshair.MouseWorld(out Vector2 mouse);
+        Vector2 aim = aimed ? mouse - hand : new Vector2(Facing, 0f);
         aim = aim.sqrMagnitude > 0.0001f ? aim.normalized : new Vector2(Facing, 0f);
         int face = Mathf.Abs(aim.x) > 0.01f ? (aim.x > 0f ? 1 : -1) : Facing; // applied on a hit only (Facing is the parry front)
         hand = (Vector2)transform.position + new Vector2(face * 0.35f, 0.25f);
+        if (aimed && GrappleAlt != null && GrappleAlt.PlanGrapple(mouse, hand, out Vector2 altAnchor, out Vector2 altPull, out bool hang)) // DECISIONS 38
+        {
+            Facing = face;
+            grappleAnchor = altAnchor;
+            grapplePull = altPull;
+            grappleCeiling = false;
+            grappleHang = hang;
+            grappleStrike = !hang;
+            grappleUsed = true;
+            EnterState(State.Grapple);
+            rope.Shoot(grappleAnchor, true);
+            Sfx.Play(SfxId.Dash);
+            return true;
+        }
         RaycastHit2D best = default;
         int n = Physics2D.Raycast(hand, aim, groundFilter, grappleHits, DashRules.GrappleRange); // groundFilter: groundMask, set every Update
         for (int i = 0; i < n; i++) // skip a collider the hand starts inside (rising through a one-way platform)
@@ -901,6 +930,8 @@ public class PlayerController : MonoBehaviour
             RaycastHit2D top = Physics2D.Raycast(probe, Vector2.down, DashRules.GrappleLedgeSnap, groundMask);
             if (top.collider != null && top.distance > 0.01f && top.normal.y > 0.7f) grappleAnchor = new Vector2(best.point.x, top.point.y + 0.1f);
         }
+        grapplePull = grappleAnchor;
+        grappleHang = grappleStrike = false;
         grappleUsed = true;
         EnterState(State.Grapple);
         rope.Shoot(grappleAnchor, true);
@@ -933,15 +964,54 @@ public class PlayerController : MonoBehaviour
             Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime);
             return;
         }
+        if (hanging) // DECISIONS 38 hook: S (or the time limit) drops straight down
+        {
+            if (input.GrapplePressed) // RMB again: a fresh rope from the hook (the open hatch, a wall); a miss just drops
+            {
+                ReleaseGrapple(false);
+                grappleUsed = false;
+                grappleReadyAt = now;
+                TryGrapple(now);
+            }
+            else if (input.DownHeld || now - hangSince >= DashRules.GrappleHangMax) ReleaseGrapple(false);
+            return;
+        }
         SpawnAfterimage(now);
-        Vector2 toAnchor = grappleAnchor - rb.position;
+        Vector2 toAnchor = grapplePull - rb.position;
         float dist = toAnchor.magnitude;
         float pulled = elapsed - DashRules.GrappleExtendTime;
         float wanted = DashRules.GrapplePullSpeed;
         bool blocked = pulled > 2f * Time.fixedDeltaTime && dist > 0.001f &&
             Vector2.Dot(rb.linearVelocity, toAnchor / dist) < 0.25f * wanted; // stuck on a corner / ceiling: let go
-        if (dist <= DashRules.GrappleReleaseDist + DashRules.GrapplePullSpeed * Time.fixedDeltaTime || blocked || pulled >= DashRules.GrappleMaxPull)
-            ReleaseGrapple(!(blocked && grappleCeiling)); // stuck under a ceiling: no pop into it
+        float step = DashRules.GrapplePullSpeed * Time.fixedDeltaTime;
+        if (grappleHang && dist <= step + 0.05f) // reached the hang point (FixedUpdate slows onto it): hold still under the hook
+        {
+            hanging = true;
+            hangSince = now;
+            rb.linearVelocity = Vector2.zero;
+            rb.position = grapplePull;
+            return;
+        }
+        if (grappleStrike && dist <= DashRules.GrappleReleaseDist + step) { HatchStrike(now); return; }
+        if ((!grappleHang && dist <= DashRules.GrappleReleaseDist + step) || blocked || pulled >= DashRules.GrappleMaxPull)
+            ReleaseGrapple(!(blocked && grappleCeiling) && !grappleHang && !grappleStrike); // no pop into a ceiling; boss targets never pop
+    }
+
+    // DECISIONS 38: the rope reached the open hatch. The boss takes the hit (GrappleStrike); the hero bounces back the way it came and
+    // falls with GrappleStrikeSafe i-frames. A hatch that shut meanwhile (false): the same bounce, no hit, no i-frames.
+    void HatchStrike(float now)
+    {
+        bool struck = GrappleAlt != null && GrappleAlt.GrappleStrike(grappleAnchor);
+        EnterState(State.Locomotion);
+        rb.linearVelocity = new Vector2(-Facing * DashRules.GrappleStrikeBounceX, DashRules.GrappleStrikeBounceY);
+        jumpCut = true;
+        grappleCarryUntil = now + DashRules.GrappleCarryTime;
+        grappleReadyAt = now + DashRules.GrappleCooldown;
+        if (!struck) return;
+        grappleSafeUntil = now + DashRules.GrappleStrikeSafe;
+        HoldPose(DraftSprites.Pick(DraftSprites.HeroAttack, 2, DraftSprites.Hero), 0.2f);
+        ParryFx.Slash(AttackCenter(), visual != null ? visual.transform : null, Facing);
+        Sfx.Play(SfxId.Swing);
     }
 
     // Back to Locomotion keeping the pull velocity. pop: anchor above -> at least GrapplePopFrac of a jump upward (slingshot onto the ledge).
@@ -1220,7 +1290,7 @@ public class PlayerController : MonoBehaviour
     {
         if (state == State.Dead) return HitResult.Dodged;
         if (state == State.Dash || state == State.Issen) return HitResult.Dodged;
-        if (health.Invulnerable) return HitResult.Dodged;
+        if (health.Invulnerable || Time.time < grappleSafeUntil) return HitResult.Dodged; // grappleSafeUntil: hatch strike fall (DECISIONS 38)
 
         float dx = info.SourcePosition.x - transform.position.x;
         // projectiles judge by travel direction (a shot spawned inside the player's box has no meaningful position side)

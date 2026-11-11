@@ -24,6 +24,10 @@ public class ControlHints : MonoBehaviour
             new[] { "ctrl_key_space", "SPACE", "Jump", "점프" },
             new[] { "ctrl_key_shift", "SHIFT", "Issen (level enemy)", "일섬 (같은 높이 적)" },
         } },
+        { "STG05", new[] // boss room (DECISIONS 38): the rope's new targets
+        {
+            new[] { "ctrl_mouse_right", "", "Rope: hooks & open hatch", "갈고리 줄: 고리 · 열린 해치" },
+        } },
         { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {
             new[] { "ctrl_key_e", "E", "Lucky dice · 7 hits = 1 roll", "점괘 주사위 · 적중 7번 = 굴림 1번" },
