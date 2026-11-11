@@ -37,9 +37,10 @@ public static class BossArt
         Variants(BladeArm, BladePix(false), BladePix(true), new Vector2(0.5f, 0f));
         Variants(Hatch, HatchPix(false), HatchPix(true), new Vector2(0.5f, 0.5f));
         HatchInside = HatchInsidePix().Make(new Vector2(0.5f, 0.5f));
-        Props[0] = RackPix().Make(new Vector2(0.5f, 0f));
-        Props[1] = ScreenPix().Make(new Vector2(0.5f, 0f));
-        Props[2] = CablesPix().Make(new Vector2(0.5f, 0f));
+        // Drawn props (Resources/BossArt/prop_*.png, bottom-centre pivot) win; the code drawings stay as the fallback.
+        Props[0] = Resources.Load<Sprite>("BossArt/prop_rack") ?? RackPix().Make(new Vector2(0.5f, 0f));
+        Props[1] = Resources.Load<Sprite>("BossArt/prop_screen") ?? ScreenPix().Make(new Vector2(0.5f, 0f));
+        Props[2] = Resources.Load<Sprite>("BossArt/prop_cables") ?? CablesPix().Make(new Vector2(0.5f, 0f));
         var bug = new Pix(3, 3); // . R .  /  R R R  /  r . r
         bug.Dot(1, 2, C(0xD8343A)); bug.Rect(0, 1, 3, 1, C(0xD8343A)); bug.Dot(0, 0, C(0x7A1018)); bug.Dot(2, 0, C(0x7A1018));
         Bug = bug.Make(new Vector2(0f, 0f));

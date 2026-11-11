@@ -2,10 +2,10 @@ using UnityEditor;
 using UnityEngine;
 
 // Boss-v2 part art (Assets/Resources/BossArt/, from docs/design/concept/boss/parts_draft/assembly.json):
-// PPU 32, point, uncompressed. Pivots: body bottom-left, arms bottom-centre (palm / blade tip), hatch pieces centre.
+// PPU 32, point, uncompressed. Pivots: body bottom-left, arms and ending props (prop_*) bottom-centre (palm / blade tip / feet), hatch pieces centre.
 public class BossArtImporter : AssetPostprocessor
 {
-    public override uint GetVersion() => 1;
+    public override uint GetVersion() => 2;
 
     void OnPreprocessTexture()
     {
@@ -20,7 +20,7 @@ public class BossArtImporter : AssetPostprocessor
         ti.alphaIsTransparency = true;
         ti.npotScale = TextureImporterNPOTScale.None;
         string name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
-        Vector2 pivot = name == "boss_body" ? Vector2.zero : name.Contains("_arm") ? new Vector2(0.5f, 0f) : new Vector2(0.5f, 0.5f);
+        Vector2 pivot = name == "boss_body" ? Vector2.zero : name.Contains("_arm") || name.StartsWith("prop_") ? new Vector2(0.5f, 0f) : new Vector2(0.5f, 0.5f);
         var s = new TextureImporterSettings();
         ti.ReadTextureSettings(s);
         s.spriteAlignment = (int)SpriteAlignment.Custom;

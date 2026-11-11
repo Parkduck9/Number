@@ -89,7 +89,7 @@ Every asset in the build is listed here.
 
 **Made by the team with generative AI tools** (tools and how they were used: see the disclosure below)
 - Characters: the dosa hero Yudo (idle, walk, run, jump, dash, attack, hurt, 9 parry poses), the Luddite helper, citizens (melee and ranged), androids, snipers, AI bugs (walking and flying), projectiles
-- The fused machine boss: server body, bug claw, blade arm, chest halves and gun core
+- The fused machine boss: server body, bug claw, blade arm, chest halves and gun core, and the machines you smash in the ending (server rack, surveillance monitor, cable box)
 - Backgrounds: stage 1 layered hanok-street parts and props, stages 2-5 (rooftops, elevated rail, hideout, production line, inspection hall, boss room)
 - Dialogue portraits (Yudo, citizen, Luddite, broadcast, android, bug), the Embector broadcast screens
 - HUD and UI: face health set, broadcast and hologram numbers, lucky dice faces and charge pips, the UI kit (panels, buttons, dialogue box, cursors, lock brackets), control hints, NUMBER logo, app icon
