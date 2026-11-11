@@ -68,6 +68,17 @@ public static class Stg01Builder
     .Concat(Walls("B", B, W, SegHeight * 1.5f))
     .ToArray();
 
+    // Platform art supports (PartsBackdropKit.PlatformArt): rail_pillar columns under the long runs, (floor they stand on, x list).
+    // x 63 is shared by ROOF-A1 and ROOF-A2 so the upper column continues the lower one.
+    static readonly Dictionary<string, (float floor, float[] xs)> Pillars = new Dictionary<string, (float, float[])>
+    {
+        { "ROOF-A1", (GroundA, new[] { 54f, 63f }) },
+        { "ROOF-A2", (14.25f, new[] { 63f }) },   // stands on ROOF-A1
+        { "ROOF-B", (GroundB, new[] { 29.5f, 37.5f }) }, // clear of the street props (pole x 22~24, stone lantern 26.2)
+        { "ROOF-B2", (GroundB, new[] { 66f, 72f }) },
+    };
+    const int PillarOrder = -104; // StreetBackdropKit Background orders: in front of the mid buildings / glow, behind the street props (-103)
+
     static readonly Pt PlayerStart = new Pt("P-START", A, 6f, 2.25f);
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
     static readonly Pt[] Checkpoints =
@@ -137,7 +148,12 @@ public static class Stg01Builder
         }
         StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f, ClimbSteps, hideTwinTower: true); // camera x range = [15, W - 15]
         StreetBackdropKit.Build(roots[B], W, SegH[B], GroundB, 15f, W - 15f, null, hideTwinTower: true);       // after A: camMax is per call
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL")));
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, false); // no placeholder bars: every platform is drawn below
+        foreach (var b in Boxes.Where(b => !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL"))))
+        {
+            Pillars.TryGetValue(b.id, out var p);
+            PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs, PillarOrder); // towers, roof walkways, girders (colliders unchanged)
+        }
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);
@@ -166,7 +182,7 @@ public static class Stg01Builder
     }
 
     // Exit marker (map audit #8): the gate stands on the trigger's floor, centred on it. World layer, order -1: in front of the backdrop,
-    // behind the placeholder blocks and the characters. No collider.
+    // behind the platform art and the characters. No collider.
     static void BuildExitArt(Transform root, Box b)
     {
         var s = AssetDatabase.LoadAssetAtPath<Sprite>(ExitArt);

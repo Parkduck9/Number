@@ -436,6 +436,54 @@ public static class PartsBackdropKit
         Strip(root, s, x1, x2, top, OLedge).color = new Color(DimProp, DimProp, DimProp, 1f);
     }
 
+    // Art for a gameplay platform from existing parts, replacing its placeholder bar / block (build the collider with visible = false; it is
+    // unchanged). Named "Visual (...)" with orders > -100, so AssignSortingLayers puts it on World like the old placeholders (behind the characters).
+    //  Building (tower)  = wall_tile facade rows from under a rail_track roof cap down to the segment floor.
+    //  Solid (beam)      = rooftop walkway: rail_track cap + one wall_tile row (same bands as a tower roof it meets).
+    //  OneWay (ledge)    = thin rail_track girder (reads as jump-through). Order -60: behind the billboard panels (-50).
+    // pillarXs = rail_pillar columns (Background, pillarOrder) from the platform's underside down to `floor` (segment-local).
+    public static void PlatformArt(Transform root, Box b, float floor = 0f, float[] pillarXs = null, int pillarOrder = ORailPillar)
+    {
+        Sprite cap = Load("buildings/rail_track"), wall = Load("buildings/wall_tile");
+        if (cap == null || wall == null) { Missing("buildings/rail_track or wall_tile"); return; }
+        float ch = cap.rect.height / Ppu, wh = wall.rect.height / Ppu;
+        float under = b.kind == Kind.Building ? b.y1 : b.kind == Kind.Solid ? b.y2 - ch - wh : b.y2 - ch;
+        // facade rows (the last one may run below the segment floor, out of the camera's range)
+        if (b.kind != Kind.OneWay)
+            for (float t = b.y2 - ch; t > under + 0.001f; t -= wh) Visual(root, wall, b.x1, b.x2, t, 0, DimFacade);
+        Visual(root, cap, b.x1, b.x2, b.y2, b.kind == Kind.OneWay ? -60 : 1, DimProp);
+        if (pillarXs != null) Pillars(root, under, floor, pillarXs, pillarOrder);
+    }
+
+    const float DimFacade = 0.8f;
+
+    static void Visual(Transform root, Sprite s, float x1, float x2, float top, int order, float dim)
+    {
+        var sr = Strip(root, s, x1, x2, top, order);
+        sr.gameObject.name = "Visual (" + s.name + ")";
+        sr.color = new Color(dim, dim, dim, 1f);
+    }
+
+    // rail_pillar columns at xs, base on `floor`, pieces stacked up; the top piece is lifted so its capital meets `top` (it overlaps the one
+    // below and draws in front of it). A span shorter than one piece pokes ph - span (< 0.5 u here) up into the platform, which hides it.
+    static void Pillars(Transform root, float top, float floor, float[] xs, int order)
+    {
+        var p = Load("buildings/rail_pillar");
+        if (p == null) { Missing("buildings/rail_pillar"); return; }
+        float ph = p.rect.height / Ppu, span = top - floor;
+        if (span <= 0f) return;
+        int n = Mathf.CeilToInt(span / ph);
+        var dim = new Color(DimProp, DimProp, DimProp, 1f);
+        foreach (float x in xs)
+            for (int i = 0; i < n; i++)
+            {
+                float y = i == n - 1 ? Mathf.Max(floor, top - ph) : floor + i * ph;
+                var t = Sprite1(root, "Background (rail_pillar)", p, new Vector2(x, y), false, order);
+                t.localPosition += new Vector3(0f, 0f, -0.01f * i); // upper pieces in front (same sorting order: nearer z wins)
+                t.GetComponent<SpriteRenderer>().color = dim;
+            }
+    }
+
     // Exit door / gate art at a transition trigger (audit #8): `file` (+ looping overlay `sheet`) bottom-centre at segment-local (x, y),
     // world-fixed, behind the characters, no collider. x on the 1/32 grid.
     public static void ExitArt(Transform root, string file, string sheet, float fps, float x, float y)

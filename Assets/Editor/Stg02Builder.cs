@@ -122,6 +122,14 @@ public static class Stg02Builder
     // and the END-B stop post behind the goal gate's left wing.
     static bool HasArt(Box b) => b.id.StartsWith("RAIL-B") || b.id.StartsWith("SH-A") || b.id == "END-B";
 
+    // Platform art supports (PartsBackdropKit.PlatformArt): rail_pillar columns under the roof walkways, (floor they stand on, x list).
+    // x 60 is shared so the ROOF-A4 column continues the ROOF-A3 one.
+    static readonly System.Collections.Generic.Dictionary<string, (float floor, float[] xs)> Pillars = new System.Collections.Generic.Dictionary<string, (float, float[])>
+    {
+        { "ROOF-A3", (1.0f, new[] { 50f, 60f }) },
+        { "ROOF-A4", (13.0f, new[] { 60f }) }, // stands on ROOF-A3
+    };
+
     // Rail art spans = the RAIL-B ledges (x1, x2, top); RAIL-B7's track runs on under the END-B post to the gate's left edge (x 29).
     static (float x1, float x2, float top)[] RailLedges() =>
         Boxes.Where(b => b.id.StartsWith("RAIL-B")).Select(b => (b.id == "RAIL-B7" ? b.x1 - 1f : b.x1, b.x2, b.y2)).ToArray();
@@ -139,8 +147,13 @@ public static class Stg02Builder
             roots[i].position = new Vector3(SegX[i], 0f, 0f);
             PartsBackdropKit.Rooftops(roots[i], W, SegH[i], 15f, W - 15f, Row[i], i == B ? RailLedges() : null); // layered parts (DECISIONS 17); camera x range [15, W - 15]
         }
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL") || HasArt(b)));
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, false); // no placeholder bars: every platform is drawn
         foreach (var b in Boxes.Where(b => b.id.StartsWith("SH-A"))) PartsBackdropKit.LedgeArt(roots[b.seg], "buildings/rail_track", b.x1, b.x2, b.y2); // shaft ledges = iron girders
+        foreach (var b in Boxes.Where(b => !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL") || HasArt(b))))
+        {
+            Pillars.TryGetValue(b.id, out var p);
+            PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs); // towers, roof walkways, ridge girder (colliders unchanged)
+        }
         // exits (audit #8): the hanok scanner gate, door centred on the trigger (B: left wing over the END-B stop post, which it hides)
         PartsBackdropKit.ExitArt(roots[GateA.seg], "buildings/gate_scanner", null, 0f, 57.25f, GateA.y1);
         PartsBackdropKit.ExitArt(roots[GoalB.seg], "buildings/gate_scanner", null, 0f, 32.4375f, GoalB.y1);

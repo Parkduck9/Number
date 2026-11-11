@@ -32,7 +32,7 @@ public static class Stg04Builder
         new[] { ("watchtower", 3f), ("factory_hall", 10.5f), ("watchtower", 15.5f), ("factory_hall", 34.5f), ("watchtower", 39.5f), ("factory_hall", 44.5f), ("watchtower", 49.5f), ("watchtower", 52.875f), ("factory_hall", 65.3125f), ("watchtower", 70.3125f), ("factory_hall", 75.3125f) },
     };
 
-    // Colliders (high tier drawn as placeholder squares). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
+    // Colliders (high tier drawn by PartsBackdropKit.PlatformArt). OneWay y2 = top surface. Jumps: dy <= 1.5 (StepUp), gaps <= 3u.
     static readonly Box[] Boxes = new[]
     {
         // ---- SEG-A floor (x 0~45, y 1.0): old layout (group + catwalk, first android, board 7 for hacking); crates / catwalks = Row
@@ -57,6 +57,13 @@ public static class Stg04Builder
     })
     .Concat(Zigzag("LIFT-B", B, 46f, 56f, 2.5f, 7, StepUp, false)) // 2.5 R, 4.0 L, 5.5 R, 7.0 L, 8.5 R, 10.0 L, 11.5 R
     .ToArray();
+
+    // Platform art supports (PartsBackdropKit.PlatformArt): rail_pillar columns from the floor (1.0) under the high-run walkways.
+    static readonly System.Collections.Generic.Dictionary<string, (float floor, float[] xs)> Pillars = new System.Collections.Generic.Dictionary<string, (float, float[])>
+    {
+        { "HRUN-A", (1.0f, new[] { 63.5f, 68.5f }) },
+        { "HRUN-B", (1.0f, new[] { 66f, 72f }) },
+    };
 
     static readonly Pt PlayerStart = new Pt("P-START", A, 3f, 1.0f);
     static readonly Pt Arrival = new Pt("P-B", B, 2f, 1.0f);
@@ -127,7 +134,12 @@ public static class Stg04Builder
             foreach (var w in Walls(i == A ? "A" : "B", i, W, H)) BuildCollider(roots[i], w, false); // outside the camera range
         }
         // the floor matches the drawn ground line; the shaft ledges get prop art instead of placeholder bars (colliders unchanged, audit #4)
-        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, !(b.id.StartsWith("GROUND") || b.id.StartsWith("CONV-A") || b.id.StartsWith("LIFT-B")));
+        foreach (var b in Boxes) BuildCollider(roots[b.seg], b, false); // no placeholder bars: every platform is drawn
+        foreach (var b in Boxes.Where(b => !(b.id.StartsWith("GROUND") || b.id.StartsWith("CONV-A") || b.id.StartsWith("LIFT-B"))))
+        {
+            Pillars.TryGetValue(b.id, out var p);
+            PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs); // press / towers, high-run walkways, stack / gantry girders (colliders unchanged)
+        }
         foreach (var b in Boxes.Where(b => b.id.StartsWith("CONV-A"))) PartsBackdropKit.LedgeArt(roots[b.seg], "props/conveyor", b.x1, b.x2, b.y2); // static belt (a moving one would read as a conveyor push)
         foreach (var b in Boxes.Where(b => b.id.StartsWith("LIFT-B"))) PartsBackdropKit.LedgeArt(roots[b.seg], "buildings/rail_track", b.x1, b.x2, b.y2); // iron girders
         // exits (audit #8): the factory scanner gate (pulsing beam) on the tower top / high run, behind the characters, no collider
