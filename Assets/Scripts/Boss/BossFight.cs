@@ -1179,6 +1179,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             while (GameFlow.InputLocked) yield return null;
         }
         else Debug.LogWarning("[BossFight] Ending file missing/not talk mode, or no DialoguePlayer; going straight to the title.");
+        GameFlow.InputLocked = ownLock = true; // the dialogue released it: hold it through the illustration so the pause menu cannot open behind it
         yield return EndingIllustration();
         GameFlow.InputLocked = ownLock = false;
         StageFlow.LoadTitle();

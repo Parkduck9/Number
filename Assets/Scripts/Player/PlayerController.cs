@@ -129,7 +129,10 @@ public class PlayerController : MonoBehaviour
     bool pendingGrapple;      // pressed during a hit-stop
     // DECISIONS 38 boss-room targets (GrappleAlt): the body is pulled to grapplePull (= grappleAnchor for ground ropes)
     Vector2 grapplePull;
-    bool grappleHang;         // a ceiling hook (RMB while swinging = a fresh rope from it)
+    Transform grappleTarget;  // ground rope: the hit collider's transform; the anchor follows it (a falling boss roof chunk)
+    Vector2 grappleLocal;     // anchor in grappleTarget's local space
+    bool grappleFollow;       // grappleTarget is set (a destroyed one reads null, so a flag marks "had a target")
+    bool grappleHang;        // a ceiling hook (RMB while swinging = a fresh rope from it)
     bool grappleStrike;       // the open hatch: strike on arrival, then bounce off and fall (GrappleStrikeSafe i-frames)
     // DECISIONS 39 rope swing: a hook or a solid ceiling zips to swingLen, then the body swings on the rope (pendulum, gravity, A/D pump)
     bool grappleSwing;        // this rope swings when it reaches swingLen (else the DECISIONS 16 pull-and-pop)
@@ -523,6 +526,7 @@ public class PlayerController : MonoBehaviour
                 rb.linearVelocity = Vector2.zero;
                 break;
             case State.Grapple:
+                FollowGrappleTarget();
                 if (!grappleAttached) { rb.linearVelocity = Vector2.zero; break; }
                 if (hanging) { SwingStep(); break; }
                 Vector2 toAnchor = grapplePull - rb.position;
@@ -906,6 +910,7 @@ public class PlayerController : MonoBehaviour
             grappleAnchor = altAnchor;
             grapplePull = hang ? altAnchor : altPull; // a hook: zip toward the hook itself, swing at the old hang depth (DECISIONS 39)
             grappleCeiling = false;
+            grappleFollow = false;
             grappleHang = grappleSwing = hang;
             swingLen = Vector2.Distance(altAnchor, altPull);
             grappleStrike = !hang;
@@ -937,6 +942,9 @@ public class PlayerController : MonoBehaviour
             if (top.collider != null && top.distance > 0.01f && top.normal.y > 0.7f) grappleAnchor = new Vector2(best.point.x, top.point.y + 0.1f);
         }
         grapplePull = grappleAnchor;
+        grappleTarget = best.collider.transform;
+        grappleLocal = grappleTarget.InverseTransformPoint(grappleAnchor);
+        grappleFollow = true;
         grappleHang = grappleStrike = false;
         grappleSwing = grappleCeiling && !best.collider.usedByEffector; // solid ceiling / overhang swings; a one-way platform keeps the pop through it
         swingLen = DashRules.GrappleSwingLen;
@@ -949,6 +957,11 @@ public class PlayerController : MonoBehaviour
 
     void UpdateGrapple(float now, float elapsed)
     {
+        if (grappleFollow && (grappleTarget == null || !grappleTarget.gameObject.activeInHierarchy)) // the hit chunk crumbled / was disabled
+        {
+            ReleaseGrapple(false);
+            return;
+        }
         // Jump = early release + a normal jump. LMB = release into a swing (UpdateLocomotion runs it this frame). Shift stays buffered until the pull ends.
         if (now <= jumpBufferedUntil && grappleAttached && hanging) // swinging: let go with the swing (slingshot)
         {
@@ -1013,6 +1026,20 @@ public class PlayerController : MonoBehaviour
         if (grappleStrike && dist <= DashRules.GrappleReleaseDist + step) { HatchStrike(now); return; }
         if ((!grappleHang && dist <= DashRules.GrappleReleaseDist + step) || blocked || pulled >= DashRules.GrappleMaxPull)
             ReleaseGrapple(!(blocked && grappleCeiling) && !grappleHang && !grappleStrike); // no pop into a ceiling; boss targets never pop
+    }
+
+    // Moves the ground anchor (and the pull point and rope tip) with the collider it hit; zero shift on static terrain.
+    void FollowGrappleTarget()
+    {
+        if (!grappleFollow || grappleTarget == null) return;
+        Vector2 delta = (Vector2)grappleTarget.TransformPoint(grappleLocal) - grappleAnchor;
+        // Inactive, or a jump no mover makes in one step (a pooled chunk crumbled and respawned elsewhere between checks): drop it,
+        // UpdateGrapple then releases (null target) even if the pooled object is active again.
+        if (!grappleTarget.gameObject.activeInHierarchy || delta.sqrMagnitude > 0.25f) { grappleTarget = null; return; }
+        if (delta.sqrMagnitude < 1e-8f) return;
+        grappleAnchor += delta;
+        grapplePull += delta;
+        rope.MoveTarget(grappleAnchor);
     }
 
     // DECISIONS 38: the rope reached the open hatch. The boss takes the hit (GrappleStrike); the hero bounces back the way it came and

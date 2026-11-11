@@ -41,6 +41,8 @@ public class EnemyProjectile : MonoBehaviour
     static readonly RaycastHit2D[] RelayHits = new RaycastHit2D[8];
     static ContactFilter2D relayFilter;
     static bool relayFilterReady;
+    static readonly RaycastHit2D[] GroundHits = new RaycastHit2D[16]; // one step's ground hits (reflected shots skip one-way ones, so keep several)
+    static ContactFilter2D groundFilter; // struct: only its layer mask is set per cast
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { Active.Clear(); relayFilterReady = false; } // Domain Reload is off
@@ -97,11 +99,17 @@ public class EnemyProjectile : MonoBehaviour
         float dist = step.magnitude;
         Vector2 dir = dist > 0f ? step / dist : Vector2.right;
 
-        Collider2D wall = groundMask.value != 0 ? Physics2D.BoxCast(prev, size, 0f, dir, dist, groundMask).collider : null;
-        if (wall != null && !(Reflected && wall.usedByEffector)) // a parried shot flies through one-way platforms (boss roof chunks must not block the lob to the hatch)
+        if (groundMask.value != 0)
         {
-            Destroy(gameObject);
-            return;
+            groundFilter.SetLayerMask(groundMask);
+            groundFilter.useTriggers = Physics2D.queriesHitTriggers;
+            int n = Physics2D.BoxCast(prev, size, 0f, dir, groundFilter, GroundHits, dist);
+            for (int i = 0; i < n; i++)
+            {
+                if (Reflected && GroundHits[i].collider.usedByEffector) continue; // a parried shot flies through one-way platforms (boss roof chunks must not block the lob to the hatch)
+                Destroy(gameObject); // any other hit along the whole step (a solid wall behind a one-way platform too)
+                return;
+            }
         }
         if (relayable && !relayed && !Reflected && TryRelay(prev, dir, dist)) return; // batted: tests the player from the next frame
         if (passedPlayer) return;

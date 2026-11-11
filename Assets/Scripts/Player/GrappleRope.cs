@@ -50,6 +50,8 @@ public class GrappleRope : MonoBehaviour
         Draw();
     }
 
+    public void MoveTarget(Vector2 to) => target = to; // the anchored thing moved (the next LateUpdate redraws)
+
     public void Hide()
     {
         active = false;
