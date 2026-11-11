@@ -4,8 +4,8 @@ using UnityEngine;
 // Owned by TestEnemy (Kind.Sniper), built on first use. Removal: delete this file and the Kind.Sniper branches in TestEnemy.
 public class SniperSight : MonoBehaviour
 {
-    const float TrackAlpha = 0.45f, TrackWidth = 1f / 32f;     // (T) 1 px
-    const float LockWidth = 2f / 32f, LockFlashHz = 20f;       // (T) 2 px, alternates full / LockDimAlpha
+    const float TrackAlpha = 0.8f, TrackWidth = 2f / 32f;      // (T) 2 px (1 px at 45% was invisible in play, 11-11)
+    const float LockWidth = 3f / 32f, LockFlashHz = 20f;       // (T) 3 px, alternates full / LockDimAlpha
     const float LockDimAlpha = 0.55f;
     static readonly Color LaserRed = new Color(1f, 0.1647f, 0.1647f); // #FF2A2A
     static Material mat;
