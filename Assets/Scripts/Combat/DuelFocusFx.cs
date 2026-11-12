@@ -14,7 +14,7 @@ public class DuelFocusFx : MonoBehaviour
     const string LayerName = "DuelBlur";
     const float FadeIn = 0.2f, FadeOut = 0.25f; // (T) s
     const float FallbackAlpha = 0.55f;          // (T) plain dark overlay
-    const float Oversize = 1.6f;                // quad vs view (camera shake; the PPU 1.5x zoom-out lags a frame)
+    const float Oversize = 2.2f;                // quad vs view (camera shake; the PPU 2x zoom-out lags a frame)
     const int LayerStep = 4000;                 // order offset per sorting layer above World when lowered
 
     static readonly int AmountId = Shader.PropertyToID("_Amount");

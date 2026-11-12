@@ -35,7 +35,8 @@ public class EliteDuel : MonoBehaviour
     static readonly float[] Gaps = { 0.8f, 0.75f, 0.7f, 0.65f, 0.6f, 0.56f, 0.52f }; // (T) s between elite strikes, N = 3..9
     const float WindowEarly = 0.25f, WindowLate = 0.1f;  // (T) LMB parry window around each strike
     const float Lockout = 0.25f;                         // (T) s
-    const float FocusPpuMul = 1.5f;                      // PPU 32 -> 48 in one step
+    const float FocusPpuMul = 2f;                        // PPU 32 -> 64 in one step (playtest 11-13: closer, and the smaller view lets the
+                                                         // bounds clamp keep a floor-level duel nearer the screen centre without showing past the map)
     const float FocusFlash = 0.06f;
     const float FinishHitStop = 0.15f, FinishHold = 0.3f, CamEaseOut = 0.35f; // (T) s
     const float ShakePx = 4f, ShakeTime = 0.3f;
