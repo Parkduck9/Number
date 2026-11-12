@@ -183,7 +183,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     readonly SpriteRenderer[] bugs = new SpriteRenderer[Waves * BugsPerWave];
     readonly Vector2[] bugOff = new Vector2[Waves * BugsPerWave];
     // bug rain pool (DECISIONS 38)
-    readonly float[] rainX = new float[RainCols], rainT = new float[RainCols];
+    readonly float[] rainX = new float[RainCols], rainT = new float[RainCols], rainG = new float[RainCols]; // rainG: landing height
     readonly int[] rainStage = new int[RainCols]; // 0 off, 1 warning, 2 falling, 3 floor carpet
     readonly bool[] rainHit = new bool[RainCols];
     readonly SpriteRenderer[] rainBugs = new SpriteRenderer[RainCols * BugsPerCol], rainMark = new SpriteRenderer[RainCols], rainLane = new SpriteRenderer[RainCols];
@@ -613,13 +613,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         rainT[c] = 0f;
         rainHit[c] = false;
         x = Mathf.Clamp(x, 0.5f, RoomW - 0.5f); // was 1.5: hugging the wall on a perch (x 0.45..0.65) no column could reach (DECISIONS 45)
-        // playtest 11-12: a column straddling a grate edge dropped half its bugs through the solid deck. Whole column in the lane or on the deck.
-        if (OverLane(x, RainHalfW) && !(x - RainHalfW >= LaneX1 && x + RainHalfW <= LaneX2))
-            x = OverLane(x) ? Mathf.Clamp(x, LaneX1 + RainHalfW, LaneX2 - RainHalfW) : x <= LaneX1 ? LaneX1 - RainHalfW : LaneX2 + RainHalfW;
+        // playtest 11-12 (2nd): a column over the grate fell through it into the lane even with the player on the deck, so the bugs looked
+        // like they dropped out of the floor. Now it lands on the grate top, and only falls into the lane when the player is down there.
+        bool lane = OverLane(x) && player.transform.position.y - 1f < Floor - 0.5f; // player feet below the deck
+        if (lane) x = Mathf.Clamp(x, LaneX1 + RainHalfW, LaneX2 - RainHalfW); // whole column inside the lane walls
         rainX[c] = Snap(x);
+        rainG[c] = lane ? LaneY : Floor;
         for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainOff[i] = new Vector2(Random.Range(-RainHalfW, RainHalfW), Random.value * RainLen);
         rainLane[c].transform.position = new Vector3(rainX[c], Floor + 8f, 0f);
-        rainMark[c].transform.position = new Vector3(rainX[c], RainGround(rainX[c]) + 0.125f, 0f);
+        rainMark[c].transform.position = new Vector3(rainX[c], rainG[c] + 0.125f, 0f);
         rainLane[c].enabled = rainMark[c].enabled = true;
         Sfx.Play(SfxId.EnemyTell, 0.5f, 1.3f);
     }
@@ -633,7 +635,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         {
             if (rainStage[c] == 0) continue;
             rainT[c] += dt;
-            float x = rainX[c], g = RainGround(x);
+            float x = rainX[c], g = rainG[c];
             if (rainStage[c] == 1)
             {
                 rainMark[c].color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.5f);
@@ -935,7 +937,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     bool InLane => player.transform.position.y - 0.85f < Floor;
     bool OnPerch => player.transform.position.y - 1f > PerchTop - 0.2f; // standing on a wall perch (or anything that high)
     static bool OverLane(float x, float half = 0f) => x + half > LaneX1 && x - half < LaneX2;
-    static float RainGround(float x) => OverLane(x) ? LaneY : Floor; // a rain column over the grate falls through it into the lane
 
     // World box of the blade's steel. rotZ 0 = hanging down (slams; sweeps use ArmHitsPlayer). Only right angles: exact.
     static Rect BladeBox(Vector2 tip, float rotZ)
