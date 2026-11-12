@@ -59,6 +59,11 @@ public static class Stg05Builder
         // the plate's bottom row (PartsBackdropKit.Wall), instead of the old grey strip (audit #10).
         BuildCollider("GROUND-L", 0f, BossFight.LaneX1, 0f, 2f, null);
         BuildCollider("GROUND-R", BossFight.LaneX2, RoomW, 0f, 2f, null);
+        // visible deck (playtest 11-12: the dark floor vs the bright grate read as two floors; rain landed on "nothing" beside the grate):
+        // the solid deck either side of the lane drawn like a rooftop walkway (rail_track cap + wall_tile), visual only
+        var deckArt = new GameObject("Deck art").transform;
+        PartsBackdropKit.PlatformArt(deckArt, new StageBuildKit.Box("DECK-L", 0, StageBuildKit.Kind.Solid, 0f, BossFight.LaneX1, 0f, 2f), facades: false);
+        PartsBackdropKit.PlatformArt(deckArt, new StageBuildKit.Box("DECK-R", 0, StageBuildKit.Kind.Solid, BossFight.LaneX2, RoomW, 0f, 2f), facades: false);
         BuildCollider("WALL-L", -1f, 0f, 0f, RoomH, null);
         BuildCollider("WALL-R", RoomW, RoomW + 1f, 0f, RoomH, null);
         BuildEscapes();

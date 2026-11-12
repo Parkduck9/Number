@@ -30,7 +30,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public enum Kind { Citizen, Bug, Android, Sniper, Elite } // new kinds go last (serialized as int)
 
     // ---- Sniper (DECISIONS 15): stands still, laser tracks the player, locks, fires one fast parryable shot along the locked line ----
-    const float SniperRange = 19f;       // (T) u from the muzzle, needs a clear line (groundMask): about a whole screen
+    const float SniperRange = 30f;       // (T) u from the muzzle, needs a clear line (groundMask): a whole screen width (was 19, playtest 11-12)
     const float SniperTrackTime = 1.0f;  // (T) laser follows the player
     const float SniperLockTime = 0.25f;  // (T) laser fixed + flashing, then the shot
     const float SniperShotSpeed = 14f;   // (T) u/s; LMB parry window = (DashRules.ParryShotRange 3 - contact 0.7) / this = 0.16 s (22 gave 0.1 s: too tight, Fable review)
@@ -454,6 +454,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     {
         Vector2 m = Muzzle, p = player.transform.position;
         if ((p - m).sqrMagnitude > SniperRange * SniperRange) return false;
+        var cam = Camera.main; // the longer range must not shoot from off-screen: the sniper has to be in view
+        if (cam != null) { Vector3 v = cam.WorldToViewportPoint(m); if (v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f) return false; }
         return groundMask.value == 0 || Physics2D.Linecast(m, p, groundMask).collider == null;
     }
 

@@ -82,9 +82,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float SweepStep = 0.3f; // u between swept hit tests (no tunnelling on a long frame)
     // DECISIONS 45: the arm lies flat (rot +-90, mirrored for left -> right so both directions are the same shape). Over its whole
     // length it covers ArmDown below the tip line (max ArmSlice.y) to ArmUp above it (-min ArmSlice.x): an 8 u wall. SweepY = tip line:
+    //   (hit band trimmed by SweepInset since 11-12: LOW 2.975..9.475, HIGH 4.775..11.275)
     //   LOW  6.1 -> arm 2.225..10.225: above the lane (head 2.05), the deck and every jump inside it; clear = a perch (feet 10.5) / the lane.
     //   HIGH 7.9 -> arm 4.025..12.025: over a standing head (3.8) and the lane; any hop, a hook, a perch, a roof chunk under 12 are inside it.
     const float ArmDown = 124f * Px, ArmUp = 132f * Px;
+    // playtest 11-12 "the sweep reach is too big": the hit band is trimmed SweepInset off both long edges of the arm (8 u -> 6.5 u),
+    // the warning band with it. The thin blade part is untouched (only the band's outer edges are trimmed).
+    const float SweepInset = 0.75f;
     static readonly float[] SweepY = { 6.1f, 7.9f }; // LOW, HIGH
     // Under-bridge lane (DECISIONS 45, built by Stg05Builder from these): the deck over LaneX1..LaneX2 is a one-way grate (S + Space drops
     // through, a jump comes back up), the lane floor is LaneY (head 2.05 < the LOW arm). Wall perches: one-way ledges PerchW wide at the
@@ -608,7 +612,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         rainStage[c] = 1;
         rainT[c] = 0f;
         rainHit[c] = false;
-        rainX[c] = Snap(Mathf.Clamp(x, 0.5f, RoomW - 0.5f)); // was 1.5: hugging the wall on a perch (x 0.45..0.65) no column could reach (DECISIONS 45)
+        x = Mathf.Clamp(x, 0.5f, RoomW - 0.5f); // was 1.5: hugging the wall on a perch (x 0.45..0.65) no column could reach (DECISIONS 45)
+        // playtest 11-12: a column straddling a grate edge dropped half its bugs through the solid deck. Whole column in the lane or on the deck.
+        if (OverLane(x, RainHalfW) && !(x - RainHalfW >= LaneX1 && x + RainHalfW <= LaneX2))
+            x = OverLane(x) ? Mathf.Clamp(x, LaneX1 + RainHalfW, LaneX2 - RainHalfW) : x <= LaneX1 ? LaneX1 - RainHalfW : LaneX2 + RainHalfW;
+        rainX[c] = Snap(x);
         for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainOff[i] = new Vector2(Random.Range(-RainHalfW, RainHalfW), Random.value * RainLen);
         rainLane[c].transform.position = new Vector3(rainX[c], Floor + 8f, 0f);
         rainMark[c].transform.position = new Vector3(rainX[c], RainGround(rainX[c]) + 0.125f, 0f);
@@ -954,7 +962,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                     if (flipX) l.x = -l.x; // the renderer is mirrored about the centre line (pivot x 0.5)
                     int u = Mathf.FloorToInt(l.y);
                     if (u < 0 || u >= ArmSlice.Length) continue;
-                    if (l.x > ArmSlice[u].x * Px && l.x < ArmSlice[u].y * Px) return true;
+                    if (l.x > Mathf.Max(ArmSlice[u].x * Px, -ArmUp + SweepInset) && l.x < Mathf.Min(ArmSlice[u].y * Px, ArmDown - SweepInset)) return true;
                 }
         }
         return false;
@@ -1090,7 +1098,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             float dir = i % 2 == 0 ? -1f : 1f, x0 = dir < 0f ? RoomW + 1f : -1f, x1 = dir < 0f ? -BladeArmLen - 1f : RoomW + BladeArmLen + 1f;
             float rot = dir * 90f; // the hilt points back (-dir), lying flat (DECISIONS 45)
             sweepY = SweepY[low ? 0 : 1];
-            sweepFill.transform.localScale = new Vector3(RoomW, ArmDown + ArmUp, 1f);
+            sweepFill.transform.localScale = new Vector3(RoomW, ArmDown + ArmUp - 2f * SweepInset, 1f);
             sweepFill.enabled = true;
             blade.Glow = true;
             blade.Sr.transform.rotation = Quaternion.Euler(0f, 0f, rot);
@@ -1478,7 +1486,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         if (zoneFloor.enabled) zoneFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.85f : 0.55f);
         if (sweepY >= 0f && !dead)
         {
-            sweepFill.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY + (ArmUp - ArmDown) * 0.5f), 0f); // the arm's full height
+            sweepFill.transform.position = new Vector3(RoomW * 0.5f, Snap(sweepY + (ArmUp - ArmDown) * 0.5f), 0f); // the arm's hit band (trimmed by SweepInset)
             sweepFill.color = new Color(1f, 0.23f, 0.23f, blink ? 0.22f : 0.1f); // the blinking band = height tell (warning only)
         }
         Vector2 aimTo = player.transform.position;

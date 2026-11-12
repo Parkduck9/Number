@@ -66,7 +66,7 @@ public static class Skill5Marks
                 Vector2 c = DiceSkillKit.Center(e);
                 MomentFx.HackPulse(c);
                 DiceSkillKit.Ring(c, 0.3f, 2f * DiceSkillKit.Px, DiceSkillKit.A(DiceSkillKit.Yellow, 0.9f), 0.25f, 2.5f); // burning paper
-                DiceSkillKit.Strike(ctx, e); // no-op on one already down
+                DiceSkillKit.StunOrStrike(ctx, e); // no-op on one already down
                 yield return DiceSkillKit.Wait(ChainGap);
             }
             DiceSkillKit.Overlay.Get().Flash(DiceSkillKit.Yellow, 0.22f, 0.12f);

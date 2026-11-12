@@ -123,6 +123,17 @@ public static class DiceSkillKit
         return ctx.Player.StrikeEnemy(e, e.BodyCollider, ctx.Player.Body.position, true);
     }
 
+    // Faces 2 / 4 / 5 (playtest 11-12, like face 3): an android is overloaded (stunned look, the next hit kills) instead of struck.
+    public const float AndroidOverloadSeconds = 3f;
+    public static bool StunOrStrike(LuckyDice ctx, TestEnemy e)
+    {
+        if (!Alive(e) || PlayerGone(ctx)) return false;
+        if (!e.IsAndroid || e.Current == TestEnemy.State.Overload) return Strike(ctx, e); // already overloaded: this blow finishes it
+        e.Overload(AndroidOverloadSeconds);
+        MomentFx.HackPulse(Center(e));
+        return true;
+    }
+
     // Scaled wait (freezes with hit-stop / pause like the rest of the game).
     public static IEnumerator Wait(float seconds)
     {

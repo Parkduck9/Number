@@ -454,7 +454,7 @@ public static class PartsBackdropKit
     //  Solid (beam)      = rooftop walkway: rail_track cap + one wall_tile row (same bands as a tower roof it meets).
     //  OneWay (ledge)    = thin rail_track girder (reads as jump-through). Order -60: behind the billboard panels (-50).
     // pillarXs = rail_pillar columns (Background, pillarOrder) from the platform's underside down to `floor` (segment-local).
-    public static void PlatformArt(Transform root, Box b, float floor = 0f, float[] pillarXs = null, int pillarOrder = ORailPillar)
+    public static void PlatformArt(Transform root, Box b, float floor = 0f, float[] pillarXs = null, int pillarOrder = ORailPillar, bool facades = true)
     {
         Sprite cap = Load("buildings/rail_track"), wall = Load("buildings/wall_tile");
         if (cap == null || wall == null) { Missing("buildings/rail_track or wall_tile"); return; }
@@ -467,7 +467,7 @@ public static class PartsBackdropKit
             for (float t = b.y2 - ch; t > under + 0.001f; t -= wh, row++)
             {
                 Visual(root, wall, b.x1, b.x2, t, 0, DimFacade);
-                Facades(root, b, t, wh, row);
+                if (facades) Facades(root, b, t, wh, row);
             }
         }
         Visual(root, cap, b.x1, b.x2, b.y2, b.kind == Kind.OneWay ? -60 : 1, DimProp);

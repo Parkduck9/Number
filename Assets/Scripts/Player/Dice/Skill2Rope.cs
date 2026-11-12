@@ -56,7 +56,7 @@ public static class Skill2Rope
                         if (!hit.Contains(e) && Passed(DiceSkillKit.Center(e) - o, a0, dir, swept))
                         {
                             hit.Add(e);
-                            DiceSkillKit.Strike(ctx, e);
+                            DiceSkillKit.StunOrStrike(ctx, e);
                         }
                 yield return null;
             }
@@ -65,7 +65,7 @@ public static class Skill2Rope
         finally
         {
             if (completed) // a frame step that jumped past the last angles
-                foreach (TestEnemy e in targets) if (!hit.Contains(e)) DiceSkillKit.Strike(ctx, e);
+                foreach (TestEnemy e in targets) if (!hit.Contains(e)) DiceSkillKit.StunOrStrike(ctx, e);
             DiceSkillKit.ReleaseHold();
             if (segs != null) Object.Destroy(segs.gameObject);
         }

@@ -47,7 +47,7 @@ public static class Skill4Hold
             if (targets.Count == 0) DiceSkillKit.Fizzle(ctx);
             bool any = false;
             foreach (TestEnemy e in targets)
-                if (DiceSkillKit.Alive(e)) { DiceSkillKit.Strike(ctx, e); any = true; }
+                if (DiceSkillKit.Alive(e)) { DiceSkillKit.StunOrStrike(ctx, e); any = true; }
             if (any) p.DuelHitStop(Juice.HitStopKill); // one shared stop (the strikes only extend it)
             yield return DiceSkillKit.Wait(Recover);
         }

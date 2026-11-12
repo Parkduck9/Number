@@ -852,7 +852,14 @@ public class PlayerController : MonoBehaviour
         Sfx.Play(SfxId.Dash);
         ParryFx.Slash(at, null, travel);
         if (alt) IssenAlt.IssenHit(at);
-        else if (!(target.IsHuman && StrikeEnemy(target, col, from, true))) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
+        else if (target.IsAndroid && target.Current != TestEnemy.State.Overload) // playtest 11-12: the cut overloads an android (stunned look, next hit kills)
+        {
+            target.Overload(DiceSkillKit.AndroidOverloadSeconds); // 3 s like the dice overload: the issen cooldown (5 s) leaves LMB to finish it
+            LuckyDice.AddHitCharge(); // a landed cut counts toward the dice (7 hits)
+            MomentFx.HackPulse(target.BodyCollider != null ? (Vector2)target.BodyCollider.bounds.center : (Vector2)target.transform.position);
+            Sfx.Play(SfxId.Stunned);
+        }
+        else if (!((target.IsHuman || target.IsAndroid) && StrikeEnemy(target, col, from, true))) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
         StartHitStop(DashRules.IssenHitStop); // only extends a kill's longer stop
         Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, path);
         return true;
