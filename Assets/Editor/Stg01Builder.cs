@@ -154,6 +154,7 @@ public static class Stg01Builder
             Pillars.TryGetValue(b.id, out var p);
             PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs, PillarOrder); // towers, roof walkways, girders (colliders unchanged)
         }
+        for (int i = 0; i < roots.Length; i++) PartsBackdropKit.GirderDetails(roots[i], i, Boxes, Boxes.Where(b => b.kind == Kind.OneWay)); // brackets at walls, chains from platforms above
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);

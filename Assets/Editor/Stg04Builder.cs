@@ -142,6 +142,8 @@ public static class Stg04Builder
         }
         foreach (var b in Boxes.Where(b => b.id.StartsWith("CONV-A"))) PartsBackdropKit.LedgeArt(roots[b.seg], "props/conveyor", b.x1, b.x2, b.y2); // static belt (a moving one would read as a conveyor push)
         foreach (var b in Boxes.Where(b => b.id.StartsWith("LIFT-B"))) PartsBackdropKit.LedgeArt(roots[b.seg], "buildings/rail_track", b.x1, b.x2, b.y2); // iron girders
+        for (int i = 0; i < roots.Length; i++) // brackets at walls, chains from platforms above (the conveyor belts are not girders)
+            PartsBackdropKit.GirderDetails(roots[i], i, Boxes, Boxes.Where(b => b.kind == Kind.OneWay && !b.id.StartsWith("CONV-A")), b => b.id.StartsWith("LIFT-B"));
         // exits (audit #8): the factory scanner gate (pulsing beam) on the tower top / high run, behind the characters, no collider
         PartsBackdropKit.ExitArt(roots[GateA.seg], "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 74.8125f, GateA.y1);
         PartsBackdropKit.ExitArt(roots[GoalB.seg], "props/scanner_gate", "props/scanner_gate_beam_pulse_4f", 3f, 73.8125f, GoalB.y1);

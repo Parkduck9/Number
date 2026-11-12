@@ -111,8 +111,8 @@
 
 | 순서 | 할 일 | 메모 |
 |---|---|---|
-| 1 | **엔딩 주인공 머리 교체 — 사용자 확인 대기** | 시안 `docs/design/concept/ending_fix/ending_illustration_v2.png`(+`compare.png`), Codex(gpt-6.1-sol) 픽셀 수정. 승인되면 `Assets/Resources/DraftUi/ending_illustration.png`에 덮어쓰고 CREDITS 기록 |
-| 2 | **맵 아트 더 자연스럽게** | 사용자 요청. 후보: 탑 벽 반복 패턴(wall_tile) 다양화, 공중 철골 발판에 받침·줄, 화면 위쪽 빈 하늘. 시안 먼저 보여 주기 |
+| 1 | ~~엔딩 주인공 머리 교체~~ — **취소 (11/12)**: 사용자가 원본(짧은 머리)이 더 어울린다고 함. `ending_illustration.png` 그대로 유지, v2 시안은 참고용으로만 남김 | — |
+| 2 | ~~맵 아트 더 자연스럽게~~ — **완료 (11/12)** | Codex 부품(벽 장식 facade_a/b/c, girder_bracket, girder_chain, far_towers_strip) → 빌더(PartsBackdropKit·StreetBackdropKit·Stg01/02/04Builder) 연결, 씬 재생성. 캡처 `docs/qa/level_overview/after4/` |
 | 3 | 보스전 플레이 피드백 반영 | 휘두르기 회피(벽 발판·아래 통로), 예고 1.0초, 내려찍기 중 높은 발판은 쉬는 자리(의도적으로 둠) |
 | 4 | 최종 WebGL 빌드 + zip | 빌드 뒤 `Mulmaru SDF.asset`·`LiberationSans SDF.asset` 되돌리기 |
 

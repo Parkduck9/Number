@@ -90,6 +90,7 @@ public static class StreetBackdropKit
         float ySkyline = y0 + SkylineLift / Ppu;
         var skylineBottom = Runs(Dir + "far_skyline.png", true).OrderByDescending(r => r.end - r.start).First();
         AddSquare(skylineG, "Background (skyline fill)", new Vector2(width * 0.5f, (ySkyline - 10f) * 0.5f), new Vector2(width + 4f, ySkyline + 10f), skylineBottom.c, OSkyline);
+        FarTowers(skylineG, cx0, ySkyline, sMin, sMax);
         Tiles(skylineG, "Background (far skyline)", skyline, null, 0f, cx0, y0 + SkylineLift / Ppu, sMin, sMax, false, OSkyline);
         Tiles(skylineG, "Background (window twinkle)", null, Frames("far_window_twinkle_4f"), 1f, cx0, y0 + SkylineLift / Ppu, sMin, sMax, false, OTwinkle);
 
@@ -136,6 +137,19 @@ public static class StreetBackdropKit
     }
 
     // ------------------------------------------------------------------ pieces
+
+    // far_towers_strip (30 u, seamless) behind the skyline: same group and order, a hair further back (z) so it draws under it; bottom edge at the skyline's.
+    static void FarTowers(Transform g, float cx0, float y, float min, float max)
+    {
+        var s = AssetDatabase.LoadAssetAtPath<Sprite>(Stg01LayerImporter.PartsDir + "far/far_towers_strip.png");
+        if (s == null) { Todo.Add("STG02_05_Parts part missing: far/far_towers_strip"); return; }
+        float w = s.rect.width / Ppu;
+        for (int k = Mathf.FloorToInt((min - cx0) / w + 0.5f), kMax = Mathf.CeilToInt((max - cx0) / w - 0.5f); k <= kMax; k++)
+        {
+            var t = Sprite1(g, "Background (far towers)", s, new Vector2(cx0 + k * w, y), false, OSkyline);
+            t.localPosition += new Vector3(0f, 0f, 0.02f);
+        }
+    }
 
     internal static Transform Group(Transform root, string name, Vector2 factor, Vector2 camOrigin)
     {

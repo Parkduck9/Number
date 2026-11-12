@@ -154,6 +154,8 @@ public static class Stg02Builder
             Pillars.TryGetValue(b.id, out var p);
             PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs); // towers, roof walkways, ridge girder (colliders unchanged)
         }
+        for (int i = 0; i < roots.Length; i++) // brackets at walls, chains from platforms above (RAIL-B / END-B have their own art)
+            PartsBackdropKit.GirderDetails(roots[i], i, Boxes, Boxes.Where(b => b.kind == Kind.OneWay && !b.id.StartsWith("RAIL-B")), b => b.id.StartsWith("SH-A"));
         // exits (audit #8): the hanok scanner gate, door centred on the trigger (B: left wing over the END-B stop post, which it hides)
         PartsBackdropKit.ExitArt(roots[GateA.seg], "buildings/gate_scanner", null, 0f, 57.25f, GateA.y1);
         PartsBackdropKit.ExitArt(roots[GoalB.seg], "buildings/gate_scanner", null, 0f, 32.4375f, GoalB.y1);

@@ -1,0 +1,70 @@
+{
+  "facade_a": {
+    "size_px": [
+      140,
+      86
+    ],
+    "opaque_palette_count": 8,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "facade_b": {
+    "size_px": [
+      140,
+      86
+    ],
+    "opaque_palette_count": 5,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "facade_c": {
+    "size_px": [
+      140,
+      86
+    ],
+    "opaque_palette_count": 7,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "girder_bracket": {
+    "size_px": [
+      96,
+      64
+    ],
+    "opaque_palette_count": 4,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "girder_chain": {
+    "size_px": [
+      128,
+      32
+    ],
+    "opaque_palette_count": 4,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "far_towers_strip": {
+    "size_px": [
+      960,
+      400
+    ],
+    "opaque_palette_count": 4,
+    "alpha_values": [
+      0,
+      255
+    ]
+  },
+  "compositor": "Python / Pillow",
+  "revision": 2
+}

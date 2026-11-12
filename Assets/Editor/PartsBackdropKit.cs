@@ -25,7 +25,7 @@ public static class PartsBackdropKit
     // draw order inside the Background sorting layer (every "Background*" object goes there, AssignSortingLayers).
     // The rail (parallax, farther) draws behind the world-fixed fence / buildings: pillars ORail, track ORail + 2.
     const int OSkyFill = -130, OSky = -129, OFarFx = -128, OSkylineFill = -127, OSkyline = -126, OTwinkle = -125, OCeiling = -124, OFar = -123,
-        OWallFill = -122, OWall = -120, OBldFill = -118, ORail = -118, OFence = -117, OBld = -115, OProp = -108;
+        OFarTowers = -127, OWallFill = -122, OWall = -120, OBldFill = -118, ORail = -118, OFence = -117, OBld = -115, OProp = -108;
     // STG-02 SEG-B world-fixed rail (audit #6): in front of the building row, behind the street props; ledge art (audit #4) above the props.
     const int ORailPillar = -113, OGroundFront = -112, ORailTrack = -111, OLedge = -106;
 
@@ -77,7 +77,7 @@ public static class PartsBackdropKit
         bool rail = railLedges != null;
         float ySky = Y0 + 4f;
         Sky("far/rooftops_sky", ySky);
-        Skyline("far/rooftops_skyline", null, 0f, "far/rooftop_window_twinkle_4f", 1f, ySky);
+        Skyline("far/rooftops_skyline", null, 0f, "far/rooftop_window_twinkle_4f", 1f, ySky, true);
         Buildings(Y0, "buildings/wall_tile", row);
         if (rail) RailOnLedges(railLedges, "buildings/wall_tile");
         var p = Props();
@@ -134,7 +134,7 @@ public static class PartsBackdropKit
         walk = true;
         float ySky = Y0 + 5f;
         Sky("far/factory_sky", ySky);
-        Skyline("far/factory_skyline", "far/smoke_stack_6f", 3f, null, 0f, ySky);
+        Skyline("far/factory_skyline", "far/smoke_stack_6f", 3f, null, 0f, ySky, true);
         Wall("interiors/factory_wall", Y0 - CompDrop, WallX, FyWall, DimWall, OWallFill, OWall, true,
             ("interiors/red_lamp_blink_2f", 1f), ("interiors/vat_bubbles_6f", 4f));
         Buildings(Y0, "buildings/wall_tile", row);
@@ -312,7 +312,8 @@ public static class PartsBackdropKit
     }
 
     // Skyline silhouette (+ optional smoke / searchlight strip behind it, window twinkle on it), registered to the sky at ySky; solid fill below it.
-    static void Skyline(string file, string behind, float behindFps, string twinkle, float twinkleFps, float ySky)
+    // towers: also the dim distant tower strip (far/far_towers_strip, 30 u, seamless) behind the skyline, in the same parallax group.
+    static void Skyline(string file, string behind, float behindFps, string twinkle, float twinkleFps, float ySky, bool towers = false)
     {
         var sprite = Load(file);
         if (sprite == null) { Missing(file); return; }
@@ -320,8 +321,19 @@ public static class PartsBackdropKit
         var g = Layer("Background (skyline)", SkylineX, FySkyline, DimSkyline);
         Range(SkylineX, CamMin, CamMax, out float min, out float max);
         Overlay(g, behind, behindFps, ySky, min, max, OFarFx);
+        if (towers) FarTowers(g, ySky, min, max);
         Tiles(g, "Background (skyline)", sprite, null, 0f, Cx0, ySky, min, max, true, OSkyline);
         Overlay(g, twinkle, twinkleFps, ySky, min, max, OTwinkle);
+    }
+
+    // Far tower strip: bottom edge at the skyline's (hidden by it), its towers rise above. Tiles every strip width, no mirroring (it is seamless).
+    static void FarTowers(Transform g, float y, float min, float max)
+    {
+        var s = Load("far/far_towers_strip");
+        if (s == null) { Missing("far/far_towers_strip"); return; }
+        float w = s.rect.width / Ppu;
+        for (int k = Mathf.FloorToInt((min - Cx0) / w + 0.5f), kMax = Mathf.CeilToInt((max - Cx0) / w - 0.5f); k <= kMax; k++)
+            Sprite1(g, "Background (far towers)", s, new Vector2(Cx0 + k * w, y), false, OFarTowers);
     }
 
     static void Overlay(Transform g, string sheet, float fps, float y, float min, float max, int order)
@@ -450,12 +462,90 @@ public static class PartsBackdropKit
         float under = b.kind == Kind.Building ? b.y1 : b.kind == Kind.Solid ? b.y2 - ch - wh : b.y2 - ch;
         // facade rows (the last one may run below the segment floor, out of the camera's range)
         if (b.kind != Kind.OneWay)
-            for (float t = b.y2 - ch; t > under + 0.001f; t -= wh) Visual(root, wall, b.x1, b.x2, t, 0, DimFacade);
+        {
+            int row = 0;
+            for (float t = b.y2 - ch; t > under + 0.001f; t -= wh, row++)
+            {
+                Visual(root, wall, b.x1, b.x2, t, 0, DimFacade);
+                Facades(root, b, t, wh, row);
+            }
+        }
         Visual(root, cap, b.x1, b.x2, b.y2, b.kind == Kind.OneWay ? -60 : 1, DimProp);
         if (pillarXs != null) Pillars(root, under, floor, pillarXs, pillarOrder);
     }
 
     const float DimFacade = 0.8f;
+
+    // Facade overlays (facade_a/b/c, wall_tile sized) on whole wall cells; most bays stay plain. Fixed rhythm along a tower's columns
+    // (plain, A, plain, B, C, plain), shifted per tower (x) and per row so neighbouring towers differ. No Random. Order 0, z -0.01: just over the wall.
+    static readonly string[] FacadeRhythm = { null, "buildings/facade_a", null, "buildings/facade_b", "buildings/facade_c", null };
+
+    static void Facades(Transform root, Box b, float top, float wh, int row)
+    {
+        float ww = Load("buildings/wall_tile").rect.width / Ppu;
+        int cols = Mathf.FloorToInt((b.x2 - b.x1) / ww + 0.001f);
+        int start = Mathf.Abs(Mathf.RoundToInt(b.x1 * 2f)) % FacadeRhythm.Length;
+        for (int c = 0; c < cols; c++)
+        {
+            string file = FacadeRhythm[(start + c + row * 3) % FacadeRhythm.Length];
+            if (file == null) continue;
+            var s = Load(file);
+            if (s == null) { Missing(file); continue; }
+            var t = Sprite1(root, "Visual (" + s.name + ")", s, new Vector2(b.x1 + (c + 0.5f) * ww, top - wh), false, 0);
+            t.localPosition += new Vector3(0f, 0f, -0.01f);
+            t.GetComponent<SpriteRenderer>().color = new Color(DimFacade, DimFacade, DimFacade, 1f);
+        }
+    }
+
+    // Girder details (visual only). A girder = a thin one-way rail_track ledge >= 3 u wide of segment `seg`.
+    //  - girder_bracket where it ends against (<= 0.5 u) a tower / solid wall; behind the girder, flipX for a wall on the right.
+    //  - else girder_chain (two chains, 128 px period, tiled vertically) hung from the underside of a platform right above (x overlap >= 3.5 u,
+    //    gap <= 6 u). Neither available: left as it is.
+    // all = every box of the stage (walls / carriers), girders = the ledges to decorate, ledgeArt = which of them are drawn by LedgeArt.
+    public static void GirderDetails(Transform root, int seg, IEnumerable<Box> all, IEnumerable<Box> girders, System.Func<Box, bool> ledgeArt = null)
+    {
+        Sprite cap = Load("buildings/rail_track"), wall = Load("buildings/wall_tile"), bracket = Load("buildings/girder_bracket"), chain = Load("buildings/girder_chain");
+        if (cap == null || wall == null || bracket == null || chain == null) { Missing("rail_track / wall_tile / girder_bracket / girder_chain"); return; }
+        float ch = cap.rect.height / Ppu, wh = wall.rect.height / Ppu, bw = bracket.rect.width / Ppu, bh = bracket.rect.height / Ppu, ov = 9f / Ppu;
+        var boxes = all.Where(o => o.seg == seg && !(o.id.StartsWith("GROUND") || o.id.StartsWith("WALL"))).ToList();
+        var dim = new Color(DimProp, DimProp, DimProp, 1f);
+        foreach (var g in girders.Where(g => g.seg == seg && g.kind == Kind.OneWay && g.x2 - g.x1 >= 3f))
+        {
+            float under = g.y2 - ch;
+            bool placed = false;
+            int order = ledgeArt != null && ledgeArt(g) ? OLedge - 1 : -61; // LedgeArt girders draw in Background at OLedge, the others on World at -60
+            foreach (var w in boxes)
+            {
+                if (w.kind == Kind.OneWay || w.y1 > under + ov - bh + 0.01f || w.y2 < under) continue; // plate and strut foot must lie on the wall
+                bool left = Mathf.Abs(w.x2 - g.x1) <= 0.5f, right = Mathf.Abs(w.x1 - g.x2) <= 0.5f;
+                if (!left && !right) continue;
+                float cx = left ? w.x2 - ov + bw * 0.5f : w.x1 + ov - bw * 0.5f;
+                var t = Sprite1(root, "Visual (girder_bracket)", bracket, new Vector2(cx, under + ov - bh), !left, order);
+                t.GetComponent<SpriteRenderer>().color = dim;
+                Debug.Log($"[Girders] {seg}:{g.id} bracket on {w.id} ({(left ? "left" : "right")})");
+                placed = true;
+                break;
+            }
+            if (placed) continue;
+            Box up = default; float upUnder = float.MaxValue;
+            foreach (var o in boxes)
+            {
+                if (o.y2 <= g.y2) continue;
+                float uu = o.kind == Kind.OneWay ? o.y2 - ch : o.kind == Kind.Solid ? o.y2 - ch - wh : o.y1; // underside, as drawn by PlatformArt
+                if (uu < g.y2 || uu - g.y2 > 6f || uu >= upUnder) continue;
+                if (Mathf.Min(o.x2, g.x2) - Mathf.Max(o.x1, g.x1) < 3.5f) continue;
+                up = o; upUnder = uu;
+            }
+            if (upUnder == float.MaxValue) continue;
+            float cxm = (Mathf.Max(up.x1, g.x1) + Mathf.Min(up.x2, g.x2)) * 0.5f, bottom = g.y2 - 4f / Ppu, top = upUnder + 4f / Ppu;
+            var c = Sprite1(root, "Visual (girder_chain)", chain, new Vector2(cxm, bottom), false, order);
+            var sr = c.GetComponent<SpriteRenderer>();
+            sr.drawMode = SpriteDrawMode.Tiled;
+            sr.size = new Vector2(chain.rect.width / Ppu, top - bottom);
+            sr.color = dim;
+            Debug.Log($"[Girders] {seg}:{g.id} chains from {up.id}");
+        }
+    }
 
     static void Visual(Transform root, Sprite s, float x1, float x2, float top, int order, float dim)
     {
