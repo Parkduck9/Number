@@ -28,7 +28,7 @@ using UnityEngine.UI;
 // HP is never shown: phase 2 / 3 darken + crack the body. Phase 3 overlaps C with A / B. HP 0: the hologram shatters, the body stops,
 // the hero smashes the machine props (LMB), everything collapses into white -> END-01 lines -> title. Dice work here (DECISIONS 31):
 // LuckyDice.BossSkill -> SkillHit (DiceDamage by face); no parry / reflect charge; melee hits (OnSwing, IssenHit) call LuckyDice.AddHitCharge.
-// Dying reloads the scene (RespawnManager): the fight restarts. Timers use scaled time and stop while input is locked (dice skills, dialogue).
+// Dying reloads the scene (RespawnManager): the fight restarts at the start of the phase reached (phase checkpoints, playtest 11-12). Timers use scaled time and stop while input is locked (dice skills, dialogue).
 public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerController.IGrappleTarget
 {
     [Header("Art overrides (empty = temporary code-drawn BossArt)")]
@@ -144,7 +144,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     readonly System.Collections.Generic.List<Material> ownMats = new System.Collections.Generic.List<Material>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { squareMat = bugMat = null; goldDigits = null; Held = false; } // Domain Reload is off
+    static void ResetStatics() { squareMat = bugMat = null; goldDigits = null; Held = false; resumeHp = 0; } // Domain Reload is off
+
+    // Phase checkpoints (playtest 11-12): reaching phase 2 / 3 saves its starting HP; a death reload resumes there. New game clears it.
+    static int resumeHp;
+    public static void ResetRun() => resumeHp = 0;
 
     sealed class Part
     {
@@ -366,6 +370,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         playerMask = 1 << player.gameObject.layer;
         groundMask = LayerMask.GetMask("Ground");
         ring = ParryRing.For(gameObject);
+        if (resumeHp > 0 && resumeHp < hp) // death reload mid-fight: start at the saved phase
+        {
+            hp = resumeHp;
+            shownPhase = Phase;
+            crack1.enabled = shownPhase >= 2;
+            crack2.enabled = shownPhase >= 3;
+        }
         StartCoroutine(Director());
     }
 
@@ -463,6 +474,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         Juice.Shake(0.25f, 0.5f);
         yield return Wait(0.35f);
         shownPhase = ph;
+        resumeHp = ph == 2 ? MaxHp * 2 / 3 : ph == 3 ? MaxHp / 3 : 0; // checkpoint: the full phase, not the HP left at the shift
         crack1.enabled = ph >= 2;
         crack2.enabled = ph >= 3;
         body.FlashUntil = Time.time + 0.12f;
