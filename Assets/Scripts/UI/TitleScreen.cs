@@ -27,6 +27,7 @@ public class TitleScreen : MonoBehaviour
     {
         RespawnManager.ResetState(); // new game: no checkpoint record / pending respawn from the last run
         LuckyDice.SetUnlocked(true); // new game (new story 11-12): Yudo has his die from the first fight
+        Stg01Tutorial.ResetRun(); // new game: the tutorial map teaches again
         LuckyDice.Charges = 0;
         Time.timeScale = 1f;
         GameFlow.InputLocked = false;

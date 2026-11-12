@@ -104,6 +104,9 @@ public static class StreetBackdropKit
         Tiles(midG, "Background (lantern glow)", null, Frames("mid_lantern_glow_4f"), 2f, cx0, y0, mMin, mMax, true, OGlow);
         if (tile0 != null) BroadcastNumber(tile0);
         if (hideTwinTower) HideTwinTowers(midG, mid);
+        else // STG-00 (playtest 11-12): the mirrored twin towers show the zero too, instead of a blank screen
+            foreach (Transform t in midG)
+                if (t != tile0 && t.name.EndsWith("(mid buildings)")) BroadcastNumber(t);
 
         // ---- props on the street plane (world-fixed), positions from the preview composition
         var props = new GameObject("Background (props)").transform;
@@ -268,7 +271,7 @@ public static class StreetBackdropKit
         var go = new GameObject("Background (broadcast number)");
         go.transform.SetParent(tile0, false);
         go.transform.localPosition = new Vector3((490f + 53f - 405f) / Ppu, (166f + 25f) / Ppu, 0f);
-        go.transform.localScale = new Vector3(2f, 2f, 1f);
+        go.transform.localScale = new Vector3(tile0.localScale.x < 0f ? -2f : 2f, 2f, 1f); // a mirrored tile: un-mirror the digit
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sortingOrder = ONumber;
         go.AddComponent<BroadcastScreen>();

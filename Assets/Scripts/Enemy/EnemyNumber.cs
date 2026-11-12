@@ -35,6 +35,7 @@ public class EnemyNumber : MonoBehaviour
     const float HoloBeamAlpha = 0.18f, HoloBeamWidth = 1f / 32f;
     const float EmberDigitWidth = 14f; // px: the digit width number-ember was drawn for
     static readonly Color Red = new Color(1f, 0.1647f, 0.1647f); // #FF2A2A
+    public const int MaxNumber = 7; // (T) highest number any enemy rolls
 
     public int Value { get; private set; }
 
@@ -274,7 +275,7 @@ public class EnemyNumber : MonoBehaviour
             Refresh();
             return;
         }
-        int n = Mathf.Max(1, maxValue - minValue + 1);
+        int n = Mathf.Max(1, Mathf.Min(maxValue, MaxNumber) - minValue + 1); // playtest 11-12: no enemy number above 7 (elites were 5..9)
         bool useArrays = n == earlyWeights.Length && n == lateWeights.Length;
         float total = 0f;
         float[] w = new float[n];

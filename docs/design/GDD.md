@@ -196,7 +196,7 @@
 | ID | 장면 | 화자 | EN | KO | 상태 |
 |---|---|---|---|---|---|
 | LINE-01 | STG-00 | 방송 | Today's lucky number is... zero. | 오늘의 행운의 숫자는… 0입니다. | `[제안]` |
-| LINE-02 | STG-00 | 주인공 | Zero? So zero breaths makes the luckiest day, huh? | 0이요? 그럼 숨 0번 쉬면 최고의 하루겠네요? | `[확정]` |
+| LINE-02 | STG-00 | 주인공 | Today's number is zero? Says who? | 오늘의 숫자가 0이라고? 누가 정한 건데. | `[확정]` (11-12 사용자: '숨 참기' 내용 뺌) |
 | LINE-03 | STG-00 | (연출) | (도시 전체가 숨을 멈춘다) | | `[확정]` |
 | LINE-04 | | | | | `[미정]` |
 

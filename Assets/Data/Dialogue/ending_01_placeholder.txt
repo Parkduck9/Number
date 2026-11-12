@@ -2,7 +2,7 @@
 @mode talk
 broadcast | 오늘의… 행운의… 숫자… 는… | Today's... lucky... number... is...
 broadcast | ……………… | ................
-helper | 방송이 멈췄어요. 도시가… 숨을 쉬어요! | The broadcast stopped. The city is... breathing!
+helper | 방송이 멈췄어요. 도시가… 다시 움직여요! | The broadcast stopped. The city is... moving again!
 yudo | 버튼이 너무 많길래 그냥 다 부쉈어. | There were too many buttons, so I just broke them all.
 citizen | …어? 숫자가… 안 보여. | ...Huh? I can't see the number anymore.
 citizen | 오늘 운은… 내가 정해도 되는 건가? | Do I... get to decide my own luck today?

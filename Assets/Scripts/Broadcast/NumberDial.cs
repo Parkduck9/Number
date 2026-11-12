@@ -115,7 +115,7 @@ public class NumberDial
         for (int i = 0; i < 10; i++)
             s += i == Selected ? "<color=#4CE0FF>" + i + "</color>" : "<color=#8A90A0>" + i + "</color>";
         digits.text = s.Replace("</color><color", "</color> <color");
-        warn.text = Selected == 0 ? T("EVERYONE STOPS BREATHING", "모두 숨을 멈춘다") : "";
+        warn.text = ""; // playtest 11-12: no "stops breathing" text (the user dropped that idea)
     }
 
     static string T(string en, string ko) { return DialogueLanguage.Korean ? ko : en; }

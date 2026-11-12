@@ -42,7 +42,7 @@ public static class Stg01Builder
         Ledge("RIDGE-A1", A, 55f, 59f, 15.75f),
         // ---- climb 2 (x 66~76): tower block, a second shaft, then a top walkway back to the left with the door
         Building("TOWER-A2", A, 66f, W, 15.75f),
-        Beam("ROOF-A2", A, 60f, 66f, 23.25f),      // ends at the shaft: nothing solid above SH-A2 (a beam there made the climb a bonk-lock)
+        Beam("ROOF-A2", A, 57f, 66f, 23.25f),      // 9u: the 6.9u gate stands fully on it (playtest 11-12: it hung off the left end). Ends at the shaft: nothing solid above SH-A2 (a beam there made the climb a bonk-lock)
     }
     .Concat(Zigzag("SH-A1", A, 38f, 46f, 6.75f, 5, StepUp, false))   // 6.75 R, 8.25 L, 9.75 R, 11.25 L, 12.75 R -> tower 14.25
     .Concat(Zigzag("SH-A2", A, 66f, W, 17.25f, 4, StepUp, false))    // 17.25 R, 18.75 L, 20.25 R, 21.75 L (flush with ROOF-A2 at x 66) -> 23.25
@@ -124,7 +124,7 @@ public static class Stg01Builder
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only that segment's enemies.
     static readonly Pt Spawner = new Pt("SPAWNER-B", B, 66.5f, 13.0f); // between E-B7 and E-B8, outside the goal trigger
-    static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 60f, 62.5f, 23.25f, 26f); // top walkway, left end
+    static readonly Box DoorA = new Box("TR-A-DOOR", A, Kind.Solid, 60.25f, 62.75f, 23.25f, 26f); // top walkway, gate centred on ROOF-A2 (gate 58.1..64.9)
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 70f, 75f, 13.0f, 17f);
     const string TutorialLines = "Assets/Data/Dialogue/stg01_tutorial.txt"; // replaces the old radio hint trigger (DECISIONS 22)
     const float HelperX = 3.5f; // tutorial guide, left of the start (P-START x 6), faces the player
@@ -182,7 +182,7 @@ public static class Stg01Builder
         BuildHud(false); // HUD only: the hack device is obtained in STG-03 (01-fixes #5)
         BuildBoard(roots[B], "BOARD-B", BoardPos, 3, new Vector2(SegX[B], SegX[B] + W));
         BuildDialoguePlayer(); // the tutorial's radio lines need DialoguePlayer.Instance
-        BuildTutorial(roots[A]);
+        // no tutorial here any more: it has its own map (TutorialBuilder, playtest 11-12)
         BuildLighting(false); // night (no lamps yet)
         SaveScene(scene, Tag, ScenePath);
     }

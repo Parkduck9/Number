@@ -353,8 +353,8 @@ public static class StageBuildKit
         {
             SetInt(te, "kind", 4); // TestEnemy.Kind.Elite (android art 1.25x, crimson, set at runtime)
             SetInt(te, "maxHp", 6);
-            SetInt(number, "minValue", f.minNumber > 0 ? f.minNumber : 3); // per-stage range (DECISIONS 22): minNumber / cap, default 3..9
-            SetInt(number, "maxValue", f.cap > 0 ? f.cap : 9);
+            SetInt(number, "minValue", f.minNumber > 0 ? f.minNumber : 3); // per-stage range (DECISIONS 22): minNumber / cap, default 3..7
+            SetInt(number, "maxValue", f.cap > 0 ? f.cap : 7); // playtest 11-12: max 7 (EnemyNumber.MaxNumber)
         }
         return go;
     }
@@ -497,29 +497,16 @@ public static class StageBuildKit
         SetObj(dp, "font", DialogueSetup.EnsureFont());
     }
 
-    // Placeholder billboard: dark panel + big yellow world-space number. zoneX = world x range the board rules (field arrives with the enemy-rules branch).
+    // Broadcast rule zone (no art: playtest 11-12 dropped the dark placeholder panel + yellow number; the backdrop's broadcast screen shows it).
+    // zoneX = world x range the board rules.
     public static BroadcastBoard BuildBoard(Transform parent, string id, Vector2 localPos, int aiNumber, Vector2 zoneX)
     {
         var go = new GameObject(id);
         go.transform.SetParent(parent, false);
         go.transform.localPosition = localPos;
-        AddSquare(go.transform, "Panel (PLACEHOLDER)", Vector2.zero, new Vector2(4f, 2.5f), new Color32(0x14, 0x16, 0x1E, 0xFF), -50);
-
-        var textGo = new GameObject("Label");
-        textGo.transform.SetParent(go.transform, false);
-        var label = textGo.AddComponent<TextMeshPro>();
-        var font = LoadFont();
-        if (font != null) label.font = font;
-        label.text = aiNumber.ToString();
-        label.fontSize = 12f;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = new Color32(0xFF, 0xD2, 0x4A, 0xFF);
-        label.sortingOrder = -49;
-        ((RectTransform)textGo.transform).sizeDelta = new Vector2(4f, 2.5f);
 
         var board = go.AddComponent<BroadcastBoard>();
         SetInt(board, "aiNumber", aiNumber);
-        SetObj(board, "label", label);
         if (HasProp(board, "zoneX")) SetVector2(board, "zoneX", zoneX);
         else Todo.Add($"{id}: set BroadcastBoard.zoneX = ({zoneX.x}, {zoneX.y}) (field missing; arrives with the enemy-rules branch)");
         return board;

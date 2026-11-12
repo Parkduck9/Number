@@ -10,7 +10,7 @@ using UnityEngine;
 // Batchmode: -executeMethod LevelOverviewCapture.CaptureBatch  (tag from the env var NUMBER_CAPTURE_TAG, default "before").
 public static class LevelOverviewCapture
 {
-    static readonly string[] Stages = { "STG01", "STG02", "STG03", "STG04", "STG05" };
+    static readonly string[] Stages = { "TUTORIAL", "STG01", "STG02", "STG03", "STG04", "STG05" };
     const float PxPerUnit = 16f; // half of PPU 32: a 76 x 34 u segment = 1215 x 540
     const string OutRoot = "docs/qa/level_overview";
 

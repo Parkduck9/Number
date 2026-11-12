@@ -12,20 +12,23 @@ EditorBuildSettings:
     path: Assets/Scenes/STG00.unity
     guid: dc12763a7b630c14d9f0548a3a99e8ee
   - enabled: 1
+    path: Assets/Scenes/TUTORIAL.unity
+    guid: ce9498c16870f6743a297272d3355cb3
+  - enabled: 1
     path: Assets/Scenes/STG01.unity
     guid: 69235d1e62c23214596f8ffe486b60d6
   - enabled: 1
     path: Assets/Scenes/STG02.unity
     guid: ee60c4320d05bf643be429be6aa261b7
   - enabled: 1
-    path: Assets/Scenes/STG03.unity
-    guid: ef233931ff04b244480843dfb9ded4ee
-  - enabled: 1
     path: Assets/Scenes/STG04.unity
     guid: 243ccd383c1727d4ab7b3419c457b45a
   - enabled: 1
     path: Assets/Scenes/STG05.unity
     guid: b46ffca2873288a4ea37208cb873ad5e
+  - enabled: 1
+    path: Assets/Scenes/STG03.unity
+    guid: ef233931ff04b244480843dfb9ded4ee
   - enabled: 0
     path: Assets/Scenes/Prototype.unity
     guid: 724289ff389697f419e3327caaa5060c

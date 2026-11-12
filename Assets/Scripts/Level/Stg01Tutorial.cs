@@ -8,15 +8,17 @@ using UnityEngine.UI;
 
 // STG-01 tutorial (DECISIONS 22; playtest 11-12: strictly in order): the contact teaches the controls over the radio with an on-screen prompt,
 // one step at a time. A step ends only when the player does it (a short check mark, then the next step); steps that need enemies (parry,
-// dice) also end after a long fallback. Esc skips everything. Plays once per session (static flag survives death reloads).
+// dice) also end after a long fallback. Esc skips everything. Plays once per run (static flag survives death reloads; the title resets it).
+// Lives in the TUTORIAL scene (playtest 11-12: a tutorial-only map between STG-00 and STG-01); its exit opens when the tutorial ends.
 // File format (stg01_tutorial.txt): "#step N" starts a step, "#check <kind>" what ends it (move, attack, parry, shift, rope, dice),
 // "#prompt English | Korean" is its on-screen prompt, the rest are radio lines.
 public class Stg01Tutorial : MonoBehaviour
 {
     [SerializeField] TextAsset lines;
+    [SerializeField] GameObject exit; // inactive until the tutorial ends / is skipped / was already done
 
     const float StartDelay = 1.5f, ParryTimeout = 30f, DiceTimeout = 60f, DoneHold = 0.6f; // (T) seconds
-    const float MoveDistance = 3f, JumpSpeed = 2f, MaxStartX = 25f;                      // (T) units
+    const float MoveDistance = 3f, JumpSpeed = 2f;                                       // (T) units
     static readonly Color PlateColor = new Color32(0x0B, 0x0F, 0x1E, 0xC0);
 
     static bool done;
@@ -24,6 +26,7 @@ public class Stg01Tutorial : MonoBehaviour
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { done = false; nextStep = 0; } // Domain Reload is off. Not reset by RespawnManager: a death reload must not replay it.
+    public static void ResetRun() => ResetStatics(); // TitleScreen: a new game teaches again
 
     struct Step { public string text, promptEn, promptKo, check; }
 
@@ -36,9 +39,9 @@ public class Stg01Tutorial : MonoBehaviour
 
     IEnumerator Start()
     {
-        if (done || lines == null) yield break;
+        if (done || lines == null) { Finish(); yield break; }
         player = FindFirstObjectByType<PlayerController>();
-        if (player == null || (nextStep == 0 && player.transform.position.x > MaxStartX)) { done = true; yield break; } // entered mid-level: nothing to teach here
+        if (player == null) { Finish(); yield break; } // (its own map now: a respawn at a later checkpoint must not skip it, so no start-x check)
         body = player.GetComponent<Rigidbody2D>();
         var steps = Parse(lines.text);
         BuildUi();
@@ -59,6 +62,7 @@ public class Stg01Tutorial : MonoBehaviour
             int parries = PlayerController.ParryCount;
             bool jumped = false, ok = false;
             var dice = FindFirstObjectByType<LuckyDice>();
+            if (steps[i].check == "dice" && LuckyDice.Charges < LuckyDice.ChargesPerRoll) LuckyDice.Charges = LuckyDice.ChargesPerRoll; // one free roll to try it
             while (Time.time < end)
             {
                 if (skipped) { Finish(); yield break; }
@@ -102,6 +106,7 @@ public class Stg01Tutorial : MonoBehaviour
         done = true;
         running = false;
         if (ui != null) Destroy(ui);
+        if (exit != null) exit.SetActive(true);
     }
 
     static List<Step> Parse(string text)

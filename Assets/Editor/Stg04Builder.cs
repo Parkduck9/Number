@@ -105,8 +105,8 @@ public static class Stg04Builder
         new Foe("E-B7", B, 66f, 11.5f, 0, 0.8f, 8f),
         new Foe("S-B1", B, 70.5f, 13.0f, 1, 0f, 19f, sniper: true),    // sniper on the gantry: frozen while the board shows 0, wakes if the player hacks it away
         // Elites (DECISIONS 22), 5~9, on the flat floor, not in the spawner list.
-        new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 9, elite: true, minNumber: 5), // under the fence run (overhead one-way, was CW-A1), 5u from the crates at x 8
-        new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 9, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
+        new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 7, elite: true, minNumber: 5), // under the fence run (overhead one-way, was CW-A1), 5u from the crates at x 8
+        new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 7, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only the climb + high-run group (E-B8, E-B9, E-B7, S-B1): watching the floor too would force a second descent (Fable review).

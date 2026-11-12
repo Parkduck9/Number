@@ -28,6 +28,7 @@ public class DialoguePlayer : MonoBehaviour
         public GameObject root;
         public Image portrait, next;
         public TMP_Text nameText, body;
+        public float baseH; // built height; a longer line grows the box (playtest 11-12: text ran out of the radio box)
     }
 
     Sprite[] nextFrames; // dialogue_next_2f: 2 frames, 2 fps blink, shown when a talk line finished typing
@@ -160,6 +161,7 @@ public class DialoguePlayer : MonoBehaviour
         var s = speakers != null ? speakers.Find(line.speaker) : null;
         box.root.SetActive(true);
         box.body.text = line.Text;
+        Fit(box);
         box.body.maxVisibleCharacters = 0;
         box.body.ForceMeshUpdate();
         box.nameText.text = s != null ? (DialogueLanguage.Korean ? s.nameKo : s.nameEn) : line.speaker;
@@ -167,6 +169,16 @@ public class DialoguePlayer : MonoBehaviour
         box.nameText.color = c;
         box.portrait.sprite = s != null ? (s.portrait != null ? s.portrait : LoadPortrait(s.id)) : null;
         box.portrait.color = box.portrait.sprite != null ? Color.white : c; // placeholder block
+    }
+
+    // Grows the box down (radio) / up (talk) so every line of the body fits; never smaller than built.
+    static void Fit(Box box)
+    {
+        var rt = (RectTransform)box.root.transform;
+        var b = box.body.rectTransform;
+        float padW = 4f + b.offsetMin.x - b.offsetMax.x, padH = 4f + b.offsetMin.y - b.offsetMax.y; // fill inset + body offsets
+        float need = box.body.GetPreferredValues(box.body.text, rt.sizeDelta.x - padW, 0f).y + padH;
+        rt.sizeDelta = new Vector2(rt.sizeDelta.x, Mathf.Max(box.baseH, Mathf.Ceil(need)));
     }
 
     // Fallback when the speaker row has no portrait assigned: Assets/Resources/Portraits/<id>.png (100x100, shown at 50 ref px radio = 1x / 100 ref px talk = 2x on 1080p).
@@ -208,6 +220,7 @@ public class DialoguePlayer : MonoBehaviour
 
         var b = new Box();
         b.root = NewRect(name, parent, anchor, anchor, anchor, pos, size);
+        b.baseH = size.y;
         var border = b.root.AddComponent<Image>();
         border.color = BorderColor;
         border.raycastTarget = false;

@@ -1,4 +1,4 @@
-# STG-01 tutorial (new story 11-12: the secret organisation's contact talks over the radio). Read by Stg01Tutorial, one step at a time, in order.
+# Tutorial map (TUTORIAL scene, playtest 11-12; was STG-01) (new story 11-12: the secret organisation's contact talks over the radio). Read by Stg01Tutorial, one step at a time, in order.
 # "#step N" starts a step, "#check <kind>" ends it when the player does it (move, attack, parry, shift, rope, dice), "#prompt English | Korean"
 # is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds). Esc skips all.
 @mode radio
@@ -6,7 +6,7 @@
 #step 1
 #check move
 #prompt A / D: move   Space: jump | A / D: 이동   Space: 점프
-helper | 숨 멈춘 사람들 사이로 움직여요. A, D로 걷고 스페이스로 뛰어요. | Move between the frozen people. Walk with A and D, jump with Space. | 6
+helper | 일단 움직여요! A, D로 걷고 스페이스로 뛰어요. | Move first! Walk with A and D, jump with Space. | 6
 
 #step 2
 #check attack
@@ -25,11 +25,11 @@ helper | 같은 높이의 적을 겨누고 Shift. 번개처럼 지나가며 벱�
 
 #step 5
 #check rope
-#prompt Right click near a wall or ledge: rope | 벽이나 발판 근처에 우클릭: 밧줄
+#prompt Too high to jump: right click near the roof edge (rope) | 점프로 못 올라가요: 지붕 끝 근처에 우클릭 (밧줄)
 helper | 우클릭은 밧줄이에요. 마우스 가까운 벽이나 발판에 걸려서 끌어올려 줘요. | Right click throws your rope. It catches the wall or ledge nearest the mouse and pulls you up. | 7
 
 #step 6
 #check dice
-#prompt 7 hits charge the dice · E: roll | 적중 7번이면 주사위 충전 · E: 굴리기
-helper | 그 주사위, 우리가 당신을 부른 이유예요. 일곱 번 맞히면 한 번 굴릴 수 있어요. E로 굴려요. | That die is why we invited you. Seven hits charge one roll. Press E to roll it. | 8
+#prompt E: roll the dice (charged this once) · 7 hits recharge it | E: 주사위 굴리기 (이번만 충전됨) · 적중 7번이면 다시 충전
+helper | 그 주사위, 우리가 당신을 부른 이유예요. 이번엔 채워 뒀어요, E로 굴려요. 다음부턴 일곱 번 맞혀야 차요. | That die is why we invited you. I charged it this time: press E to roll. After that, seven hits charge it. | 8
 yudo | 남이 불러 주는 숫자 말고, 내가 굴리는 숫자라. 좋지. | Not a number someone calls out, but one I roll myself. Good. | 5
