@@ -386,6 +386,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     void Update()
     {
         if (player == null || Held) return; // dice face 4: frozen in place, nothing redrawn
+        // Playtest 11-12: the player once fell out of the room (cause not reproduced). Safety net: below the lane floor -> back on the bridge.
+        if (player.transform.position.y < LaneY - 2f)
+        {
+            var body = player.GetComponent<Rigidbody2D>();
+            Vector3 back = new Vector3(4f, Floor + 1.02f, 0f); // the player's start spot, centre = feet + 1
+            if (body != null) { body.linearVelocity = Vector2.zero; body.position = back; }
+            player.transform.position = back;
+            Debug.LogWarning("[BossFight] Player fell out of the room; put back on the bridge.");
+        }
         UpdateWaves(Dt);
         UpdateRain(Dt);
         UpdateShock(Dt);
