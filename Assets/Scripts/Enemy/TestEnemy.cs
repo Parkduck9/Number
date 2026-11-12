@@ -77,6 +77,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public static readonly List<TestEnemy> All = new List<TestEnemy>();
     public bool IsDown => state == State.Stunned || !isActiveAndEnabled;
     public bool IsBossWave { get; set; } // set by BossFight: dice skills skip it
+    public bool Guarded { get; set; } // Stg01Tutorial: blocks every player hit until the step's move is done
     public bool IsAndroid => kind == Kind.Android; // DECISIONS 32 dice face 3: androids overload instead of taking the bolt
     public bool IsHuman => kind == Kind.Citizen || kind == Kind.Sniper; // DECISIONS 26: the RMB issen kills these in one hit (not bugs / androids / elite)
     public Collider2D BodyCollider { get; private set; }
@@ -764,6 +765,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
+        if (Guarded) { Flash(Juice.BlockTint); Sfx.Play(SfxId.Parry, 0.5f); return false; } // tutorial: this enemy only falls to the move being taught
         if (kind == Kind.Android && !info.Pierce && state != State.Overload && !AndroidExposedTo(info.SourcePosition)) // frontal hit on a guarding Android
         {
             Flash(Juice.BlockTint); // white was invisible on the (white) draft sprite

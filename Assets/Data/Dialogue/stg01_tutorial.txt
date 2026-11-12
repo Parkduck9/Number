@@ -1,35 +1,45 @@
-# Tutorial map (TUTORIAL scene, playtest 11-12; was STG-01) (new story 11-12: the secret organisation's contact talks over the radio). Read by Stg01Tutorial, one step at a time, in order.
-# "#step N" starts a step, "#check <kind>" ends it when the player does it (move, attack, parry, shift, rope, dice), "#prompt English | Korean"
-# is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds). Esc skips all.
+# Tutorial map (TUTORIAL scene, playtest 11-12): the secret organisation's contact talks over the radio. Read by Stg01Tutorial, one step at a time, in order.
+# "#step N" starts a step, "#check <kind>" ends it when the player does it (move, kill, shift, parry, rope, dice), "#prompt English | Korean"
+# is the on-screen prompt, "#info English | Korean" a line in a panel under it, the rest are radio lines (speaker | ko | en | seconds).
+# Each step has its own fenced-off area and one enemy (TutorialBuilder); the barrier opens when the step is done. Esc skips all.
 @mode radio
 
 #step 1
 #check move
 #prompt A / D: move   Space: jump | A / D: 이동   Space: 점프
-helper | 일단 움직여요! A, D로 걷고 스페이스로 뛰어요. | Move first! Walk with A and D, jump with Space. | 6
+helper | 일단 움직여요! A, D로 걷고 스페이스로 상자를 넘어요. | Move first! Walk with A and D, jump the crates with Space. | 6
 
 #step 2
-#check attack
+#check kill
 #prompt Left click: strike (lunges toward the mouse) | 좌클릭: 베기 (마우스 쪽으로 돌진)
-helper | 경비 로봇이 와요! 좌클릭으로 베요. 마우스 쪽으로 파고듭니다. | Guard robots incoming! Left click to strike. You lunge toward the mouse. | 6
+helper | 경비 로봇이에요! 좌클릭으로 베요. 마우스 쪽으로 파고들어요. | A guard robot! Left click to strike. You lunge toward the mouse. | 6
 
 #step 3
-#check parry
-#prompt Read the number · rings meet = left click (parry) | 숫자를 읽고 · 고리가 겹칠 때 좌클릭 (패링)
-helper | 놈들 얼굴 앞 숫자를 읽어요. 그게 공격까지 남은 박자예요. 두 고리가 겹칠 때 좌클릭, 패링! | Read the number in front of their faces: the beats left before they strike. When the two rings meet, left click to parry! | 8
+#check shift
+#prompt Shift: issen, a flash cut through an enemy on your level | Shift: 일섬, 같은 높이 적을 꿰뚫고 지나가며 베기
+helper | 이 녀석은 그냥 베면 막아요. 같은 높이에서 Shift! 번개처럼 꿰뚫고 지나가요. | This one blocks plain strikes. On its level, press Shift: flash right through it. | 7
 
 #step 4
-#check shift
-#prompt Shift: issen at a level enemy (no target = dash) | Shift: 같은 높이 적에게 일섬 (적이 없으면 대시)
-helper | 같은 높이의 적을 겨누고 Shift. 번개처럼 지나가며 벱니다. 적이 없으면 그냥 대시예요. | Aim at an enemy on your level and press Shift: you flash past and cut. No target, it's a dash. | 7
+#check parry
+#prompt Rings meet = left click: parry | 두 고리가 겹칠 때 좌클릭: 패링
+helper | 안드로이드는 앞에서 베면 다 막아요. 얼굴 앞 숫자가 공격까지 남은 박자예요. | Androids block everything from the front. The number before its face counts the beats to its strike. | 7
+helper | 두 고리가 겹칠 때 좌클릭, 패링! 막으면 과부하로 멈춰요. 그때 베요. | When the two rings meet, left click to parry! It overloads and stops. Then cut it. | 7
 
 #step 5
 #check rope
 #prompt Too high to jump: right click near the roof edge (rope) | 점프로 못 올라가요: 지붕 끝 근처에 우클릭 (밧줄)
-helper | 우클릭은 밧줄이에요. 마우스 가까운 벽이나 발판에 걸려서 끌어올려 줘요. | Right click throws your rope. It catches the wall or ledge nearest the mouse and pulls you up. | 7
+helper | 벽이 막혔죠? 우클릭은 밧줄이에요. 마우스 가까운 지붕 끝에 걸려서 끌어올려 줘요. | Blocked by a wall? Right click throws your rope. It catches the roof edge nearest the mouse and pulls you up. | 7
 
 #step 6
 #check dice
-#prompt E: roll the dice (charged this once) · 7 hits recharge it | E: 주사위 굴리기 (이번만 충전됨) · 적중 7번이면 다시 충전
-helper | 그 주사위, 우리가 당신을 부른 이유예요. 이번엔 채워 뒀어요, E로 굴려요. 다음부턴 일곱 번 맞혀야 차요. | That die is why we invited you. I charged it this time: press E to roll. After that, seven hits charge it. | 8
+#prompt E: roll the lucky dice (charged this once) · 7 hits recharge it | E: 행운의 주사위 굴리기 (이번만 충전됨) · 적중 7번이면 다시 충전
+#info The face you roll is the skill you get: | 굴려서 나온 눈이 그대로 스킬이 돼요:
+#info 1  Shrink-earth step: blink behind the nearest enemy and cut | 1  축지법: 가장 가까운 적 뒤로 순간이동해 베기
+#info 2  Binding rope: a whirl that strikes everyone around you | 2  오랏줄: 한 바퀴 휘둘러 주변 적 모두 타격
+#info 3  Talisman lightning: a bolt on every enemy on screen | 3  부적 낙뢰: 화면 안 모든 적에게 번개
+#info 4  Sheath cut: slashes the nearest four | 4  칼집 일섬: 가까운 적 넷을 한 번에 베기
+#info 5  Five talismans: mark five, strike one, all burst | 5  부적 다섯 장: 다섯을 표시, 하나를 치면 모두 터짐
+#info 6  Divination path: chain blinks through every enemy | 6  점괘 길: 모든 적을 이어 순간이동 연속 베기
+helper | 그 주사위, 우리가 당신을 부른 이유예요. 이번엔 채워 뒀어요, E로 굴려요. | That die is why we invited you. I charged it this time: press E to roll. | 7
+helper | 나온 눈마다 기술이 달라요. 다음부턴 적중 일곱 번이면 다시 차요. | Every face is a different skill. After this, seven hits charge it again. | 7
 yudo | 남이 불러 주는 숫자 말고, 내가 굴리는 숫자라. 좋지. | Not a number someone calls out, but one I roll myself. Good. | 5
