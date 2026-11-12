@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // Elite clash duel (user design 11-10). An elite (TestEnemy.Kind.Elite) that would attack a grounded player in range starts it:
@@ -7,6 +8,8 @@ using UnityEngine;
 // -WindowEarly / +WindowLate = clang, one press per strike, a stray press locks presses out for Lockout), then the hero's automatic
 // counter at S_k + gap/2 that the elite parries (second clang, presentation only). Clang pitch +1 semitone per exchange.
 // All N parried: finisher (blink through, shatter, hit-stop, shake), a kill. Any miss: a normal hit, duel over, the elite back to its AI.
+// Close-in (DECISIONS 49): over CloseTime both slide toward each other to FightGap centre to centre (each stops short of walls and
+// ledges; if one can't move the other covers more). The rest of the world goes out of focus (DuelFocusFx).
 // Scene object built on demand. Scaled time (a hit-stop freezes it); the bars and the camera ease on real time.
 // The foe is an IDuelFoe: the elite (TestEnemy). (The boss stuck blade used it too until DECISIONS 36 made it a mash window.)
 public interface IDuelFoe
@@ -24,6 +27,10 @@ public interface IDuelFoe
 public class EliteDuel : MonoBehaviour
 {
     const float StartRange = 2.5f, StartDy = 1f;        // (T) u, centre to centre
+    const float FightGap = 1.1f;                         // (T) u centre to centre after the close-in (blades meet)
+    const float CloseTime = 0.15f;                       // (T) s, ease-out
+    const float WallSkin = 0.02f, StepUp = 0.1f;         // u: stop short of a wall; hits this close above the feet are floor seams
+    const float EdgeStep = 0.05f, EdgeMargin = 0.2f;     // u: ledge probes along the slide, ahead of the body centre
     const float FirstHit = 0.9f;                         // (T) s from the start to the first elite strike
     static readonly float[] Gaps = { 0.8f, 0.75f, 0.7f, 0.65f, 0.6f, 0.56f, 0.52f }; // (T) s between elite strikes, N = 3..9
     const float WindowEarly = 0.25f, WindowLate = 0.1f;  // (T) LMB parry window around each strike
@@ -50,6 +57,11 @@ public class EliteDuel : MonoBehaviour
     PlayerInputReader input;
     ParryRing ring;
     DuelLetterbox bars;
+    DuelFocusFx focus;
+    Rigidbody2D pBody, eBody;
+    float pFromX, pToX, eFromX, eToX, closeAt = -1f; // closeAt = Time.time the close-in started (-1 = not sliding)
+    static readonly RaycastHit2D[] castHits = new RaycastHit2D[8];
+    static readonly List<Collider2D> bodyCols = new List<Collider2D>(4);
     readonly SpriteRenderer[] pipRim = new SpriteRenderer[9], pipCore = new SpriteRenderer[9];
     readonly int[] pipPopFrame = new int[9];
     int n, k, face;             // face = elite facing (toward the player)
@@ -98,11 +110,87 @@ public class EliteDuel : MonoBehaviour
         face = p.transform.position.x >= e.transform.position.x ? 1 : -1;
         e.InDuel = true;
         p.DuelBegin(-face);
-        BuildPips(e.transform.position);
+        PlanCloseIn(e, p);
+        Vector2 eAt = new Vector2(eToX, e.transform.position.y), pAt = new Vector2(pToX, p.transform.position.y);
+        BuildPips(eAt);
         bars.Show(true);
         bars.Flash(FocusFlash);
-        CameraFollow2D.DuelFocus(((Vector2)e.transform.position + (Vector2)p.transform.position) * 0.5f + new Vector2(0f, 0.25f), FocusPpuMul);
+        if (focus == null) focus = DuelFocusFx.Create(transform);
+        focus.Begin(p.transform, e.transform, transform);
+        CameraFollow2D.DuelFocus((eAt + pAt) * 0.5f + new Vector2(0f, 0.25f), FocusPpuMul);
         Sfx.Play(SfxId.LastTell);
+    }
+
+    // Split the gap beyond FightGap between the two (half each; the room one lacks goes to the other). Never pushes them apart.
+    void PlanCloseIn(IDuelFoe e, PlayerController p)
+    {
+        pBody = p.Body;
+        eBody = e.transform.GetComponent<Rigidbody2D>();
+        pFromX = pToX = p.transform.position.x;
+        eFromX = eToX = e.transform.position.x;
+        closeAt = -1f;
+        float need = Mathf.Abs(pFromX - eFromX) - FightGap;
+        if (pBody == null || eBody == null || need <= 0f) return;
+        int ground = LayerMask.GetMask("Ground");
+        float pRoom = Room(pBody, -face, need, ground), eRoom = Room(eBody, face, need, ground);
+        float pm = Mathf.Min(pRoom, need * 0.5f);
+        float em = Mathf.Min(eRoom, need - pm);
+        pm = Mathf.Min(pRoom, need - em);
+        pToX = pFromX - face * pm; // the player is on the +face side
+        eToX = eFromX + face * em;
+        pBody.linearVelocity = eBody.linearVelocity = Vector2.zero;
+        closeAt = Time.time;
+    }
+
+    // How far (<= max) the body can slide along dir: short of a wall (ground layer, not one-way, above the feet) and of a ledge
+    // (ground under the centre + EdgeMargin all the way).
+    static float Room(Rigidbody2D body, int dir, float max, int mask)
+    {
+        body.GetAttachedColliders(bodyCols);
+        bool any = false;
+        Bounds b = default;
+        foreach (Collider2D c in bodyCols)
+        {
+            if (c.isTrigger) continue;
+            if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+        }
+        if (!any) return 0f;
+        float feet = b.min.y, room = max;
+        var filter = new ContactFilter2D { useTriggers = false };
+        filter.SetLayerMask(mask);
+        int n = body.Cast(new Vector2(dir, 0f), filter, castHits, max + WallSkin);
+        for (int i = 0; i < n; i++)
+        {
+            RaycastHit2D h = castHits[i];
+            if (h.collider.usedByEffector || Mathf.Abs(h.normal.y) >= 0.5f || h.collider.bounds.max.y < feet + StepUp) continue; // one-way / floor / tile seam
+            room = Mathf.Min(room, Mathf.Max(0f, h.distance - WallSkin));
+        }
+        float x0 = body.position.x;
+        for (float s = 0f; ; s += EdgeStep)
+        {
+            float sc = Mathf.Min(s, room);
+            if (Physics2D.Raycast(new Vector2(x0 + dir * (sc + EdgeMargin), feet + 0.1f), Vector2.down, 0.35f, mask).collider == null)
+                return Mathf.Max(0f, sc - EdgeStep);
+            if (sc >= room) return room;
+        }
+    }
+
+    // The close-in slide (physics step, so the interpolated bodies move smoothly). Velocities zeroed: nothing else pushes them.
+    void FixedUpdate()
+    {
+        if (closeAt < 0f || !HasFoe) return;
+        float u = Mathf.Clamp01((Time.time - closeAt) / CloseTime);
+        float w = 1f - (1f - u) * (1f - u) * (1f - u);
+        Slide(pBody, Mathf.Lerp(pFromX, pToX, w));
+        Slide(eBody, Mathf.Lerp(eFromX, eToX, w));
+        if (u >= 1f) closeAt = -1f;
+    }
+
+    static void Slide(Rigidbody2D b, float x)
+    {
+        if (b == null) return;
+        b.linearVelocity = Vector2.zero;
+        b.MovePosition(new Vector2(x, b.position.y));
     }
 
     void Update()
@@ -206,8 +294,10 @@ public class EliteDuel : MonoBehaviour
     {
         if (ownHeld) { ownHeld = false; GameFlow.EnemiesHeld = false; }
         if (ownLock) { ownLock = false; GameFlow.InputLocked = false; }
+        closeAt = -1f;
         CameraFollow2D.DuelUnfocus(CamEaseOut);
         if (bars != null) bars.Show(false);
+        if (focus != null) focus.End();
         for (int i = 0; i < pipRim.Length; i++) if (pipRim[i] != null) pipRim[i].enabled = pipCore[i].enabled = false;
         if (ring != null) ring.Hide();
         if (HasFoe) elite.InDuel = false;
