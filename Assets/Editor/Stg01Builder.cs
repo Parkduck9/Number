@@ -149,12 +149,17 @@ public static class Stg01Builder
         StreetBackdropKit.Build(roots[A], W, SegH[A], GroundA, 15f, W - 15f, ClimbSteps, hideTwinTower: true); // camera x range = [15, W - 15]
         StreetBackdropKit.Build(roots[B], W, SegH[B], GroundB, 15f, W - 15f, null, hideTwinTower: true);       // after A: camMax is per call
         foreach (var b in Boxes) BuildCollider(roots[b.seg], b, false); // no placeholder bars: every platform is drawn below
-        foreach (var b in Boxes.Where(b => !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL"))))
+        PartsBackdropKit.OneWayCap = "buildings/ledge_giwa"; // hanok market: one-way ledges are giwa eaves (level-art draft, user-picked 11-12)
+        try
         {
-            Pillars.TryGetValue(b.id, out var p);
-            PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs, PillarOrder); // towers, roof walkways, girders (colliders unchanged)
+            foreach (var b in Boxes.Where(b => !(b.id.StartsWith("GROUND") || b.id.StartsWith("WALL"))))
+            {
+                Pillars.TryGetValue(b.id, out var p);
+                PartsBackdropKit.PlatformArt(roots[b.seg], b, p.floor, p.xs, PillarOrder); // towers, roof walkways, girders (colliders unchanged)
+            }
+            for (int i = 0; i < roots.Length; i++) PartsBackdropKit.GirderDetails(roots[i], i, Boxes, Boxes.Where(b => b.kind == Kind.OneWay)); // brackets at walls, chains from platforms above
         }
-        for (int i = 0; i < roots.Length; i++) PartsBackdropKit.GirderDetails(roots[i], i, Boxes, Boxes.Where(b => b.kind == Kind.OneWay)); // brackets at walls, chains from platforms above
+        finally { PartsBackdropKit.OneWayCap = "buildings/rail_track"; }
 
         var playerGo = (GameObject)PrefabUtility.InstantiatePrefab(Player);
         playerGo.transform.position = World(SegX, PlayerStart, 1f);

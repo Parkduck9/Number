@@ -454,9 +454,13 @@ public static class PartsBackdropKit
     //  Solid (beam)      = rooftop walkway: rail_track cap + one wall_tile row (same bands as a tower roof it meets).
     //  OneWay (ledge)    = thin rail_track girder (reads as jump-through). Order -60: behind the billboard panels (-50).
     // pillarXs = rail_pillar columns (Background, pillarOrder) from the platform's underside down to `floor` (segment-local).
+    // One-way ledge art (a stage builder sets it around its PlatformArt / GirderDetails calls, then resets it). STG-01 hanok market: the giwa
+    // eave ledge (from the level-art draft, 11-12); the others keep the rail_track girder.
+    public static string OneWayCap = "buildings/rail_track";
+
     public static void PlatformArt(Transform root, Box b, float floor = 0f, float[] pillarXs = null, int pillarOrder = ORailPillar, bool facades = true)
     {
-        Sprite cap = Load("buildings/rail_track"), wall = Load("buildings/wall_tile");
+        Sprite cap = Load(b.kind == Kind.OneWay ? OneWayCap : "buildings/rail_track"), wall = Load("buildings/wall_tile");
         if (cap == null || wall == null) { Missing("buildings/rail_track or wall_tile"); return; }
         float ch = cap.rect.height / Ppu, wh = wall.rect.height / Ppu;
         float under = b.kind == Kind.Building ? b.y1 : b.kind == Kind.Solid ? b.y2 - ch - wh : b.y2 - ch;
@@ -504,14 +508,14 @@ public static class PartsBackdropKit
     // all = every box of the stage (walls / carriers), girders = the ledges to decorate, ledgeArt = which of them are drawn by LedgeArt.
     public static void GirderDetails(Transform root, int seg, IEnumerable<Box> all, IEnumerable<Box> girders, System.Func<Box, bool> ledgeArt = null)
     {
-        Sprite cap = Load("buildings/rail_track"), wall = Load("buildings/wall_tile"), bracket = Load("buildings/girder_bracket"), chain = Load("buildings/girder_chain");
-        if (cap == null || wall == null || bracket == null || chain == null) { Missing("rail_track / wall_tile / girder_bracket / girder_chain"); return; }
-        float ch = cap.rect.height / Ppu, wh = wall.rect.height / Ppu, bw = bracket.rect.width / Ppu, bh = bracket.rect.height / Ppu, ov = 9f / Ppu;
+        Sprite cap = Load("buildings/rail_track"), ledge = Load(OneWayCap), wall = Load("buildings/wall_tile"), bracket = Load("buildings/girder_bracket"), chain = Load("buildings/girder_chain");
+        if (cap == null || ledge == null || wall == null || bracket == null || chain == null) { Missing("rail_track / " + OneWayCap + " / wall_tile / girder_bracket / girder_chain"); return; }
+        float ch = cap.rect.height / Ppu, lh = ledge.rect.height / Ppu, wh = wall.rect.height / Ppu, bw = bracket.rect.width / Ppu, bh = bracket.rect.height / Ppu, ov = 9f / Ppu;
         var boxes = all.Where(o => o.seg == seg && !(o.id.StartsWith("GROUND") || o.id.StartsWith("WALL"))).ToList();
         var dim = new Color(DimProp, DimProp, DimProp, 1f);
         foreach (var g in girders.Where(g => g.seg == seg && g.kind == Kind.OneWay && g.x2 - g.x1 >= 3f))
         {
-            float under = g.y2 - ch;
+            float under = g.y2 - lh; // the one-way ledge art's underside
             bool placed = false;
             int order = ledgeArt != null && ledgeArt(g) ? OLedge - 1 : -61; // LedgeArt girders draw in Background at OLedge, the others on World at -60
             foreach (var w in boxes)
@@ -531,7 +535,7 @@ public static class PartsBackdropKit
             foreach (var o in boxes)
             {
                 if (o.y2 <= g.y2) continue;
-                float uu = o.kind == Kind.OneWay ? o.y2 - ch : o.kind == Kind.Solid ? o.y2 - ch - wh : o.y1; // underside, as drawn by PlatformArt
+                float uu = o.kind == Kind.OneWay ? o.y2 - lh : o.kind == Kind.Solid ? o.y2 - ch - wh : o.y1; // underside, as drawn by PlatformArt
                 if (uu < g.y2 || uu - g.y2 > 6f || uu >= upUnder) continue;
                 if (Mathf.Min(o.x2, g.x2) - Mathf.Max(o.x1, g.x1) < 3.5f) continue;
                 up = o; upUnder = uu;
