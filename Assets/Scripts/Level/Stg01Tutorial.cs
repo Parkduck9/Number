@@ -5,14 +5,19 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 // Tutorial (DECISIONS 22, 48; playtest 11-12: strictly in order, one enemy at a time, every move forced): the contact teaches the controls
-// over the radio with an on-screen prompt, one step at a time. A step ends only when the player does it (a short check mark, then the next
-// step). Each step may have a gate (a barrier opened when the step is done) and a target enemy; shift / parry / dice targets are Guarded
-// (no other hit lands) until the taught move is done. Esc skips everything. Plays once per run (static flag survives death reloads; the
-// title resets it). Lives in the TUTORIAL scene (a tutorial-only map between STG-00 and STG-01); its exit opens when the tutorial ends.
+// one step at a time. Each step opens with a FROZEN centred card (timeScale 0 + GameFlow.InputLocked, like the pause menu) holding the step title,
+// the contact's portrait + all of the step's radio lines, the controls line, the optional dice list and an optional looping clip; a click
+// closes it. Afterwards the goal sits top-left under the face HUD until the player does it (a short "OK!", then the next card). A step ends
+// only when the player does it. Each step may have a gate (a barrier opened when the step is done) and a target enemy; shift / parry / dice
+// targets are Guarded (no other hit lands) until the taught move is done. Esc skips everything (also while a card is up). Plays once per run
+// (static flag survives death reloads; the title resets it). Lives in the TUTORIAL scene; its exit opens when the tutorial ends.
 // File format (stg01_tutorial.txt): "#step N" starts a step, "#check <kind>" what ends it (move, kill, shift, parry, rope, dice),
-// "#prompt English | Korean" is its on-screen prompt, "#info English | Korean" adds a line to a panel under it, the rest are radio lines.
+// "#title English | Korean" the card header, "#clip <name>" Assets/StreamingAssets/Tutorial/<name>.mp4 (optional, no file = no video),
+// "#prompt English | Korean" the controls / goal line, "#info English | Korean" adds a line to the list in the card, the rest are the
+// card's text lines (speaker | ko | en | seconds; the seconds are unused here).
 public class Stg01Tutorial : MonoBehaviour
 {
     [SerializeField] TextAsset lines;
@@ -22,7 +27,9 @@ public class Stg01Tutorial : MonoBehaviour
 
     const float StartDelay = 1.5f, DoneHold = 0.6f, OverloadAfterParry = 3f; // (T) seconds
     const float MoveDistance = 3f, JumpSpeed = 2f;                                       // (T) units
+    const float CardInputGuard = 0.6f, VideoWait = 2f;                                   // (T) unscaled seconds
     static readonly Color PlateColor = new Color32(0x0B, 0x0F, 0x1E, 0xC0);
+    static readonly Color Accent = new Color32(0xFF, 0xD2, 0x5A, 0xFF);
 
     static bool done;
     static int nextStep; // a death reload mid-tutorial resumes at the step it was on, not at step 1
@@ -31,15 +38,29 @@ public class Stg01Tutorial : MonoBehaviour
     static void ResetStatics() { done = false; nextStep = 0; } // Domain Reload is off. Not reset by RespawnManager: a death reload must not replay it.
     public static void ResetRun() => ResetStatics(); // TitleScreen: a new game teaches again
 
-    struct Step { public string text, promptEn, promptKo, check, infoEn, infoKo; }
+    struct Step { public string bodyEn, bodyKo, portraitId, titleEn, titleKo, clip, promptEn, promptKo, check, infoEn, infoKo; }
 
     PlayerController player;
     Rigidbody2D body;
     GameObject ui;
-    TMP_Text prompt, info;
-    LocalizedText promptLoc, infoLoc;
-    RectTransform plate, infoPlate;
     bool skipped, running;
+    bool frozen, ownLock; // frozen = timeScale held at 0, ownLock = we set GameFlow.InputLocked
+
+    // card
+    GameObject cardRoot;
+    RectTransform cardRect;
+    TMP_Text cardHeader, cardBody, cardPrompt, cardInfo;
+    LocalizedText headerLoc, bodyLoc, promptLoc, infoLoc;
+    Image portrait;
+    RawImage video;
+    bool hasInfo, videoOn, videoWait, videoError;
+    VideoPlayer vp;
+    RenderTexture rt;
+
+    // goal plate (top-left, under the face HUD)
+    RectTransform goalPlate;
+    TMP_Text goalTitle, goalText;
+    LocalizedText goalTitleLoc, goalTextLoc;
 
     IEnumerator Start()
     {
@@ -64,8 +85,9 @@ public class Stg01Tutorial : MonoBehaviour
         {
             nextStep = i;
             while (GameFlow.InputLocked) yield return null;
-            if (DialoguePlayer.Instance != null) { DialoguePlayer.Instance.ClearRadio(); DialoguePlayer.Instance.Play(new TextAsset("@mode radio\n" + steps[i].text)); } // a quick player: drop the last step's leftover lines
-            ShowPrompt(steps[i], i + 1, steps.Count);
+            yield return Card(steps[i], i + 1, steps.Count);
+            if (skipped) { Finish(); yield break; }
+            ShowGoal(steps[i], i + 1, steps.Count);
 
             float startX = player.transform.position.x;
             int parries = PlayerController.ParryCount;
@@ -94,7 +116,7 @@ public class Stg01Tutorial : MonoBehaviour
             Release(steps[i].check, target);
             OpenGate(i);
             {
-                SetPrompt($"{i + 1}/{steps.Count}  OK!", $"{i + 1}/{steps.Count}  좋아!");
+                SetGoalText("OK!", "좋아!");
                 float hold = Time.time + DoneHold;
                 while (Time.time < hold) { if (skipped) { Finish(); yield break; } yield return null; }
             }
@@ -102,14 +124,91 @@ public class Stg01Tutorial : MonoBehaviour
         Finish();
     }
 
+    // The step card: freeze, (optionally) wait for the clip, show, wait for a click, release the mouse, unfreeze.
+    IEnumerator Card(Step s, int n, int count)
+    {
+        Freeze();
+        PrepareClip(s.clip);
+        float t = Time.unscaledTime;
+        while (videoWait && !skipped)
+        {
+            if (videoError) { videoWait = false; vp.Stop(); }
+            else if (vp.isPrepared) { vp.Play(); videoOn = true; videoWait = false; }
+            else if (Time.unscaledTime - t > VideoWait) { videoWait = false; vp.Stop(); } // no file / slow: the card just has no clip
+            else yield return null;
+        }
+        if (skipped) yield break;
+
+        ShowCard(s, n, count);
+        float opened = Time.unscaledTime;
+        while (!skipped)
+        {
+            if (Time.unscaledTime - opened >= CardInputGuard)
+            {
+                var m = Mouse.current; var kb = Keyboard.current;
+                if ((m != null && m.leftButton.wasPressedThisFrame) || (kb != null && (kb.eKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))) break;
+            }
+            yield return null;
+        }
+        HideCard();
+        if (skipped) yield break;
+
+        // The closing click must not become an attack: stay frozen until the button is up (PlayerInputReader only sees WasPressedThisFrame, nothing buffered).
+        while (Mouse.current != null && Mouse.current.leftButton.isPressed && !skipped) yield return null;
+        frozen = false;
+        Time.timeScale = 1f;
+        yield return null; // one more locked frame: LuckyDice drops a press it kept during a hit-stop
+        Unfreeze();
+    }
+
+    void Freeze()
+    {
+        frozen = true;
+        ownLock = true;
+        GameFlow.InputLocked = true;
+        Time.timeScale = 0f;
+    }
+
+    void Unfreeze()
+    {
+        if (frozen) { frozen = false; Time.timeScale = 1f; }
+        if (ownLock) { ownLock = false; GameFlow.InputLocked = false; }
+    }
+
     // Runs before PauseMenu (order 1000) and marks Esc as used, so the skip press does not also open the pause menu.
-    // Ignored while paused / in dialogue, so Esc closing the pause menu does not skip the tutorial.
+    // Ignored while paused / in dialogue (a lock that is not ours), so Esc closing the pause menu does not skip the tutorial.
     void Update()
     {
-        if (!running || skipped || PauseMenu.IsOpen || GameFlow.InputLocked || GameFlow.EscConsumed) return;
+        if (!running || skipped || PauseMenu.IsOpen || GameFlow.EscConsumed) return;
+        if (GameFlow.InputLocked && !frozen) return;
         if (Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame) return;
         skipped = true;
         GameFlow.EscConsumedFrame = Time.frameCount;
+        StopAllCoroutines(); // finish here, not in the coroutine: Esc must unfreeze even if the coroutine died on an exception
+        Finish();
+    }
+
+    void LateUpdate()
+    {
+        if (frozen && Time.timeScale != 0f) Time.timeScale = 0f; // the parry hit-stop end sets it back to 1 (same as PauseMenu)
+        if (relayout) // after every Loc.Changed handler: the labels re-subscribe on SetActive(true), so they refresh after OnLanguage
+        {
+            relayout = false;
+            if (cardRoot != null && cardRoot.activeSelf) LayoutCard();
+            if (goalPlate != null && goalPlate.gameObject.activeSelf) LayoutGoal();
+        }
+    }
+
+    void OnDisable()
+    {
+        Unfreeze();
+        Loc.Changed -= OnLanguage;
+    }
+
+    void OnDestroy()
+    {
+        Unfreeze();
+        ReleaseVideo();
     }
 
     TestEnemy Target(int i) => targets != null && i < targets.Length ? targets[i] : null;
@@ -131,16 +230,21 @@ public class Stg01Tutorial : MonoBehaviour
         if (gates != null) foreach (var g in gates) if (g != null) g.SetActive(false);
         if (targets != null) foreach (var t in targets) if (t != null) t.Guarded = false;
         running = false;
+        Unfreeze();
+        ReleaseVideo();
         if (ui != null) Destroy(ui);
         if (exit != null) exit.SetActive(true);
     }
+
+    // ------------------------------------------------------------------ parsing
 
     const string NewLine = "\n";
 
     static List<Step> Parse(string text)
     {
         var steps = new List<Step>();
-        var sb = new StringBuilder();
+        var en = new StringBuilder();
+        var ko = new StringBuilder();
         Step cur = default;
         bool open = false;
         foreach (var raw in text.Split('\n'))
@@ -148,10 +252,17 @@ public class Stg01Tutorial : MonoBehaviour
             string line = raw.Trim();
             if (line.StartsWith("#step"))
             {
-                if (open) { cur.text = sb.ToString(); steps.Add(cur); }
-                open = true; cur = default; sb.Clear();
+                if (open) { cur.bodyEn = en.ToString(); cur.bodyKo = ko.ToString(); steps.Add(cur); }
+                open = true; cur = default; en.Clear(); ko.Clear();
             }
             else if (line.StartsWith("#check")) cur.check = line.Substring(6).Trim();
+            else if (line.StartsWith("#clip")) cur.clip = line.Substring(5).Trim();
+            else if (line.StartsWith("#title"))
+            {
+                var p = line.Substring(6).Split('|');
+                cur.titleEn = p[0].Trim();
+                cur.titleKo = p.Length > 1 ? p[1].Trim() : cur.titleEn;
+            }
             else if (line.StartsWith("#info"))
             {
                 var p = line.Substring(5).Split('|');
@@ -164,68 +275,215 @@ public class Stg01Tutorial : MonoBehaviour
                 cur.promptEn = p[0].Trim();
                 cur.promptKo = p.Length > 1 ? p[1].Trim() : cur.promptEn;
             }
-            else if (open) sb.AppendLine(line);
+            else if (open && line.Length > 0 && line[0] != '#' && line[0] != '@')
+            {
+                var p = line.Split('|');
+                if (p.Length < 3) continue;
+                string who = p[0].Trim();
+                if (cur.portraitId == null) cur.portraitId = who;
+                if (en.Length > 0) { en.Append(NewLine); ko.Append(NewLine); }
+                if (who != cur.portraitId) // someone else speaking (the player, yudo): show the name
+                {
+                    var sp = DialoguePlayer.Instance != null ? DialoguePlayer.Instance.FindSpeaker(who) : null;
+                    en.Append(sp != null && !string.IsNullOrEmpty(sp.nameEn) ? sp.nameEn : who).Append(": ");
+                    ko.Append(sp != null && !string.IsNullOrEmpty(sp.nameKo) ? sp.nameKo : who).Append(": ");
+                }
+                en.Append(p[2].Trim());
+                ko.Append(p[1].Trim());
+            }
         }
-        if (open) { cur.text = sb.ToString(); steps.Add(cur); }
+        if (open) { cur.bodyEn = en.ToString(); cur.bodyKo = ko.ToString(); steps.Add(cur); }
         return steps;
     }
 
-    const float MaxW = 820f, PadX = 24f, PadY = 10f, SkipH = 20f; // (T) ref px
+    // ------------------------------------------------------------------ UI (reference 960x540)
+
+    const float CardW = 640f, CardPadX = 30f, CardPadTop = 24f, CardPadBot = 22f, PortraitSz = 64f, VidW = 352f, VidH = 198f, CardMaxH = 510f;
+    const float GoalX = 16f, GoalY = 132f, GoalW = 400f, GoalPad = 10f; // under the face HUD (96 px face at (16,16) + 112 px bezel)
 
     void BuildUi()
     {
+        var t = UiTheme.Current;
         var canvas = UiKit.CreateCanvas("TutorialCanvas", transform, 35); // below the lucky dice HUD (40)
         ui = canvas.gameObject;
-        plate = UiKit.Rect("Plate", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(620f, 64f));
-        plate.pivot = new Vector2(0.5f, 1f);
-        UiKit.FilledImage(plate, PlateColor);
-        prompt = UiKit.Label("Prompt", plate, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(MaxW - 2f * PadX, 32f), "", "", 22, UiTheme.Current.text);
-        prompt.textWrappingMode = TextWrappingModes.Normal; // playtest 11-12: long prompts ran out of the plate
-        prompt.rectTransform.pivot = new Vector2(0.5f, 1f);
-        promptLoc = prompt.GetComponent<LocalizedText>();
-        UiKit.Label("Skip", plate, new Vector2(0.5f, 0f), new Vector2(0f, PadY * 0.5f + SkipH * 0.5f), new Vector2(600f, SkipH), "Esc: skip tutorial", "Esc: 튜토리얼 건너뛰기", 14, UiTheme.Current.dim);
 
-        infoPlate = UiKit.Rect("Info", canvas.transform, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(620f, 64f));
-        infoPlate.pivot = new Vector2(0.5f, 1f);
-        UiKit.FilledImage(infoPlate, PlateColor);
-        info = UiKit.Label("InfoText", infoPlate, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MaxW - 2f * PadX, 32f), "", "", 18, UiTheme.Current.text);
-        info.textWrappingMode = TextWrappingModes.Normal;
-        info.alignment = TextAlignmentOptions.Left;
-        infoLoc = info.GetComponent<LocalizedText>();
-        infoPlate.gameObject.SetActive(false);
+        // --- card
+        var rootRt = UiKit.Stretch("Card", canvas.transform);
+        cardRoot = rootRt.gameObject;
+        UiKit.FilledImage(UiKit.Stretch("Dim", rootRt), t.dimmer);
+        var fill = UiKit.Frame("Panel", rootRt, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CardW, 300f), out _);
+        cardRect = (RectTransform)fill.parent;
+
+        cardHeader = Text("Header", fill, 24, Accent, TextAlignmentOptions.Center, out headerLoc);
+        var vr = UiKit.Rect("Video", fill, new Vector2(0f, 1f), Vector2.zero, new Vector2(VidW, VidH));
+        video = vr.gameObject.AddComponent<RawImage>();
+        video.raycastTarget = false;
+        var pr = UiKit.Rect("Portrait", fill, new Vector2(0f, 1f), Vector2.zero, new Vector2(PortraitSz, PortraitSz));
+        portrait = pr.gameObject.AddComponent<Image>();
+        portrait.raycastTarget = false;
+        portrait.preserveAspect = true;
+        cardBody = Text("Body", fill, 20, t.text, TextAlignmentOptions.TopLeft, out bodyLoc);
+        cardPrompt = Text("Prompt", fill, 20, Accent, TextAlignmentOptions.TopLeft, out promptLoc);
+        cardInfo = Text("Info", fill, 18, t.text, TextAlignmentOptions.TopLeft, out infoLoc);
+        var footer = UiKit.Label("Footer", fill, new Vector2(0f, 1f), Vector2.zero, new Vector2(CardW - 2f * CardPadX, 18f), "Click / E: continue    Esc: skip tutorial", "클릭 / E: 계속    Esc: 튜토리얼 건너뛰기", 14, t.dim);
+        footerRt = footer.rectTransform;
+        cardRoot.SetActive(false);
+
+        // --- goal plate
+        goalPlate = UiKit.Rect("Goal", canvas.transform, new Vector2(0f, 1f), Vector2.zero, new Vector2(GoalW, 80f));
+        goalPlate.pivot = new Vector2(0f, 1f);
+        goalPlate.anchoredPosition = new Vector2(GoalX, -GoalY);
+        UiKit.FilledImage(goalPlate, PlateColor);
+        goalTitle = Text("GoalTitle", goalPlate, 16, Accent, TextAlignmentOptions.TopLeft, out goalTitleLoc);
+        goalText = Text("GoalText", goalPlate, 18, t.text, TextAlignmentOptions.TopLeft, out goalTextLoc);
+        goalSkip = UiKit.Label("GoalSkip", goalPlate, new Vector2(0f, 1f), Vector2.zero, new Vector2(GoalW - 2f * GoalPad, 16f), "Esc: skip tutorial", "Esc: 튜토리얼 건너뛰기", 12, t.dim);
+        goalSkip.alignment = TextAlignmentOptions.TopLeft;
+        goalPlate.gameObject.SetActive(false);
+
+        Loc.Changed += OnLanguage;
     }
 
-    void ShowPrompt(Step s, int n, int count)
+    RectTransform footerRt;
+    TMP_Text goalSkip;
+
+    static TMP_Text Text(string name, Transform parent, int size, Color color, TextAlignmentOptions align, out LocalizedText loc)
     {
-        SetPrompt($"{n}/{count}  {s.promptEn}", $"{n}/{count}  {s.promptKo}");
-        bool hasInfo = !string.IsNullOrEmpty(s.infoEn);
-        infoPlate.gameObject.SetActive(hasInfo);
-        if (!hasInfo) return;
-        infoLoc.Set(info, s.infoEn, s.infoKo);
-        Vector2 size = Fit(info);
-        infoPlate.sizeDelta = size + new Vector2(2f * PadX, 2f * PadY);
-        info.rectTransform.sizeDelta = size;
-        infoPlate.anchoredPosition = new Vector2(0f, plate.anchoredPosition.y - plate.sizeDelta.y - 8f);
+        var tmp = UiKit.Label(name, parent, new Vector2(0f, 1f), Vector2.zero, new Vector2(100f, 20f), "", "", size, color);
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+        tmp.alignment = align;
+        loc = tmp.GetComponent<LocalizedText>();
+        return tmp;
     }
 
-    // Plate grows with the prompt (wraps past MaxW): text on top, the Esc line under it.
-    void SetPrompt(string en, string ko)
+    static void Place(RectTransform rt, float x, float y, float w, float h)
     {
-        promptLoc.Set(prompt, en, ko);
-        Vector2 size = Fit(prompt);
-        prompt.rectTransform.sizeDelta = size;
-        prompt.rectTransform.anchoredPosition = new Vector2(0f, -PadY);
-        plate.sizeDelta = new Vector2(Mathf.Max(size.x + 2f * PadX, 360f), size.y + 2f * PadY + SkipH);
-        if (infoPlate != null && infoPlate.gameObject.activeSelf)
-            infoPlate.anchoredPosition = new Vector2(0f, plate.anchoredPosition.y - plate.sizeDelta.y - 8f);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
     }
 
-    static Vector2 Fit(TMP_Text t)
+    static float TextH(TMP_Text t, float w) => Mathf.Ceil(t.GetPreferredValues(t.text, w, 0f).y);
+
+    void ShowCard(Step s, int n, int count)
     {
-        float maxW = MaxW - 2f * PadX;
-        Vector2 one = t.GetPreferredValues(t.text, Mathf.Infinity, 0f);
-        if (one.x <= maxW) return new Vector2(Mathf.Ceil(one.x) + 2f, Mathf.Ceil(one.y));
-        Vector2 wrapped = t.GetPreferredValues(t.text, maxW, 0f);
-        return new Vector2(maxW, Mathf.Ceil(wrapped.y));
+        headerLoc.Set(cardHeader, $"{n}/{count} · {s.titleEn}", $"{n}/{count} · {s.titleKo}");
+        bodyLoc.Set(cardBody, s.bodyEn, s.bodyKo);
+        promptLoc.Set(cardPrompt, s.promptEn, s.promptKo);
+        hasInfo = !string.IsNullOrEmpty(s.infoEn);
+        if (hasInfo) infoLoc.Set(cardInfo, s.infoEn, s.infoKo);
+        cardInfo.gameObject.SetActive(hasInfo);
+
+        var sp = DialoguePlayer.Instance != null ? DialoguePlayer.Instance.FindSpeaker(s.portraitId) : null;
+        portrait.sprite = DialoguePlayer.Instance != null && s.portraitId != null ? DialoguePlayer.Instance.PortraitFor(s.portraitId) : null;
+        portrait.color = portrait.sprite != null ? Color.white : (sp != null ? sp.color : Color.gray); // placeholder block like the radio box
+        cardRoot.SetActive(true);
+        LayoutCard();
+    }
+
+    void HideCard()
+    {
+        cardRoot.SetActive(false);
+        if (vp != null && videoOn) vp.Stop();
+        videoOn = false;
+    }
+
+    // Content stacks top-down; the card shrinks when there is no clip / dice list, and scales down if it would not fit the screen.
+    void LayoutCard()
+    {
+        float inner = CardW - 2f * CardPadX;
+        float y = CardPadTop;
+        Place(cardHeader.rectTransform, CardPadX, y, inner, 30f);
+        y += 38f;
+        video.gameObject.SetActive(videoOn);
+        if (videoOn)
+        {
+            Place(video.rectTransform, (CardW - VidW) * 0.5f, y, VidW, VidH);
+            y += VidH + 12f;
+        }
+        float bw = inner - PortraitSz - 14f;
+        float bh = TextH(cardBody, bw);
+        Place(portrait.rectTransform, CardPadX, y, PortraitSz, PortraitSz);
+        Place(cardBody.rectTransform, CardPadX + PortraitSz + 14f, y, bw, bh);
+        y += Mathf.Max(PortraitSz, bh) + 14f;
+        float ph = TextH(cardPrompt, inner);
+        Place(cardPrompt.rectTransform, CardPadX, y, inner, ph);
+        y += ph + 10f;
+        if (hasInfo)
+        {
+            float ih = TextH(cardInfo, inner);
+            Place(cardInfo.rectTransform, CardPadX, y, inner, ih);
+            y += ih + 10f;
+        }
+        Place(footerRt, CardPadX, y + 4f, inner, 18f);
+        footerRt.GetComponent<TMP_Text>().alignment = TextAlignmentOptions.Center;
+        y += 22f + CardPadBot;
+        cardRect.sizeDelta = new Vector2(CardW + 4f, y + 4f);
+        float k = Mathf.Min(1f, CardMaxH / (y + 4f));
+        cardRect.localScale = new Vector3(k, k, 1f);
+    }
+
+    void ShowGoal(Step s, int n, int count)
+    {
+        goalTitleLoc.Set(goalTitle, $"Goal {n}/{count}", $"목표 {n}/{count}");
+        goalTextLoc.Set(goalText, s.promptEn, s.promptKo);
+        goalPlate.gameObject.SetActive(true);
+        LayoutGoal();
+    }
+
+    void SetGoalText(string en, string ko)
+    {
+        goalTextLoc.Set(goalText, en, ko);
+        LayoutGoal();
+    }
+
+    void LayoutGoal()
+    {
+        float w = GoalW - 2f * GoalPad;
+        float y = GoalPad - 2f;
+        Place(goalTitle.rectTransform, GoalPad, y, w, 20f);
+        y += 20f;
+        float h = TextH(goalText, w);
+        Place(goalText.rectTransform, GoalPad, y, w, h);
+        y += h + 4f;
+        Place(goalSkip.rectTransform, GoalPad, y, w, 16f);
+        y += 16f + GoalPad - 2f;
+        goalPlate.sizeDelta = new Vector2(GoalW, y);
+    }
+
+    bool relayout;
+    void OnLanguage() => relayout = true;
+
+    // ------------------------------------------------------------------ clip (VideoPlayer -> RenderTexture -> RawImage; runs on unscaled time so it plays under timeScale 0)
+
+    void PrepareClip(string clip)
+    {
+        videoOn = videoWait = videoError = false;
+        if (string.IsNullOrEmpty(clip)) return;
+        if (vp == null)
+        {
+            vp = ui.AddComponent<VideoPlayer>();
+            vp.playOnAwake = false;
+            vp.renderMode = VideoRenderMode.RenderTexture;
+            vp.isLooping = true;
+            vp.audioOutputMode = VideoAudioOutputMode.None;
+            vp.timeUpdateMode = VideoTimeUpdateMode.UnscaledGameTime;
+            vp.source = VideoSource.Url;
+            rt = new RenderTexture(480, 270, 0);
+            vp.targetTexture = rt;
+            video.texture = rt;
+            vp.errorReceived += OnVideoError;
+        }
+        vp.Stop();
+        vp.url = Application.streamingAssetsPath + "/Tutorial/" + clip + ".mp4"; // a URL on WebGL: plain concat, not Path.Combine
+        vp.Prepare();
+        videoWait = true;
+    }
+
+    void OnVideoError(VideoPlayer source, string message) { videoError = true; }
+
+    void ReleaseVideo()
+    {
+        if (vp != null) { vp.errorReceived -= OnVideoError; vp.Stop(); }
+        if (rt != null) { rt.Release(); Destroy(rt); rt = null; }
     }
 }

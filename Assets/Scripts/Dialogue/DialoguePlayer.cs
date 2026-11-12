@@ -189,6 +189,14 @@ public class DialoguePlayer : MonoBehaviour
         return sp;
     }
 
+    // Stg01Tutorial's step card shows the same speaker portrait / name the radio box does.
+    public DialogueSpeakers.Speaker FindSpeaker(string id) => speakers != null ? speakers.Find(id) : null;
+    public Sprite PortraitFor(string id)
+    {
+        var s = FindSpeaker(id);
+        return s != null && s.portrait != null ? s.portrait : LoadPortrait(id);
+    }
+
     void BuildUi()
     {
         var canvasGo = new GameObject("DialogueCanvas");
