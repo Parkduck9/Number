@@ -82,13 +82,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float SweepStep = 0.3f; // u between swept hit tests (no tunnelling on a long frame)
     // DECISIONS 45: the arm lies flat (rot +-90, mirrored for left -> right so both directions are the same shape). Over its whole
     // length it covers ArmDown below the tip line (max ArmSlice.y) to ArmUp above it (-min ArmSlice.x): an 8 u wall. SweepY = tip line:
-    //   (hit band trimmed by SweepInset since 11-12: LOW 2.975..9.475, HIGH 4.775..11.275)
+    //   (hit band trimmed by SweepInset since 11-12: LOW 3.475..8.975, HIGH 5.275..10.775)
     //   LOW  6.1 -> arm 2.225..10.225: above the lane (head 2.05), the deck and every jump inside it; clear = a perch (feet 10.5) / the lane.
     //   HIGH 7.9 -> arm 4.025..12.025: over a standing head (3.8) and the lane; any hop, a hook, a perch, a roof chunk under 12 are inside it.
     const float ArmDown = 124f * Px, ArmUp = 132f * Px;
     // playtest 11-12 "the sweep reach is too big": the hit band is trimmed SweepInset off both long edges of the arm (8 u -> 6.5 u),
     // the warning band with it. The thin blade part is untouched (only the band's outer edges are trimmed).
-    const float SweepInset = 0.75f;
+    const float SweepInset = 1.25f; // playtest 11-12 (2nd, "smaller still"): 0.75 -> 1.25, band 6.5 u -> 5.5 u
     static readonly float[] SweepY = { 6.1f, 7.9f }; // LOW, HIGH
     // Under-bridge lane (DECISIONS 45, built by Stg05Builder from these): the deck over LaneX1..LaneX2 is a one-way grate (S + Space drops
     // through, a jump comes back up), the lane floor is LaneY (head 2.05 < the LOW arm). Wall perches: one-way ledges PerchW wide at the
@@ -99,7 +99,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // ~2.9 s and slams come ~0.9 s apart, so three pairs can be live. The waves leave ShockDelay after the impact (the floor flash
     // is the tell): someone standing right beside the blade gets time to jump, and a late parry cancels them before they show.
     const int ShockSlots = 6, ShockCols = 7;
-    const float ShockH = 0.9f, ShockColW = 4f * Px, ShockHitBack = 0.5f, ShockDustEvery = 2.5f, SlamFlashTime = 0.15f, ShockDelay = SlamFlashTime;
+    const float ShockH = 1.5f, ShockColW = 6f * Px, ShockHitBack = 0.9f, // playtest 11-12 "too easy to dodge": 0.9 / 4 px / 0.5 -> 1.5 / 6 px / 0.9
+                ShockDustEvery = 2.5f, SlamFlashTime = 0.15f, ShockDelay = SlamFlashTime;
     static readonly float[] ShockSpeed = { 10f, 11f, 12f }; // by phase, u/s
     static readonly float[] ShockProfile = { 0.55f, 0.9f, 1f, 0.75f, 0.5f, 0.3f, 0.15f }; // column heights x ShockH, front to tail
     // A: while walls fly, the chest hatch glows and cracks open with the aim dots for BugShotTell, then fires one bug bullet at the
