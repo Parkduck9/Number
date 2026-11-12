@@ -855,7 +855,7 @@ public class PlayerController : MonoBehaviour
         if (alt) IssenAlt.IssenHit(at);
         else if (target.IsAndroid && target.Current != TestEnemy.State.Overload) // playtest 11-12: the cut overloads an android (stunned look, next hit kills)
         {
-            target.Overload(DiceSkillKit.AndroidOverloadSeconds); // 3 s like the dice overload: the issen cooldown (5 s) leaves LMB to finish it
+            target.Overload(DiceSkillKit.AndroidOverloadSeconds); // 3 s like the dice overload: the issen cooldown (2.5 s) leaves LMB to finish it
             LuckyDice.AddHitCharge(); // a landed cut counts toward the dice (7 hits)
             MomentFx.HackPulse(target.BodyCollider != null ? (Vector2)target.BodyCollider.bounds.center : (Vector2)target.transform.position);
             Sfx.Play(SfxId.Stunned);
@@ -864,6 +864,15 @@ public class PlayerController : MonoBehaviour
         StartHitStop(DashRules.IssenHitStop); // only extends a kill's longer stop
         Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, path);
         return true;
+    }
+
+    // Side-effect-free mirror of TryIssen's decision (DECISIONS 50): would a Shift press issen right now? Used by the crosshair cue.
+    public bool CanIssenNow()
+    {
+        if (Time.time < issenReadyAt || CurrentState == State.Dead || !MouseCrosshair.MouseWorld(out Vector2 mouse)) return false;
+        TestEnemy target = FindIssenTarget(mouse, out Collider2D col);
+        if (target != null && PlanIssen(target, col, out _)) return true;
+        return IssenAlt != null && IssenAlt.PlanIssen(mouse, rb.position, out _, out _);
     }
 
     // The crosshair's lunge lock (FindLungeTarget: what the brackets show) if any; else the enemy collider nearest the mouse within

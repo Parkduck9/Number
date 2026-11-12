@@ -12,7 +12,10 @@ public class MouseCrosshair : MonoBehaviour
     static readonly Color IdleTint = new Color(0.93f, 0.95f, 0.97f);         // off-white
     static readonly Color LockTint = new Color(0.298f, 0.909f, 0.847f);      // hero cyan #4CE8D8 = "the lunge will hit this"
 
+    static readonly Color IssenTint = new Color32(0xF2, 0xC9, 0x4C, 0xFF);   // talisman yellow #F2C94C = "Shift would issen right now"
+
     PlayerController player;
+    bool bracketsPrecolored;
     SpriteRenderer cross;
     Sprite idleArt, lockArt;
     readonly SpriteRenderer[] brackets = new SpriteRenderer[4];
@@ -27,6 +30,7 @@ public class MouseCrosshair : MonoBehaviour
         Sprite bracketArt = DraftHud.Ui("lock_bracket");
         if (c.idleArt == null || c.lockArt == null) c.idleArt = c.lockArt = null;
         c.cross = MakeRenderer(go.transform, c.idleArt != null ? c.idleArt : CrossSprite());
+        c.bracketsPrecolored = bracketArt != null;
         Sprite corner = bracketArt != null ? bracketArt : CornerSprite();
         for (int i = 0; i < 4; i++)
         {
@@ -66,8 +70,13 @@ public class MouseCrosshair : MonoBehaviour
         Collider2D col = null;
         bool locked = aim.sqrMagnitude > 0.0001f && player.CurrentState != PlayerController.State.Dead
             && player.FindLungeTarget(aim.normalized, out col) != null;
+        bool issen = player.CanIssenNow(); // once per frame: Shift would issen -> talisman yellow cue
         if (idleArt != null) cross.sprite = locked ? lockArt : idleArt;
         else cross.color = locked ? LockTint : IdleTint;
+        if (issen) cross.color = IssenTint;
+        else if (idleArt != null) cross.color = Color.white;
+        Color bracketBase = bracketsPrecolored ? Color.white : LockTint;
+        foreach (SpriteRenderer br in brackets) br.color = issen ? IssenTint : bracketBase;
         SetBrackets(locked);
         if (!locked) return;
         Bounds b = col.bounds;

@@ -69,7 +69,7 @@ public static class DashRules
 
     // ---- Issen flash strike (DECISIONS 26; on Shift since playtest 11-11, PlayerController.TryIssen / FindIssenTarget / PlanIssen) ----
     public const float IssenMaxDy = 1f;          // (T) u, player centre to the target centre: only enemies roughly level with the player ("1자", playtest 11-11)
-    public const float IssenCooldown = 5f;       // (T) s after a strike; a press on cooldown does nothing
+    public const float IssenCooldown = 2.5f;      // (T) s after a strike; a press on cooldown does nothing
     public const float IssenRange = 9f;          // (T) u, player centre to the target centre (also the aim line length)
     public const float IssenMouseRadius = 1.5f;  // (T) u: no lunge lock -> the enemy collider nearest the mouse within this
     public const float IssenHitStop = 0.08f;     // (T) s freeze on arrival (a kill extends it to Juice.HitStopKill)
