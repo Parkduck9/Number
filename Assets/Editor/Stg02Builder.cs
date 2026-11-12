@@ -180,6 +180,7 @@ public static class Stg02Builder
         BuildCamera(playerGo.transform, Enumerable.Range(0, SegX.Length).Select(i => SegRect(SegX[i], W, SegH[i])).ToArray(), new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(false); // number HUD shown, no hack dial: the device is obtained in STG-03
+        BuildDialoguePlayer(); // StageRadio's stage-start radio lines (new story 11-12)
         BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
     }

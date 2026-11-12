@@ -20,7 +20,7 @@ public class StageSkipKeys : MonoBehaviour
     {
         var kb = Keyboard.current;
         if (kb == null || !kb.ctrlKey.isPressed || !kb.shiftKey.isPressed || !kb.altKey.isPressed) return;
-        for (int i = 0; i < StageFlow.Stages.Count; i++)
-            if (i < Digits.Length && kb[Digits[i]].wasPressedThisFrame) { StageFlow.LoadStage(StageFlow.Stages[i]); return; }
+        for (int i = 0; i < Digits.Length; i++) // by name: STG03 is out of the run (11-12) but 3 still opens it for testing
+            if (kb[Digits[i]].wasPressedThisFrame) { StageFlow.LoadStage("STG0" + i); return; }
     }
 }

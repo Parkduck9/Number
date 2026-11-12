@@ -6,14 +6,16 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-// STG-01 tutorial (DECISIONS 22): the Luddite helper teaches the controls with radio lines and an on-screen prompt, one step at a time.
-// A step ends when the player does it or after its timeout; Esc skips everything. Plays once per session (static flag survives death reloads).
-// File format (stg01_tutorial.txt): "#step N" starts a step, "#prompt English | Korean" is its on-screen prompt, the rest are radio lines.
+// STG-01 tutorial (DECISIONS 22; playtest 11-12: strictly in order): the contact teaches the controls over the radio with an on-screen prompt,
+// one step at a time. A step ends only when the player does it (a short check mark, then the next step); steps that need enemies (parry,
+// dice) also end after a long fallback. Esc skips everything. Plays once per session (static flag survives death reloads).
+// File format (stg01_tutorial.txt): "#step N" starts a step, "#check <kind>" what ends it (move, attack, parry, shift, rope, dice),
+// "#prompt English | Korean" is its on-screen prompt, the rest are radio lines.
 public class Stg01Tutorial : MonoBehaviour
 {
     [SerializeField] TextAsset lines;
 
-    const float StartDelay = 1.5f, StepTimeout = 8f, ParryTimeout = 20f, DiceHold = 6f; // (T) seconds
+    const float StartDelay = 1.5f, ParryTimeout = 30f, DiceTimeout = 60f, DoneHold = 0.6f; // (T) seconds
     const float MoveDistance = 3f, JumpSpeed = 2f, MaxStartX = 25f;                      // (T) units
     static readonly Color PlateColor = new Color32(0x0B, 0x0F, 0x1E, 0xC0);
 
@@ -23,7 +25,7 @@ public class Stg01Tutorial : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { done = false; nextStep = 0; } // Domain Reload is off. Not reset by RespawnManager: a death reload must not replay it.
 
-    struct Step { public string text, promptEn, promptKo; }
+    struct Step { public string text, promptEn, promptKo, check; }
 
     PlayerController player;
     Rigidbody2D body;
@@ -36,7 +38,7 @@ public class Stg01Tutorial : MonoBehaviour
     {
         if (done || lines == null) yield break;
         player = FindFirstObjectByType<PlayerController>();
-        if (player == null || player.transform.position.x > MaxStartX) { done = true; yield break; } // entered mid-level: nothing to teach here
+        if (player == null || (nextStep == 0 && player.transform.position.x > MaxStartX)) { done = true; yield break; } // entered mid-level: nothing to teach here
         body = player.GetComponent<Rigidbody2D>();
         var steps = Parse(lines.text);
         BuildUi();
@@ -49,27 +51,37 @@ public class Stg01Tutorial : MonoBehaviour
         {
             nextStep = i;
             while (GameFlow.InputLocked) yield return null;
-            if (DialoguePlayer.Instance != null) DialoguePlayer.Instance.Play(new TextAsset("@mode radio\n" + steps[i].text));
+            if (DialoguePlayer.Instance != null) { DialoguePlayer.Instance.ClearRadio(); DialoguePlayer.Instance.Play(new TextAsset("@mode radio\n" + steps[i].text)); } // a quick player: drop the last step's leftover lines
             ShowPrompt(steps[i], i + 1, steps.Count);
 
-            float startX = player.transform.position.x, end = Time.time + (i == 2 ? ParryTimeout : StepTimeout);
+            float startX = player.transform.position.x;
+            float end = steps[i].check == "parry" ? Time.time + ParryTimeout : steps[i].check == "dice" ? Time.time + DiceTimeout : float.MaxValue;
             int parries = PlayerController.ParryCount;
-            bool jumped = false;
-            if (i == steps.Count - 1) end = Time.time + DiceHold; // explain only: nothing to do
+            bool jumped = false, ok = false;
+            var dice = FindFirstObjectByType<LuckyDice>();
             while (Time.time < end)
             {
                 if (skipped) { Finish(); yield break; }
                 if (body != null && body.linearVelocity.y > JumpSpeed) jumped = true;
-                bool ok = i switch
+                var st = player.CurrentState;
+                ok = steps[i].check switch
                 {
-                    0 => jumped && Mathf.Abs(player.transform.position.x - startX) >= MoveDistance,
-                    1 => player.CurrentState == PlayerController.State.Attack,
-                    2 => PlayerController.ParryCount > parries,
-                    3 => player.CurrentState == PlayerController.State.Grapple,
-                    _ => false,
+                    "move" => jumped && Mathf.Abs(player.transform.position.x - startX) >= MoveDistance,
+                    "attack" => st == PlayerController.State.Attack,
+                    "parry" => PlayerController.ParryCount > parries,
+                    "shift" => st == PlayerController.State.Issen || st == PlayerController.State.Dash,
+                    "rope" => st == PlayerController.State.Grapple,
+                    "dice" => dice != null && dice.Busy,
+                    _ => true,
                 };
                 if (ok) break;
                 yield return null;
+            }
+            if (ok) // a short check mark before the next step
+            {
+                promptLoc.Set(prompt, $"{i + 1}/{steps.Count}  OK!", $"{i + 1}/{steps.Count}  좋아!");
+                float hold = Time.time + DoneHold;
+                while (Time.time < hold) { if (skipped) { Finish(); yield break; } yield return null; }
             }
         }
         Finish();
@@ -106,6 +118,7 @@ public class Stg01Tutorial : MonoBehaviour
                 if (open) { cur.text = sb.ToString(); steps.Add(cur); }
                 open = true; cur = default; sb.Clear();
             }
+            else if (line.StartsWith("#check")) cur.check = line.Substring(6).Trim();
             else if (line.StartsWith("#prompt"))
             {
                 var p = line.Substring(7).Split('|');

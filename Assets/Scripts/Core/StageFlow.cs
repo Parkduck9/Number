@@ -8,7 +8,8 @@ using UnityEngine.SceneManagement;
 public static class StageFlow
 {
     public const string TitleScene = "Title"; // Card D's title scene; loaded by name if it exists
-    public static readonly System.Collections.Generic.IReadOnlyList<string> Stages = new[] { "STG00", "STG01", "STG02", "STG03", "STG04", "STG05" };
+    // New story 11-12 (user): no STG03 hideout stop in the middle; the scene stays in the project but is not in the run.
+    public static readonly System.Collections.Generic.IReadOnlyList<string> Stages = new[] { "STG00", "STG01", "STG02", "STG04", "STG05" };
 
     // Field BGM for the title and every stage scene (a scene reload after a death switches the boss track back). Test scenes stay silent.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

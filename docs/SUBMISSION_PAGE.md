@@ -1,6 +1,6 @@
 # itch.io 제출 페이지 초안 (붙여넣기용)
 
-> 2026-11-08 재작성, 2026-11-10 갱신 (Claude: 엔딩 하나, 도사 주인공, 주사위, 부적, 강한 적 대결, 합체 보스, 튜토리얼 반영). 페이지 본문은 **영어**(게임 UI·심사 언어) + 짧은 한국어 소개. 이 머리말과 체크리스트는 사용자 메모.
+> 2026-11-08 재작성, 2026-11-10 갱신, 2026-11-12 주제 문구·새 이야기 앞부분 반영 (Claude: 엔딩 하나, 도사 주인공, 주사위, 부적, 강한 적 대결, 합체 보스, 튜토리얼 반영). 페이지 본문은 **영어**(게임 UI·심사 언어) + 짧은 한국어 소개. 이 머리말과 체크리스트는 사용자 메모.
 > 근거: [JAM_RULES.md](../JAM_RULES.md) "제출 페이지 필수 항목"·7(d) AI 공개·8(e) 금지 콘텐츠, [CREDITS.md](../CREDITS.md), [design/GDD.md](design/GDD.md), [design/DECISIONS.md](design/DECISIONS.md) 11장, [review/REVIEW.md](review/REVIEW.md).
 > `[TODO: ...]`는 제출 전에 사용자가 채우거나 확인해야 하는 곳이다. 본문의 `---` 아래부터 itch 페이지 설명란에 그대로 붙여 넣는다 (itch는 Markdown을 지원한다).
 
@@ -18,13 +18,13 @@
 
 # NUMBER
 
-**Read the lucky number in front of every enemy. It tells you exactly how many strikes are coming.**
+**A lucky number is not something you receive. You read it, you build it up, and you roll it yourself.**
 
 ## About
 
-In a Joseon-styled cyberpunk city, everyone carries a hologram of their "lucky number", and the AI of the tech company **Embector** quietly makes those numbers come true. The city has gone numb to numbers. You haven't.
+Don't freeze at the number the city forces on you. Read every enemy's countdown, build up your luck one cut at a time, and roll the die with your own hand. A 2D pixel action platformer about the numbers others decide, and the one you make.
 
-You are **Yudo**, a fortune-teller dosa who reads real luck, not the company's fake numbers. Every enemy shows a number in front of its face. That number is how many times it will strike. Count the strikes, parry, dash, and punish the opening. Hack the city's broadcast boards, roll your own lucky dice, and smash the machine that sells the city its luck.
+In a Joseon-styled cyberpunk city, the AI of the tech company **Embector** broadcasts "today's lucky number" and the whole city obeys. You are **Yudo**, a young fortune-teller dosa invited to the city by a secret group that wants the fake luck stopped. The moment you arrive, the broadcast says zero, the city stops breathing, and the guard robots come for you. Every enemy shows a number in front of its face. That number is how many times it will strike. Count the strikes, parry, dash, and punish the opening. Hack the city's broadcast boards, roll your own lucky dice, and smash the machine that sells the city its luck.
 
 - **The number is the fight.** No health bars: the hologram number tells you how long each attack chain is.
 - **Broadcast numbers change the whole street.** 3 makes every enemy fast and relentless, 7 overclocks them for seven seconds before they collapse exhausted, 0 makes the city hold its breath.
@@ -37,7 +37,9 @@ About 15 minutes. Made in 7 days for the Official Unity Game Jam 2026, theme **"
 
 ### 한국어 소개
 
-조선풍 사이버펑크 도시. 모든 적의 얼굴 앞에 뜬 행운의 숫자가 **그 적이 몇 번 연속으로 공격하는지** 알려 준다. 횟수를 세며 패링하고 대시로 피한 뒤, 공격이 끝난 빈틈에 반격하라. 거리의 적은 한 방이지만, 안드로이드는 마지막 일격을 패링해야만 무너진다. 주인공 유도는 회사가 파는 가짜 행운 대신 진짜 운을 읽는 도사다. 방송 전광판을 해킹해 숫자를 뒤집고, 패링으로 채운 행운의 주사위를 굴려 도술을 쓰고, 도시의 행운을 파는 거대한 기계를 때려 부숴라. 약 15분. 영어·한국어 지원.
+**행운의 숫자는 받는 게 아니라, 읽고 쌓아서 직접 굴리는 것.** 도시가 강요하는 숫자에 멈춰 서지 말고, 적의 카운트다운을 읽고, 한 번씩 베어 행운을 쌓고, 내 손으로 주사위를 굴려라. 비밀 조직의 초대를 받아 도시에 온 젊은 도사 유도는 도착하자마자 "오늘의 행운의 숫자는 0"이라는 방송과 함께 숨을 멈춘 도시, 그리고 자신을 노리는 경비 로봇과 마주친다.
+
+조선풍 사이버펑크 도시. 모든 적의 얼굴 앞에 뜬 행운의 숫자가 **그 적이 몇 번 연속으로 공격하는지** 알려 준다. 횟수를 세며 패링하고 대시로 피한 뒤, 공격이 끝난 빈틈에 반격하라. 거리의 적은 한 방이지만, 안드로이드는 마지막 일격을 패링해야만 무너진다. 주인공 유도는 회사가 파는 가짜 행운 대신 진짜 운을 읽는 도사다. 방송 전광판을 해킹해 숫자를 뒤집고, 적중 7번으로 채운 행운의 주사위를 굴려 도술을 쓰고, 도시의 행운을 파는 거대한 기계를 때려 부숴라. 약 15분. 영어·한국어 지원.
 
 ## The number rule (3 lines)
 

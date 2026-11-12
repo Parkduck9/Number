@@ -170,6 +170,7 @@ public static class Stg04Builder
         BuildCamera(playerGo.transform, new[] { SegRect(SegX[A], W, H), SegRect(SegX[B], W, H) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
         BuildHud(true);
+        BuildDialoguePlayer(); // StageRadio's stage-start radio lines (new story 11-12)
         BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
     }

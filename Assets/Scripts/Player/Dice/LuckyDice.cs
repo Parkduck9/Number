@@ -26,7 +26,7 @@ public class LuckyDice : MonoBehaviour
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() { Unlocked = false; UnlockChanged = null; Charges = 0; boss = null; current = null; }
+    static void ResetStatics() { Unlocked = true; /* new story 11-12: Yudo brings his own die, usable from the first fight */ UnlockChanged = null; Charges = 0; boss = null; current = null; }
 
     static LuckyDice current; // the player's dice: its skills' strikes must not charge it
     static BossFight boss; // found per scene in Start

@@ -209,7 +209,7 @@ public static class Stg01Builder
             var old = rootA.Find(n);
             if (old != null) Object.DestroyImmediate(old.gameObject);
         }
-        BuildHelper(rootA, "LUDDITE-HELPER", HelperX, GroundA);
+        // New story 11-12: the contact teaches over the radio only, no helper NPC on the street (an old copy is removed above).
         var go = new GameObject("TUTORIAL");
         go.transform.SetParent(rootA, false);
         var lines = AssetDatabase.LoadAssetAtPath<TextAsset>(TutorialLines);

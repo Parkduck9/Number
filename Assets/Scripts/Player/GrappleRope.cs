@@ -1,15 +1,19 @@
 using UnityEngine;
 
-// DECISIONS 16 neon grapple rope, drawn in code (no asset): a thin cyan core over a wider low-alpha glow, a polyline of stretched 1x1
+// Playtest 11-12: a hemp rope (tan core over a dark-brown outline, no neon) with two small talisman tags (yellow paper, red mark) hanging
+// off it. Was the DECISIONS 16 neon grapple rope. Drawn in code (no asset): a polyline of stretched 1x1
 // squares (DiceSkillKit.Segs, shared with dice skill 2's rope) from the hand to the tip, on the FX sorting layer. Scaled time like SpriteFx, so it freezes with the hit-stop.
 // Flight = travelling whip wave + hook head; hit = damped snap + a wrap knot at the anchor; pull = shrinking wobble; miss = droops slack.
 // PlayerController drives it: Shoot (out to the target; a miss snaps back by itself), Hide (release / cancel).
 public class GrappleRope : MonoBehaviour
 {
-    static readonly Color Core = new Color(0.31f, 0.94f, 1f);          // #4FF0FF
-    static readonly Color Glow = new Color(0.31f, 0.94f, 1f, 0.28f);
-    static readonly Color Head = new Color(0.85f, 1f, 1f);
-    const float CoreWidth = 2f / 32f, GlowWidth = 6f / 32f;          // 2 px core, 6 px glow at PPU 32
+    static readonly Color Core = new Color32(0xC8, 0x9A, 0x5A, 0xFF);  // hemp tan
+    static readonly Color Glow = new Color32(0x3A, 0x24, 0x16, 0xFF);  // dark-brown outline (was the neon glow)
+    static readonly Color Head = new Color32(0xE2, 0xC0, 0x84, 0xFF);  // lighter hemp: hook head / wrap knot
+    static readonly Color TagPaper = new Color32(0xF2, 0xD0, 0x4A, 0xFF), TagMark = new Color32(0xC8, 0x2A, 0x2A, 0xFF);
+    const float CoreWidth = 2f / 32f, GlowWidth = 4f / 32f;          // 2 px core, 1 px outline each side at PPU 32
+    static readonly float[] TagAt = { 0.4f, 0.72f };                 // talisman tags along the rope (0 = hand, 1 = tip)
+    const float TagW = 4f / 32f, TagH = 8f / 32f;                    // a small paper strip hanging straight down
     const int Points = 16;                                            // (T) polyline points; 15 segments x (core + glow)
     const float WhipAmp = 0.45f;       // (T) u: wave height mid-rope in flight (clamped to 25% of the rope length)
     const float Waves = 1.5f;          // (T) wave cycles along the rope
@@ -95,11 +99,18 @@ public class GrappleRope : MonoBehaviour
             pts[i] = Vector2.Lerp(from, tip, u) + n * (amp * bow * Mathf.Sin(u * Waves * 2f * Mathf.PI - t * WaveSpeed)) + Vector2.down * (sag * bow);
         }
 
-        float flicker = 0.85f + 0.15f * Mathf.PerlinNoise(Time.time * 30f, 0.37f); // neon buzz
-        Color glow = Glow, core = Core;
-        glow.a *= flicker; core.a *= flicker;
-        for (int i = 1; i < Points; i++) segs.Seg(pts[i - 1], pts[i], GlowWidth, glow, 120);
-        for (int i = 1; i < Points; i++) segs.Seg(pts[i - 1], pts[i], CoreWidth, core, 121);
+        for (int i = 1; i < Points; i++) segs.Seg(pts[i - 1], pts[i], GlowWidth, Glow, 120);
+        for (int i = 1; i < Points; i++) segs.Seg(pts[i - 1], pts[i], CoreWidth, Core, 121);
+        foreach (float tu in TagAt) // talisman tags: hang straight down from the rope point, a red mark across the middle
+        {
+            float f = tu * (Points - 1);
+            int i0 = Mathf.Min(Points - 2, Mathf.FloorToInt(f));
+            Vector2 at = Vector2.Lerp(pts[i0], pts[i0 + 1], f - i0);
+            Vector2 top = at, bottom = at + Vector2.down * TagH;
+            segs.Seg(top, bottom, TagW, TagPaper, 122);
+            Vector2 mid = (top + bottom) * 0.5f;
+            segs.Seg(mid + Vector2.left * TagW * 0.3f, mid + Vector2.right * TagW * 0.3f, 1f / 32f, TagMark, 123);
+        }
 
         segs.Dot(tip, HeadSize, Head, 122, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + 45f); // hook head: a small diamond at the tip
 

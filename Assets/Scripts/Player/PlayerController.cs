@@ -144,6 +144,7 @@ public class PlayerController : MonoBehaviour
     float grappleCarryAccel = DashRules.GrappleAirAccel; // carried release momentum -> air control rate (a swing release keeps it longer)
     float grappleSafeUntil;   // i-frames after a landed hatch strike
     readonly RaycastHit2D[] grappleHits = new RaycastHit2D[8];
+    readonly Collider2D[] grappleNear = new Collider2D[8];
     readonly System.Collections.Generic.HashSet<TestEnemy> swingHits = new System.Collections.Generic.HashSet<TestEnemy>();
     int swingDamaged;                   // blows that did damage since the last reset (StrikeEnemy)
 
@@ -944,9 +945,39 @@ public class PlayerController : MonoBehaviour
             return true;
         }
         RaycastHit2D best = default;
+        // Playtest 11-12: aim at the collider nearest the mouse (within GrappleMouseSnap and rope range), not at whatever the ray touches
+        // first: one-way platforms between the hand and that target are passed (a solid wall in the way still stops the rope).
+        Collider2D want = null;
+        Vector2 wantPt = default;
+        if (aimed)
+        {
+            float bestD = float.MaxValue;
+            int m = Physics2D.OverlapCircle(mouse, DashRules.GrappleMouseSnap, groundFilter, grappleNear);
+            for (int i = 0; i < m; i++)
+            {
+                Vector2 p = grappleNear[i].ClosestPoint(mouse); // the mouse itself when it is inside the collider
+                if (grounded && p.y <= transform.position.y + feetOffset.y + 0.1f) continue; // not the floor underfoot (a level aim goes on to the wall)
+                float d = (p - mouse).sqrMagnitude;
+                if (d < bestD && Vector2.Distance(hand, p) <= DashRules.GrappleRange && Vector2.Distance(hand, p) > 0.3f) { bestD = d; want = grappleNear[i]; wantPt = p; }
+            }
+            if (want != null)
+            {
+                wantPt += ((Vector2)want.bounds.center - wantPt).normalized * 0.05f; // a hair inside: a corner point must not graze past
+                Vector2 to = wantPt - hand;
+                aim = to.normalized;
+                face = Mathf.Abs(aim.x) > 0.01f ? (aim.x > 0f ? 1 : -1) : Facing;
+            }
+        }
         int n = Physics2D.Raycast(hand, aim, groundFilter, grappleHits, DashRules.GrappleRange); // groundFilter: groundMask, set every Update
+        bool reached = false; // pass one-way platforms only when the ray really gets to the wanted collider
+        for (int i = 0; i < n; i++) if (grappleHits[i].collider == want && grappleHits[i].distance > 0.01f) reached = true;
         for (int i = 0; i < n; i++) // skip a collider the hand starts inside (rising through a one-way platform)
-            if (grappleHits[i].distance > 0.01f && (best.collider == null || grappleHits[i].distance < best.distance)) best = grappleHits[i];
+        {
+            RaycastHit2D h = grappleHits[i];
+            if (h.distance <= 0.01f) continue;
+            if (reached && h.collider != want && h.collider.usedByEffector) continue; // a one-way platform on the way to the target
+            if (best.collider == null || h.distance < best.distance) best = h;
+        }
         if (best.collider == null)
         {
             rope.Shoot(hand + aim * DashRules.GrappleRange, false);

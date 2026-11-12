@@ -89,6 +89,14 @@ public class DialoguePlayer : MonoBehaviour
     }
 
     // ---- Radio ----
+    // Drops the current and queued radio lines (Stg01Tutorial: the next step's lines replace a quick player's leftovers).
+    public void ClearRadio()
+    {
+        radioQueue.Clear();
+        radioLine = null;
+        if (radioBox != null) radioBox.root.SetActive(false);
+    }
+
     void UpdateRadio()
     {
         if (radioLine == null && radioQueue.Count > 0)

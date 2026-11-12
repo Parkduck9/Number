@@ -1,3 +1,4 @@
-# GDD LINE-02 [확정] text. File name kept: scenes reference it.
+# New story 11-12: Yudo arrives as an invited guest. Line 2 is GDD LINE-02 [확정]. File name kept: scenes reference it.
 @mode talk
+yudo | 초대장대로 오긴 왔는데… 마중은 없고 방송만 요란하네. | The invitation brought me here... no one to greet me, just a loud broadcast.
 yudo | 0이요? 그럼 숨 0번 쉬면 최고의 하루겠네요? | Zero? So zero breaths makes the luckiest day, huh?

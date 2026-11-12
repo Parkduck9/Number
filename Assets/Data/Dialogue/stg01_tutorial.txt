@@ -1,24 +1,35 @@
-# STG-01 tutorial, DRAFT lines (the user may rewrite them). Read by Stg01Tutorial, played as radio, one step at a time.
-# "#step N" starts a step, "#prompt English | Korean" is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds).
-# Each step waits until the player does it (or its timeout), Esc skips all. Step 5 only explains (the dice are taught in STG-03, where they unlock).
+# STG-01 tutorial (new story 11-12: the secret organisation's contact talks over the radio). Read by Stg01Tutorial, one step at a time, in order.
+# "#step N" starts a step, "#check <kind>" ends it when the player does it (move, attack, parry, shift, rope, dice), "#prompt English | Korean"
+# is the on-screen prompt, the rest are radio lines (speaker | ko | en | seconds). Esc skips all.
 @mode radio
 
 #step 1
+#check move
 #prompt A / D: move   Space: jump | A / D: 이동   Space: 점프
-helper | 일어났군. A, D로 걷고 스페이스로 뛰어 봐. | Up already? Walk with A and D, jump with Space. | 6
+helper | 숨 멈춘 사람들 사이로 움직여요. A, D로 걷고 스페이스로 뛰어요. | Move between the frozen people. Walk with A and D, jump with Space. | 6
 
 #step 2
-#prompt Left click: attack / lunge | 좌클릭: 공격 · 돌진
-helper | 좌클릭으로 베어. 마우스 쪽으로 돌진해. | Left click to strike. You lunge toward the mouse. | 6
+#check attack
+#prompt Left click: strike (lunges toward the mouse) | 좌클릭: 베기 (마우스 쪽으로 돌진)
+helper | 경비 로봇이 와요! 좌클릭으로 베요. 마우스 쪽으로 파고듭니다. | Guard robots incoming! Left click to strike. You lunge toward the mouse. | 6
 
 #step 3
-#prompt Two rings meet: left click = parry | 두 고리가 겹칠 때 좌클릭 = 패링
-helper | 적이 칠 때 두 고리가 겹치면 좌클릭. | When the two rings meet, left click to parry. | 7
+#check parry
+#prompt Read the number · rings meet = left click (parry) | 숫자를 읽고 · 고리가 겹칠 때 좌클릭 (패링)
+helper | 놈들 얼굴 앞 숫자를 읽어요. 그게 공격까지 남은 박자예요. 두 고리가 겹칠 때 좌클릭, 패링! | Read the number in front of their faces: the beats left before they strike. When the two rings meet, left click to parry! | 8
 
 #step 4
-#prompt Right click a wall or ledge: grapple rope | 벽이나 턱에 우클릭: 갈고리 줄
-helper | 우클릭으로 줄을 던져. 걸린 곳까지 끌려 올라가. | Right click throws the rope. It pulls you to where it catches. | 7
+#check shift
+#prompt Shift: issen at a level enemy (no target = dash) | Shift: 같은 높이 적에게 일섬 (적이 없으면 대시)
+helper | 같은 높이의 적을 겨누고 Shift. 번개처럼 지나가며 벱니다. 적이 없으면 그냥 대시예요. | Aim at an enemy on your level and press Shift: you flash past and cut. No target, it's a dash. | 7
 
 #step 5
-#prompt Shift: issen at a level enemy | Shift: 같은 높이 적에게 일섬
-helper | 같은 높이에 있는 적을 겨누고 Shift. 번개처럼 뒤로 지나가며 벤다. 5초에 한 번이야. | Aim at an enemy on your level and press Shift. You flash past and cut it down. Once every 5 seconds. | 8
+#check rope
+#prompt Right click near a wall or ledge: rope | 벽이나 발판 근처에 우클릭: 밧줄
+helper | 우클릭은 밧줄이에요. 마우스 가까운 벽이나 발판에 걸려서 끌어올려 줘요. | Right click throws your rope. It catches the wall or ledge nearest the mouse and pulls you up. | 7
+
+#step 6
+#check dice
+#prompt 7 hits charge the dice · E: roll | 적중 7번이면 주사위 충전 · E: 굴리기
+helper | 그 주사위, 우리가 당신을 부른 이유예요. 일곱 번 맞히면 한 번 굴릴 수 있어요. E로 굴려요. | That die is why we invited you. Seven hits charge one roll. Press E to roll it. | 8
+yudo | 남이 불러 주는 숫자 말고, 내가 굴리는 숫자라. 좋지. | Not a number someone calls out, but one I roll myself. Good. | 5

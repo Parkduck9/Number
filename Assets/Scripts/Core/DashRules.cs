@@ -47,6 +47,7 @@ public static class DashRules
     public const float GrappleMissCooldown = 0.12f; // s before another rope after a miss (DECISIONS 44: was 0.25)
     public const float GrappleCooldown = 0.2f;   // s before another rope after a release (ground ropes refill at once) (DECISIONS 44: was 0.4)
     public const float GrappleHookRegrab = 1f;   // s after letting go of a boss ceiling hook before that same hook can be grabbed again (no endless hang)
+    public const float GrappleMouseSnap = 1.5f;  // (T) u: the rope aims at the ground / platform collider nearest the mouse within this (playtest 11-12)
     public const float GrappleLedgeSnap = 2f;    // u: a wall hit within this below a ledge top anchors on the top corner instead
     // Uses: 1 per airtime (an attached rope spends it), refilled on landing.
     // DECISIONS 38 boss-room rope targets (PlayerController.GrappleAlt = BossFight): hang from a ceiling hook / strike the open chest hatch
