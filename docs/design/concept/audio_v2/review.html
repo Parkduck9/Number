@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NUMBER — audio v2 drafts</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;background:#111821;color:#e6e6db;max-width:1100px;margin:36px auto;padding:0 20px}
+h1{font-size:26px}button,input{font:inherit}button{background:#22333e;color:#f4cf7d;border:1px solid #71828a;padding:6px 10px;cursor:pointer}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #35434b;padding:10px 8px;vertical-align:top}
+th{color:#f4cf7d}small,p{color:#bcc8ce}audio{width:270px;max-width:100%}.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:20px 0}
+.note{font-size:13px}.active{color:#f4cf7d}code{color:#f4cf7d}a{color:#f4cf7d}
+</style>
+<h1>NUMBER — audio v2 / DRAFTS ONLY</h1>
+<p>Local review player. All sounds are synthesized offline; Assets are unchanged. Start at a low speaker volume. The agent could audit the signals but could not hear them.</p>
+<div class="controls"><label>Music volume <input id="mv" type="range" min="0" max="1" step=".01" value=".28"></label><label>SFX volume <input id="sv" type="range" min="0" max="1" step=".01" value=".65"></label><button id="stop">Stop all</button></div>
+<p>Music can keep playing under SFX for a masking check. Playing another music track stops the previous music. “Original” reads the existing WAV beside the repository; it does not change it.</p>
+<table><thead><tr><th>File / intent</th><th>v2 draft</th><th>Original</th></tr></thead><tbody id="rows"></tbody></table>
+<h2>Sample-accurate loop boundary check</h2>
+<p>Select either generated BGM WAV below. Playback uses a Web Audio loop with exact frame boundaries. “Boundary” starts two seconds before the end and runs across the join twice. This uses a local file picker so it also works when this HTML is opened directly from disk.</p>
+<div class="controls"><input id="loopfile" type="file" accept=".wav,audio/wav"><button id="boundary">Boundary ×2</button><button id="full">Full loop</button><button id="loopstop">Stop loop check</button></div>
+<p id="status" role="status">Choose bgm_field.wav or bgm_boss.wav from this folder.</p>
+<p class="note">Check: no click or silence at the join; parry is distinct from ordinary hit; enemy tells remain obvious under both loops; UI tick stays small at the intended game mixer gain; six ascending plucks read as die-face confirmation. Do not judge relative loudness from the shared −1 dBFS peaks alone.</p>
+<p><a href="README.md">README</a> · <a href="validation.json">PCM validation and baseline measurements</a></p>
+<script>
+const entries=[
+['sfx_swing',.2,'Air sweep, faint low string scrape'],['sfx_hit',.28,'Janggu stick crack and robot clank'],
+['sfx_parry',.7,'Bright bronze impact, pitched ringing reward'],['sfx_dash',.16,'Air rush and rising digital zip'],
+['sfx_hurt',.3,'Deep buk and crushed descending glitch'],['sfx_enemy_tell',.2,'Rising robot wind-up, terminal blip'],
+['sfx_last_tell',.5,'Two descending urgent reed notes'],['sfx_stunned',.75,'Electric fizz and falling bent string'],
+['sfx_broadcast',1.9,'Four cold, slightly detuned digital bells'],['sfx_hack_ok',1,'Jing bloom and six rising plucks'],
+['sfx_ui_select',.12,'Wooden clapper tick, tiny pluck'],['sfx_shockwave',1.8,'Heavy buk, spreading gong, low rumble'],
+['bgm_field',48,'120 BPM / 24 bars: janggu, plucks; reed B section'],['bgm_boss',40,'144 BPM / 24 bars: heavy drums, bass, urgent reed']];
+const tracks=[], rows=document.querySelector('#rows'), mv=document.querySelector('#mv'),sv=document.querySelector('#sv');
+for(const [name,sec,desc] of entries){
+ const music=name.startsWith('bgm_'),tr=document.createElement('tr'),title=document.createElement('td');
+ title.innerHTML='<code>'+name+'.wav</code><br><small>'+sec.toFixed(2)+' s · '+desc+'</small>';tr.append(title);
+ for(const original of [false,true]){
+  const td=document.createElement('td'),a=document.createElement('audio');a.controls=true;a.preload='none';a.loop=music;a.dataset.music=music;
+  a.src=original?'../../../../Assets/Audio/Resources/'+(music?'Bgm/':'Sfx/')+name+'.wav':name+'.wav';
+  a.volume=music?+mv.value:+sv.value;
+  a.addEventListener('play',()=>{for(const other of tracks)if(other!==a&&other.dataset.music===a.dataset.music)other.pause();if(music)stopLoop();});
+  tracks.push(a);td.append(a);tr.append(td);
+ }rows.append(tr);
+}
+for(const input of [mv,sv])input.addEventListener('input',()=>{for(const a of tracks)a.volume=a.dataset.music==='true'?+mv.value:+sv.value;if(loopGain)loopGain.gain.value=+mv.value;});
+let ctx,loopBuffer,source,secondSource,loopGain;
+const status=document.querySelector('#status');
+function stopLoop(){for(const s of [source,secondSource])if(s){try{s.stop();}catch{}s.disconnect();}source=null;secondSource=null;if(loopGain){loopGain.disconnect();loopGain=null;}}
+document.querySelector('#stop').onclick=()=>{tracks.forEach(a=>{a.pause();a.currentTime=0;});stopLoop();};
+document.querySelector('#loopstop').onclick=stopLoop;
+document.querySelector('#loopfile').onchange=async e=>{
+ stopLoop();const f=e.target.files[0];if(!f)return;
+ try{ctx??=new AudioContext({sampleRate:32000});loopBuffer=await ctx.decodeAudioData(await f.arrayBuffer());
+ status.textContent=f.name+' · '+loopBuffer.duration.toFixed(3)+' seconds · '+loopBuffer.sampleRate+' Hz playback buffer. Ready.';
+ }catch(err){status.textContent=String(err);}
+};
+async function playLoop(boundary){
+ if(!loopBuffer){status.textContent='Choose a generated BGM WAV first.';return;}
+ stopLoop();tracks.filter(a=>a.dataset.music==='true').forEach(a=>a.pause());await ctx.resume();
+ source=ctx.createBufferSource();source.buffer=loopBuffer;source.loop=true;
+ // Boundary audition loops a 4-second buffer [last 2s | first 2s].
+ // Its middle join is the exact original join; its outer join is not for judging.
+ if(boundary){const sr=loopBuffer.sampleRate,n=2*sr,clip=ctx.createBuffer(1,4*sr,sr),s=loopBuffer.getChannelData(0),d=clip.getChannelData(0);
+ d.set(s.subarray(s.length-n));d.set(s.subarray(0,n),n);source.buffer=clip;
+ // Play two separate passes with a 0.5s gap; no artificial outer join.
+ source.loop=false;
+ }
+ source.loopStart=0;source.loopEnd=source.buffer.duration;loopGain=ctx.createGain();loopGain.gain.value=+mv.value;
+ source.connect(loopGain).connect(ctx.destination);source.start();
+ if(boundary){secondSource=ctx.createBufferSource();secondSource.buffer=source.buffer;secondSource.connect(loopGain);secondSource.start(ctx.currentTime+4.5);
+ status.textContent='Two boundary passes: join at 2 seconds in each pass (0.5 second gap between passes).';
+ }else status.textContent='Looping all '+loopBuffer.duration.toFixed(3)+' seconds; no fades or crossfades.';
+}
+document.querySelector('#boundary').onclick=()=>playLoop(true);document.querySelector('#full').onclick=()=>playLoop(false);
+</script>
+</html>
