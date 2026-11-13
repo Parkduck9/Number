@@ -461,6 +461,13 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         Bgm.Play(BgmId.Boss);
         Sfx.Play(SfxId.LastTell);
         Juice.Shake(Juice.ShakeKillAmp, 0.4f);
+        if (StageRadio.FirstTime("STG05-boss")) // dialogue B01 (Codex concept-only proposal 11-13): a blocking talk, then phase 1
+        {
+            Say("@mode talk\nbroadcast | 오늘의 행운의 숫자는 0. 이동을 중지하십시오. | Today's lucky number is 0. Cease movement.\n" +
+                "yudo | 여기까지 걸어온 게 아깝잖아. | After I walked all this way?\n");
+            yield return null; // let the talk box lock input
+            while (GameFlow.InputLocked) yield return null;
+        }
         yield return Wait(1f);
         int last = -1;
         while (true)
@@ -489,6 +496,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         }
     }
 
+    static void Say(string script) // boss dialogue (B01-B05), same format as the dialogue files
+    {
+        if (DialoguePlayer.Instance != null) DialoguePlayer.Instance.Play(new TextAsset(script));
+    }
+
     static readonly int[] PhaseOnePool = { 0, 4, 1, 3, 5 }, LaterPool = { 0, 0, 4, 4, 1, 2, 3, 5 };
     static bool IsBlade(int atk) => atk == 1 || atk == 3 || atk == 5;
 
@@ -504,6 +516,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         Juice.Shake(0.25f, 0.5f);
         yield return Wait(0.35f);
         shownPhase = ph;
+        if (ph == 2) Say("@mode radio\nbroadcast | 저항 수치를 다시 계산합니다. | Recalculating resistance. | 3\n"); // B02
+        else if (ph == 3) Say("@mode radio\nbroadcast | 허용되는 결과는 0입니다. | The permitted outcome is 0. | 3\n"); // B03
         resumeHp = ph == 2 ? MaxHp * 2 / 3 : ph == 3 ? MaxHp / 3 : 0; // checkpoint: the full phase, not the HP left at the shift
         crack1.enabled = ph >= 2;
         crack2.enabled = ph >= 3;
@@ -1586,10 +1600,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         core.Pos = CoreLow;
         SpriteFx.Play("impact-ring", CoreLow, false, 101, 2f);
         Juice.Shake(Juice.ShakeHurtAmp, 0.2f, Vector2.down);
-        hint.text = Loc.T("STRIKE THE CORE  [LMB]", "핵을 베어라  [좌클릭]");
+        hint.text = Loc.T("STRIKE THE CORE  [LMB]", "코어를 베어라  [좌클릭]"); // B04
         hint.gameObject.SetActive(true);
         while (finishHits < FinishHits) yield return null;
         hint.gameObject.SetActive(false);
+        Say("@mode radio\nbroadcast | 다음 숫자는… | The next number is… | 2.5\n"); // B05: it never says the number
         for (int i = 0; i < props.Length; i++) if (!propBroken[i]) BreakProp(i); // the last blow takes the rest
         yield return Wait(0.5f);
         GameFlow.InputLocked = ownLock = true;

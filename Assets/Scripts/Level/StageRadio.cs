@@ -10,23 +10,28 @@ public class StageRadio : MonoBehaviour
     const float Delay = 1.2f; // s after the stage loads (lets the camera settle / the boss intro start)
 
     // Same format as the dialogue files (Assets/Data/Dialogue): speaker | Korean | English | seconds. Embedded: those files are not in Resources.
+    // Codex concept-only proposal (11-13): P04 after the first auto-roll (STG01 start), P05 rooftops, P06 factory. STG05 has its own
+    // boss talk (BossFight), so no radio there.
     static readonly Dictionary<string, string> Lines = new Dictionary<string, string>
     {
+        { "STG01",
+            "@mode radio\n" +
+            "helper | 숫자 안 믿는다며. 주사위는 왜 챙겼어? | You don't trust numbers. Why bring a die? | 4\n" +
+            "yudo | 찍어 주는 숫자는. 굴릴 판은 내가 만들지. | Not numbers I'm handed. I earn my rolls. | 4\n" },
         { "STG02",
             "@mode radio\n" +
-            "helper | 지붕으로 올라가요! 저격수의 붉은 선이 굳으면 쏴요. | Get on the roofs! When a sniper's red line locks, it fires. | 5\n" +
-            "yudo | 읽고, 쌓고, 굴린다. 점보는 거랑 같네. | Read, build, roll. Just like telling fortunes. | 4\n" },
+            "helper | 지붕 위에 저격수다. | Sniper on the roof. | 3\n" +
+            "yudo | 봤어. 지붕이 길보다 바쁘네. | I see them. Roofs are busier than the streets. | 3.5\n" },
         { "STG04",
             "@mode radio\n" +
-            "helper | 매일 아침 행운의 숫자를 찍어 내는 공장이에요. 방송 장치는 궁 왕좌실에 있어요. | This factory stamps out the lucky number every morning. The broadcaster is in the throne room. | 6\n" +
-            "yudo | 운도 공장에서 찍어 내는군. | So luck comes off a production line. | 4\n" },
-        { "STG05",
-            "@mode radio\n" +
-            "helper | 저 기계가 도시의 운을 쥐고 있어요. 코어가 열리면 쳐요! | That machine holds the city's luck. Hit the core when it opens! | 5\n" +
-            "yudo | 네 숫자는 다 읽었어. 이제 내가 굴린다. | I've read all your numbers. My roll now. | 4\n" },
+            "helper | 방송을 내보내는 AI는 궁 안에 있어. | The AI behind the broadcast is in the palace. | 4\n" +
+            "yudo | 왕 노릇도 하나 보네. | Playing king, too. | 3\n" },
     };
 
     static readonly HashSet<string> Played = new HashSet<string>(); // once per run: a death reload does not replay it
+
+    // Once per run (cleared on the title like the stage radio): BossFight's intro talk is not replayed after a death reload.
+    public static bool FirstTime(string key) => Played.Add(key);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { SceneManager.sceneLoaded -= OnSceneLoaded; Played.Clear(); }

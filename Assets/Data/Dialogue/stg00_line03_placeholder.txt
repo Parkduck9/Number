@@ -1,3 +1,3 @@
-# New story 11-12: the contact (who sent the invitation) radios in. File name kept: scenes reference it.
+# Codex concept-only proposal (11-13, P03). File name kept: scenes reference it.
 @mode radio
-helper | 도사님, 초대장 보낸 사람이에요. 경비 로봇이 와요. 달려요! | It's me, I sent the invitation. Guard robots incoming. Run! | 4
+helper | 시민들이야. 칩이 몸을 움직이고 있어. | They're civilians. The chips are moving them. | 4

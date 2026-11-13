@@ -90,6 +90,8 @@ public class DialoguePlayer : MonoBehaviour
     }
 
     // ---- Radio ----
+    public bool RadioBusy => radioLine != null || radioQueue.Count > 0; // OpeningSequence: the broadcast finishes before the talk opens
+
     // Drops the current and queued radio lines (Stg01Tutorial: the next step's lines replace a quick player's leftovers).
     public void ClearRadio()
     {

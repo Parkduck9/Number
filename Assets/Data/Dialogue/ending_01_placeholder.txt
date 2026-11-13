@@ -1,11 +1,7 @@
-# Ending (new story 11-12). format: speakerId | Korean | English. The LAST yudo line is undecided (user, 11-12): placeholder kept.
+# Ending (Codex concept-only proposal 11-13, E01; last line by the user). format: speakerId | Korean | English.
 @mode talk
-broadcast | 오늘의… 행운의… 숫자… 는… | Today's... lucky... number... is...
-broadcast | ……………… | ................
-helper | 방송이 멈췄어요. 도시가 다시 움직여요! | The broadcast is dead. The city's moving again!
-yudo | 버튼이 많길래 다 부쉈어. | Too many buttons. I broke them all.
-citizen | …어? 숫자가 안 보여. | ...Huh? The number's gone.
-citizen | 오늘 운은… 내가 정해도 돼? | So today's luck... is up to me?
-yudo | 그래. 읽고, 쌓고, 직접 굴려. | Yeah. Read it, build it, roll it yourself.
-yudo | 오늘은… 대길. | Today... great luck.
+helper | 방송이 끊겼어. 다들 제 발로 걷고 있어. | Broadcast's dead. They're walking on their own.
+yudo | 길이 좀 붐비겠네. | Streets will be busy.
+helper | 다음 행운의 숫자는? | What's the next lucky number?
+yudo | 각자 정하는 거지. | Everyone picks their own.
 broadcast | [END] | [END]

@@ -1,4 +1,5 @@
-# New story 11-12: Yudo arrives as an invited guest. Line 2 is GDD LINE-02 [확정]. File name kept: scenes reference it.
+# Codex concept-only proposal (11-13, P01): the benefactor (helper) radios in after the broadcast. File name kept: scenes reference it.
 @mode talk
-yudo | 초대받아 왔더니, 마중 대신 방송이네. | I came on an invitation. Got a broadcast instead.
-yudo | 0이라고? 누가 정했는데. | Zero? Says who?
+helper | 안유도. 와 줬군. | Ahn Yudo. You made it.
+yudo | 초대받았는데. 마중은 없나? | You invited me. No welcome party?
+helper | 엠벡터 방송을 끊어 줘. 길은 내가 짚을게. | Cut Embector's broadcast. I'll guide you.

@@ -1,3 +1,4 @@
-# DRAFT (Claude 2026-11-10, the user may rewrite). Keep the format. File name kept: scenes reference it.
+# Codex concept-only proposal (11-13, P02). File name kept: scenes reference it.
 @mode radio
-broadcast | 엠벡터 방송. 오늘의 행운의 숫자는… 0입니다. | Embector broadcast. Today's lucky number is... zero. | 3.5
+broadcast | 엠벡터가 전합니다. 오늘의 행운의 숫자는 0. | Embector reports: today's lucky number is 0. | 3.5
+broadcast | 개별 판단을 멈추고 안내에 따르십시오. | Suspend individual judgment. Follow instructions. | 3.5

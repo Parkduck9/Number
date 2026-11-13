@@ -34,7 +34,7 @@ MonoBehaviour:
     portrait: {fileID: 0}
     color: {r: 0.7215686, g: 0.5254902, b: 0.1803922, a: 1}
   - id: helper
-    nameKo: "연락책"
-    nameEn: Contact
+    nameKo: "귀인"
+    nameEn: Benefactor
     portrait: {fileID: 0}
     color: {r: 0.7215686, g: 0.5254902, b: 0.1803922, a: 1}

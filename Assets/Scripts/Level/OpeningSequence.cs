@@ -29,6 +29,7 @@ public class OpeningSequence : MonoBehaviour
         if (board != null) board.SetAiNumber(0); // the 0 is on screen before the lights go: it is what stays lit
         Play(line01Radio);
         yield return new WaitForSeconds(broadcastWait);
+        while (DialoguePlayer.Instance != null && DialoguePlayer.Instance.RadioBusy) yield return null; // 11-13: the broadcast is two lines now
 
         Current = Phase.Joke;
         Play(line02Talk);
