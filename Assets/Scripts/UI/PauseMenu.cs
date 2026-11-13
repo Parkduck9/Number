@@ -132,9 +132,10 @@ public class PauseMenu : MonoBehaviour
         dimImage = UiKit.FilledImage(dim, t.dimmer, true); // also blocks clicks to anything below
         dimAlpha = t.dimmer.a;
 
-        var panelSize = new Vector2(t.buttonSize2.x + 96f, 4 * t.buttonStep + 96f);
-        var fill = UiKit.Frame("Panel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f), panelSize, out _);
-        var controls = UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 80f - panelSize.y / 2f - 60f));
+        var panelSize = new Vector2(t.buttonSize2.x + 96f, 4 * t.buttonStep + 150f); // 4 buttons + the volume rows
+        var fill = UiKit.Frame("Panel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, 72f), panelSize, out _);
+        // Panel, volume rows and the controls guide together fill the 540 px canvas: 72 + 195 = 267 at the top, -266 at the bottom.
+        var controls = UiKit.ControlsPanel(canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0f, -169f));
         popPanel = fill.parent; popControls = controls.transform;
         UiKit.Label("Title", fill, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(panelSize.x, 36f), "PAUSED", "일시정지", t.buttonSize, t.text);
 
@@ -144,6 +145,7 @@ public class PauseMenu : MonoBehaviour
         UiKit.AddButton(column, "Restart from checkpoint", "체크포인트에서 재시작", i++, RestartFromCheckpoint);
         UiKit.AddButton(column, "Language: English", "언어: 한국어", i++, () => Loc.SetKorean(!Loc.Korean));
         UiKit.AddButton(column, "To title", "타이틀로", i++, ToTitle);
+        UiKit.VolumeStack(fill, new Vector2(0.5f, 0f), new Vector2(0f, 46f)); // under the buttons, inside the panel
         return canvas.gameObject;
     }
 

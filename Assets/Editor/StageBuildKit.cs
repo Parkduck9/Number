@@ -449,8 +449,8 @@ public static class StageBuildKit
         return go;
     }
 
-    // Face-portrait health HUD (top-left) + broadcast number HUD (always); allowHack = dial and [E] prompt (STG-04/05 only, DECISIONS 01-fixes #5).
-    public static void BuildHud(bool allowHack)
+    // Face-portrait health HUD (top-left) + broadcast number HUD (always). Hacking a board was removed on 11-13.
+    public static void BuildHud()
     {
         var font = LoadFont();
         var canvasGo = new GameObject("HUD Canvas");
@@ -487,7 +487,6 @@ public static class StageBuildKit
 
         var ui = new GameObject("BroadcastHackUi").AddComponent<BroadcastHackUi>();
         if (font != null) SetObj(ui, "font", font);
-        SetBool(ui, "allowHack", allowHack);
     }
 
     public static void BuildDialoguePlayer()

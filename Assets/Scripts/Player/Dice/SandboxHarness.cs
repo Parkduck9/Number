@@ -12,12 +12,9 @@ public class SandboxHarness : MonoBehaviour
 
     static readonly Key[] Digits = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6 };
     static readonly Key[] FKeys = { Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6 };
-    static readonly FieldInfo DialBoard = typeof(BroadcastHackUi).GetField("dialBoard", BindingFlags.NonPublic | BindingFlags.Instance);
-
     PlayerController player;
     PlayerHealth health;
     LuckyDice dice;
-    BroadcastHackUi hackUi;
     int queued; // 1..6 waiting for the dice to be free
 
     void Start()
@@ -25,8 +22,8 @@ public class SandboxHarness : MonoBehaviour
         LuckyDice.SetUnlocked(true);
         var canvas = UiKit.CreateCanvas("Sandbox Hint", transform, 50);
         UiKit.Label("Hint", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(900f, 28f),
-            "1-6: dice skill   F1-F6: station   R: reset   E: hack board",
-            "1-6: 주사위 스킬   F1-F6: 구역 이동   R: 초기화   E: 해킹", 18, Color.white);
+            "1-6: dice skill   F1-F6: station   R: reset",
+            "1-6: 주사위 스킬   F1-F6: 구역 이동   R: 초기화", 18, Color.white);
     }
 
     void Update()
@@ -38,22 +35,20 @@ public class SandboxHarness : MonoBehaviour
             health = player.GetComponent<PlayerHealth>();
         }
         if (dice == null) dice = player.GetComponent<LuckyDice>();
-        if (hackUi == null) hackUi = FindFirstObjectByType<BroadcastHackUi>();
         LuckyDice.SetUnlocked(true);
         if (health != null && !health.IsDead && health.Hp < health.MaxHp) health.RestoreFull(); // no death, but not invulnerable: hits still show and the elite duel can start (TryBegin refuses an invulnerable player)
 
         var kb = Keyboard.current;
         if (kb == null) return;
-        if (kb.rKey.wasPressedThisFrame && !DialOpen()) { Reload(); return; }
+        if (kb.rKey.wasPressedThisFrame) { Reload(); return; }
         for (int i = 0; i < FKeys.Length; i++)
             if (kb[FKeys[i]].wasPressedThisFrame) Teleport(stationX[i]);
-        if (dice == null || DialOpen()) return; // the hack dial uses the digit keys
+        if (dice == null) return;
         for (int i = 0; i < Digits.Length; i++)
             if (kb[Digits[i]].wasPressedThisFrame) queued = i + 1; // latest press wins
         if (queued != 0 && dice.ForceRoll(queued)) queued = 0; // a press during a roll / running skill fires when that ends (was dropped)
     }
 
-    bool DialOpen() => hackUi != null && DialBoard != null && DialBoard.GetValue(hackUi) != null;
 
     void Teleport(float x)
     {

@@ -30,7 +30,7 @@ public class GameAudio : MonoBehaviour
     // ---- tunables (T) ----
     const int Voices = 10;               // simultaneous SFX
     const float SfxVolume = 0.8f;
-    const float BgmVolume = 0.45f;
+    const float BgmVolume = 0.45f;   // before the player's level (AudioLevels.Bgm)
     const float BgmFade = 0.6f;          // seconds, fade out old / fade in new
     const float SameSfxCooldown = 0.04f; // same id within this time is skipped (multi-hit frames)
     const float PitchJitter = 0.05f;     // +-5% on combat sounds so repeats don't sound identical
@@ -118,7 +118,15 @@ public class GameAudio : MonoBehaviour
         AudioSource v = voices[nextVoice];
         nextVoice = (nextVoice + 1) % Voices;
         v.pitch = pitch > 0f ? pitch : IsCombat(id) ? 1f + Random.Range(-PitchJitter, PitchJitter) : 1f;
-        v.PlayOneShot(clip, volume * SfxVolume);
+        v.PlayOneShot(clip, volume * SfxVolume * AudioLevels.Sfx);
+    }
+
+    float BgmTarget => BgmVolume * AudioLevels.Bgm;
+
+    // The player moved the music slider: take it without waiting for the next fade.
+    public void ApplyBgmLevel()
+    {
+        if (bgm != null && bgm.isPlaying && fadeDir >= 0f) bgm.volume = BgmTarget;
     }
 
     public void PlayBgm(BgmId id)
@@ -157,9 +165,9 @@ public class GameAudio : MonoBehaviour
 
         if (fadeDir != 0f)
         {
-            bgm.volume = Mathf.MoveTowards(bgm.volume, fadeDir > 0f ? BgmVolume : 0f, BgmVolume * Time.unscaledDeltaTime / BgmFade);
+            bgm.volume = Mathf.MoveTowards(bgm.volume, fadeDir > 0f ? BgmTarget : 0f, BgmVolume * Time.unscaledDeltaTime / BgmFade);
             if (fadeDir < 0f && bgm.volume <= 0f) Swap();
-            else if (fadeDir > 0f && bgm.volume >= BgmVolume) fadeDir = 0f;
+            else if (fadeDir > 0f && bgm.volume >= BgmTarget) fadeDir = 0f;
         }
 
         if (breathStopAt >= 0f && now >= breathStopAt) BreathStop(BreathStopSeconds);

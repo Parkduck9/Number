@@ -75,6 +75,21 @@ public static class UiKit
         return fill;
     }
 
+    // A label the code writes itself (a percentage): no LocalizedText, which rewrites the text on every enable.
+    public static TMP_Text PlainLabel(string name, Transform parent, Vector2 anchor, Vector2 pos, Vector2 size, int fontSize, Color color)
+    {
+        var rt = Rect(name, parent, anchor, pos, size);
+        var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
+        var t = UiTheme.Current;
+        if (t.font != null) tmp.font = t.font;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.raycastTarget = false;
+        return tmp;
+    }
+
     public static TMP_Text Label(string name, Transform parent, Vector2 anchor, Vector2 pos, Vector2 size, string en, string ko, int fontSize, Color color)
     {
         var rt = Rect(name, parent, anchor, pos, size);
@@ -116,6 +131,58 @@ public static class UiKit
         return btn;
     }
 
+    // Both volume sliders on one line (music | sound), 560x36. Two stacked rows ran off the bottom of the
+    // 960x540 canvas in the title and burst the pause panel, so they share a line.
+    public static RectTransform VolumePair(Transform parent, Vector2 anchor, Vector2 pos)
+    {
+        var line = Rect("Volume", parent, anchor, pos, new Vector2(560f, 36f));
+        VolumeSlider(line, "Music", "배경음", new Vector2(-140f, 0f), AudioLevels.Bgm, v => AudioLevels.Bgm = v);
+        VolumeSlider(line, "Sound", "효과음", new Vector2(140f, 0f), AudioLevels.Sfx, v => AudioLevels.Sfx = v);
+        return line;
+    }
+
+    // The same two sliders stacked, for the pause panel, which is narrower than one line of them.
+    public static RectTransform VolumeStack(Transform parent, Vector2 anchor, Vector2 pos)
+    {
+        var box = Rect("Volume", parent, anchor, pos, new Vector2(280f, 76f));
+        VolumeSlider(box, "Music", "배경음", new Vector2(0f, 19f), AudioLevels.Bgm, v => AudioLevels.Bgm = v);
+        VolumeSlider(box, "Sound", "효과음", new Vector2(0f, -19f), AudioLevels.Sfx, v => AudioLevels.Sfx = v);
+        return box;
+    }
+
+    // One slider inside a VolumePair line: name, bar, percent, centred on `centreX`. Arrow keys move it while
+    // selected (Unity's Slider), and the pointer drags it.
+    static Slider VolumeSlider(Transform line, string en, string ko, Vector2 centre, float value, UnityAction<float> onChange)
+    {
+        var t = UiTheme.Current;
+        var row = Rect("Vol " + en, line, new Vector2(0.5f, 0.5f), centre, new Vector2(260f, 36f));
+        Label("Name", row, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(84f, 28f), en, ko, 17, t.dim);
+        var percent = PlainLabel("Percent", row, new Vector2(1f, 0.5f), new Vector2(-26f, 0f), new Vector2(44f, 28f), 17, t.dim);
+
+        var bar = Rect("Bar", row, new Vector2(1f, 0.5f), new Vector2(-108f, 0f), new Vector2(104f, 12f));
+        FilledImage(bar, t.border, true);
+        var fillArea = Stretch("Fill Area", bar, 2f);
+        var fillRt = Stretch("Fill", fillArea);
+        var fill = FilledImage(fillRt, t.dim);
+
+        var slider = bar.gameObject.AddComponent<Slider>();
+        slider.transition = Selectable.Transition.None;
+        slider.fillRect = fillRt;
+        slider.targetGraphic = fill;
+        slider.minValue = 0f; slider.maxValue = 1f;
+        slider.SetValueWithoutNotify(value);
+        percent.text = Mathf.RoundToInt(value * 100f) + "%";
+        slider.onValueChanged.AddListener(v =>
+        {
+            percent.text = Mathf.RoundToInt(v * 100f) + "%";
+            onChange(v);
+        });
+        // Selected / hovered: the bar brightens, like a button's text does.
+        var tint = slider.gameObject.AddComponent<VolumeRowTint>();
+        tint.Init(fill, t);
+        return slider;
+    }
+
     // Controls guide rows (playtest 11-13, user: the wall of text read badly). Each row is groups of three:
     // keys, EN, KO. Keys are comma-separated "sprite:letter" tokens ("+" draws a plus between two keys).
     static readonly string[][] ControlRows =
@@ -123,11 +190,9 @@ public static class UiKit
         new[] { "ctrl_key_a:A,ctrl_key_d:D", "Move", "이동",
                 "ctrl_key_space:SPACE", "Jump", "점프",
                 "ctrl_key_a:S,+,ctrl_key_space:SPACE", "Drop through a ledge", "발판 아래로" },
-        new[] { "ctrl_key_shift:SHIFT", "Issen (level enemy)", "일섬 (같은 높이 적)",
-                "ctrl_key_e:E", "Interact / hack (when near)", "상호작용 / 해킹 (가까이서)" },
-        new[] { "ctrl_mouse_left:", "Attack / Parry", "공격 / 패링",
-                "ctrl_mouse_right:", "Grapple rope", "갈고리 줄" },
-        new[] { "ctrl_key_e:E", "Lucky dice (after unlock)", "점괘 주사위 (해금 후)",
+        new[] { "ctrl_key_shift:SHIFT", "Issen", "일섬",
+                "ctrl_mouse_left:", "Attack / Parry", "공격 / 패링",
+                "ctrl_mouse_right:", "Grapple rope", "갈고리 줄",
                 "ctrl_key_space:ESC", "Pause", "일시정지" },
     };
 
@@ -140,7 +205,7 @@ public static class UiKit
         bool icons = DraftHud.Ui("ctrl_key_a") != null && DraftHud.Ui("ctrl_key_space") != null
                      && DraftHud.Ui("ctrl_key_shift") != null && DraftHud.Ui("ctrl_key_e") != null
                      && DraftHud.Ui("ctrl_mouse_left") != null && DraftHud.Ui("ctrl_mouse_right") != null;
-        var fill = Frame("Controls", parent, anchor, pos, new Vector2(620f, icons ? 168f : 104f), out _);
+        var fill = Frame("Controls", parent, anchor, pos, new Vector2(620f, icons ? 76f : 104f), out _); // 2 x 32 px rows
         if (!icons)
         {
             Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
@@ -150,9 +215,9 @@ public static class UiKit
             return fill.parent.gameObject;
         }
 
-        var column = Stretch("Rows", fill, 8f);
+        var column = Stretch("Rows", fill, 2f);
         var vertical = column.gameObject.AddComponent<VerticalLayoutGroup>();
-        vertical.spacing = 4f;
+        vertical.spacing = 1f;
         vertical.childAlignment = TextAnchor.MiddleCenter;
         vertical.childControlWidth = vertical.childControlHeight = true;
         vertical.childForceExpandWidth = vertical.childForceExpandHeight = false;
@@ -294,4 +359,25 @@ public class ButtonHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler, 
         label.rectTransform.anchoredPosition = skin != null && down ? new Vector2(0f, -2f) : Vector2.zero; // pressed: text drops 1 art px (2 ref px)
         label.color = on ? theme.text : theme.dim;
     }
+}
+
+// The volume bar's fill brightens while its row is selected or hovered, so it reads like the buttons above it.
+public class VolumeRowTint : MonoBehaviour, ISelectHandler, IDeselectHandler, IPointerEnterHandler, IPointerExitHandler
+{
+    Image fill; Color on, off; bool selected, hovered;
+
+    public void Init(Image barFill, UiTheme theme)
+    {
+        fill = barFill;
+        off = theme.dim;
+        on = theme.text;
+        fill.color = off;
+    }
+
+    void Apply() => fill.color = selected || hovered ? on : off;
+
+    public void OnSelect(BaseEventData e) { selected = true; Apply(); }
+    public void OnDeselect(BaseEventData e) { selected = false; Apply(); }
+    public void OnPointerEnter(PointerEventData e) { hovered = true; Apply(); }
+    public void OnPointerExit(PointerEventData e) { hovered = false; Apply(); }
 }

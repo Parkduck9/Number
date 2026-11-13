@@ -48,7 +48,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     const float AndroidDescendVy = 0.5f;  // (T) airborne attacker counts as "from above" only while moving down faster than this (u/s)
 
     [Header("Variants (defaults = melee citizen)")]
-    [SerializeField] Kind kind = Kind.Citizen;       // NUM-0 freezes citizens only; Android uses the gold fan special
+    [SerializeField] Kind kind = Kind.Citizen;       // Android uses the gold fan special
     [SerializeField] LayerMask groundMask;           // 0 = no edge check
     [SerializeField] float activationRange = 8f;     // idle until the player is this close (spotting range); 0 = always active
     [SerializeField] float edgeProbeForward = 0.7f;  // ground probe ahead of the feet
@@ -225,8 +225,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             if (frozenUntil > 0f) frozenUntil += Time.deltaTime;
             return;
         }
-        // Dice Overload freeze ran out; a zone still on 0 keeps it frozen (the board releases it).
-        if (state == State.Frozen && frozenUntil > 0f && Time.time >= frozenUntil && broadcast != 0) { frozenUntil = 0f; FinishReset(); }
+        // The dice Overload freeze ran out (the only freeze left since NUM-0 went, 11-13).
+        if (state == State.Frozen && frozenUntil > 0f && Time.time >= frozenUntil) { frozenUntil = 0f; FinishReset(); }
         if (state == State.Stunned && Time.time - stateEnteredAt >= Juice.KillVanishDelay)
         {
             if (visual != null) PlayVanishSpark();
@@ -282,11 +282,9 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             number.Reroll();
             strikesLeft = number.Value;
         }
-        // NUM-7: doping starts. Leaving 7 early just clears it (no exhaustion when the number is hacked away).
+        // NUM-7: doping starts. Leaving 7 early just clears it.
         if (n == 7) exhaustedCycle = -1;
-        // NUM-0: citizens stop breathing; the number changing away releases them.
-        if (n == 0 && (kind == Kind.Citizen || kind == Kind.Sniper)) EnterState(State.Frozen); // the sniper is a citizen too
-        else if (old == 0 && state == State.Frozen && Time.time >= frozenUntil) { frozenUntil = 0f; FinishReset(); } // a dice freeze still running ends on its own timer
+        // NUM-0 (a 0 on the board froze every citizen) was removed on 11-13: the user found that stopping the crowd killed the pace.
     }
 
     // NUM-7 timer (time-based, not a board poll).

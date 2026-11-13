@@ -192,7 +192,7 @@ public static class Stg01Builder
 
         BuildCamera(playerGo.transform, Enumerable.Range(0, SegX.Length).Select(i => SegRect(SegX[i], W, SegH[i])).ToArray(), new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
-        BuildHud(false); // HUD only: the hack device is obtained in STG-03 (01-fixes #5)
+        BuildHud(); // the number HUD only; hacking was removed on 11-13
         BuildBoard(roots[B], "BOARD-B", BoardPos, 3, new Vector2(SegX[B], SegX[B] + W));
         BuildDialoguePlayer(); // the tutorial's radio lines need DialoguePlayer.Instance
         // no tutorial here any more: it has its own map (TutorialBuilder, playtest 11-12)

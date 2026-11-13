@@ -125,9 +125,10 @@ public static class Stg04Builder
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only the climb + high-run group (E-B8, E-B9, E-B7, S-B1): watching the floor too would force a second descent (Fable review).
     static readonly Pt Spawner = new Pt("SPAWNER-B", B, 68f, 11.5f); // on the high run between E-B7 and the gantry, outside the goal trigger
 
-    // Billboards (segment-local center, within hand reach for hacking from the floor): A shows 7, B shows 0. Zone = the whole segment.
-    static readonly Vector2 BoardPosA = new Vector2(25f, 4.5f), BoardPosB = new Vector2(10f, 4.5f); // y 4.5: within BroadcastHackUi.interactRange (3u) of a grounded player (center y 2)
-    const int BoardA = 7, BoardB = 0;
+    // Billboards (segment-local center). Zone = the whole segment. Both show 7 since 11-13: a 0 used to freeze the
+    // whole crowd (NUM-0, removed with hacking), so segment B would otherwise wake up with no rule of its own.
+    static readonly Vector2 BoardPosA = new Vector2(25f, 4.5f), BoardPosB = new Vector2(10f, 4.5f);
+    const int BoardA = 7, BoardB = 7;
 
     static readonly Box GateA = new Box("TR-A-GATE", A, Kind.Solid, 74.3f, W, 13.0f, 17.0f); // right end of the gate tower (the sniper stands left of it)
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 72.3125f, 75.3125f, 11.5f, 15.5f); // right end of the high run
@@ -182,7 +183,7 @@ public static class Stg04Builder
 
         BuildCamera(playerGo.transform, new[] { SegRect(SegX[A], W, H), SegRect(SegX[B], W, H) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
-        BuildHud(true);
+        BuildHud();
         BuildDialoguePlayer(); // StageRadio's stage-start radio lines (new story 11-12)
         BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);

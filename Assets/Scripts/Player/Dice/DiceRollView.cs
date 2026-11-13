@@ -143,6 +143,7 @@ public class DiceRollView : MonoBehaviour
 
         float t = 0f, spin = 0f;
         bool landed1 = false, landed2 = false;
+        int knocks = 0; // playtest 11-13 (user): it should knock its way to a stop, not land twice in silence
         const float t1 = FlyTime, t2 = t1 + BounceTime, t3 = t2 + RollTime;
         while (t < t3)
         {
@@ -158,15 +159,18 @@ public class DiceRollView : MonoBehaviour
             }
             else if (t < t2)
             {
-                if (!landed1) { landed1 = true; Sfx.Play(SfxId.Parry, 0.5f); }
+                if (!landed1) { landed1 = true; Sfx.Play(SfxId.DiceLand, 0.5f); }
                 float k = (t - t1) / BounceTime;
                 p = new Vector2(Mathf.Lerp(Land1.x, Land2.x, k), FloorY + BounceHeight * 4f * k * (1f - k));
                 rate = 18f;
             }
             else
             {
-                if (!landed2) { landed2 = true; Sfx.Play(SfxId.Parry, 0.3f); }
+                if (!landed2) { landed2 = true; Sfx.Play(SfxId.DiceLand, 0.4f, 1.15f); } // a touch higher, so the two knocks read apart
                 float k = (t - t2) / RollTime;
+                // ...then two quicker, quieter knocks as it tumbles the last stretch: knock, knock, ker-knock
+                if (knocks == 0 && k > 0.14f) { knocks = 1; Sfx.Play(SfxId.DiceLand, 0.26f, 1.3f); }
+                else if (knocks == 1 && k > 0.27f) { knocks = 2; Sfx.Play(SfxId.DiceLand, 0.18f, 1.45f); }
                 p = new Vector2(Mathf.Lerp(Land2.x, 0f, 1f - (1f - k) * (1f - k)), FloorY); // rolls to a stop
                 rate = Mathf.Lerp(16f, 6f, k);
             }

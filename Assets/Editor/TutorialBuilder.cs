@@ -86,7 +86,7 @@ public static class TutorialBuilder
 
         BuildCamera(playerGo.transform, new[] { SegRect(0f, W) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
-        BuildHud(false);
+        BuildHud();
         BuildDialoguePlayer();
 
         var tut = new GameObject("TUTORIAL").AddComponent<Stg01Tutorial>();

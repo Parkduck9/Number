@@ -56,6 +56,7 @@ public class TitleScreen : MonoBehaviour
         UiKit.AddButton(column, "Controls", "조작법", i++, () => controls.SetActive(!controls.activeSelf));
         if (Application.platform != RuntimePlatform.WebGLPlayer)
             UiKit.AddButton(column, "Quit", "종료", i++, Quit);
+        UiKit.VolumePair(canvas.transform, center, new Vector2(0f, MenuTopY - i * t.buttonStep - 10f)); // below the last button
 
         controls = UiKit.ControlsPanel(canvas.transform, center, new Vector2(0f, LogoY)); // covers the logo while open
         controls.SetActive(false);

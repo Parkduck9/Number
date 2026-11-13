@@ -80,7 +80,7 @@ public static class SandboxBuilder
 
         BuildCamera(playerGo.transform, new[] { SegRect(0f, W, SegHeight) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "RespawnManager");
-        BuildHud(true); // allowHack: station 3 board (E)
+        BuildHud();
         new GameObject("SandboxHarness").AddComponent<SandboxHarness>();
         BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);

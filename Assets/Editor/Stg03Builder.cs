@@ -58,7 +58,7 @@ public static class Stg03Builder
 
         BuildCamera(playerGo.transform, new[] { new Rect(0f, 0f, RoomWidth, SegHeight) }, new Color32(0x0B, 0x0F, 0x1E, 0xFF));
         AddByName("RespawnManager", new GameObject("RespawnManager"), "Card A RespawnManager");
-        BuildHud(false);
+        BuildHud();
         BuildDialoguePlayer();
         BuildLighting(false);
         SaveScene(scene, Tag, ScenePath);
