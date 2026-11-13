@@ -3,7 +3,7 @@
 제출 페이지 크레딧과 AI 공개 문구의 원본. 에셋을 추가할 때마다 바로 기록한다.
 
 ## Team
-- (팀원 이름 / 역할)
+- NIPAD — solo developer (design, direction, art direction, playtesting)
 
 ## Third-party assets
 | 에셋 | 제작자 | 출처 URL | 라이선스 | 사용 위치 |
@@ -17,7 +17,7 @@
 ## AI-generated assets
 | 에셋 | 도구 | 사용 위치 |
 |---|---|---|
-| Gwiin / Benefactor Gemini portrait DRAFT (100x100 RGBA) — supplied benefactor_gemini.jpg cropped, background masked, downscaled and palette-limited; eyes, hair, headset, contours and cyan rim cleaned with integer-pixel edits; 22 opaque colours plus transparency; Yudo / Citizen comparison at exact nearest-neighbour 4x | AI 생성 (Google Gemini source supplied by the user; Codex local Node.js pixel conversion and cleanup; no new image-generation API or paid service) | docs/design/concept/portraits/benefactor/benefactor_gemini_px.png, preview_gemini_4x.png; in game: Assets/Resources/Portraits/helper.png |
+| Gwiin / Benefactor dialogue portrait v4 (100x100, 50x50 art at 2x) — Google Gemini source made with only the other in-game portraits as style reference (benefactor_gemini2.png); Codex cut it out, removed the watermark, grid-snapped it to native 50x50 with dominant-colour voting and matched head size / eye line / framing to Yudo and the Citizen | AI 생성 (Google Gemini, Codex gpt-6.1-sol) | Assets/Resources/Portraits/helper.png; source and drafts v2-v5: docs/design/concept/portraits/benefactor/ |
 | Gwiin / Benefactor dialogue portrait DRAFTS A/B/C (100x100 RGBA) — original integer-pixel drawings; high ponytail/headset, low bun/binyeo/throat radio, long hair/headset/norigae; 19 opaque colours plus transparency, shared project palette and gold speaker accent; Yudo comparison at nearest-neighbour 4x | AI 생성 (Codex), local Node.js pixel-authoring script; no image-generation API, traced external art or paid services | docs/design/concept/portraits/benefactor/; review drafts only, not installed in Assets/ |
 | HUD dice DRAFT v5 — high 3/4 camera with large readable top-face results, thin seeded-pip strips, dim die and four tumbling poses; eleven 24x24 sprites and filename-only 8x preview | AI 생성 (Codex), deterministic local Node.js integer-pixel authoring using the existing v4 palette and editable source; no image-generation API, external assets or paid services | docs/design/concept/dice_skills/redraw_v5/; review drafts only, not installed in Assets/ |
 | HUD dice redraw v5 (dice_face_1~6, dice_off, dice_roll_0~3, 24x24) — high 3/4 view, the rolled number on the big top face, seeded random shaded pips on the narrow front/side strips; drafts v1–v4 kept for reference | AI 생성 (Codex gpt-6.1-sol), local script pixel authoring; no image-generation API | source: docs/design/concept/dice_skills/redraw_v1~v5/; in game: Assets/Resources/DraftHud/dice_*.png |
