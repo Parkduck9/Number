@@ -1608,8 +1608,8 @@ public class PlayerController : MonoBehaviour
         float hold = Mathf.Max(0f, hitStopEndsAt - Time.unscaledTime);
         parrySlowUntil = Time.unscaledTime + hold + DashRules.ParrySlowTime;
         parryUnfocusAt = Time.unscaledTime + DashRules.ParryZoomHold;
-        Camera cam = Camera.main; // zoom only: focus on where the camera already looks, so the view does not jump sideways
-        CameraFollow2D.DuelFocus(cam != null ? (Vector2)cam.transform.position : Vector2.Lerp(transform.position, contact, 0.5f), DashRules.ParryZoom);
+        // Playtest 11-13 (user): the zoom centres on the clash (hero + contact), not on the follow view where the hero sits low
+        CameraFollow2D.DuelFocus(Vector2.Lerp(transform.position, contact, 0.5f), DashRules.ParryZoom);
     }
 
     void UpdateParryFeel()
