@@ -62,7 +62,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // B tracks (DECISIONS 29): after each slam the blade re-aims at the player's x, slides there in SlamShift, waits SlamAim, slams.
     // DECISIONS 33: while it waits it keeps following the player's x (TrackSpeed u/s) and locks only when the ring appears.
     const float SlamShift = 0.15f, RingLead = 0.6f, TrackSpeed = 9f; // ring always 0.6 s (DECISIONS 28), starts after the slide
-    static readonly float[] SlamAim = { 0.85f, 0.8f, 0.75f };    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
+    static readonly float[] SlamAim = { 0.75f, 0.7f, 0.65f }; // playtest 11-13 (slam a bit faster): was 0.85 / 0.8 / 0.75
+    const float SlamDrop = 0.08f, SlamHitHalf = 1.1f; // s blade fall (was 0.12); u half width of the slam hit (was the steel's 0.69: the slam missed people inside the 1.5 red zone)    // by phase: s from the slide's end to the slam (>= RingLead); tracks for SlamAim - RingLead
     // B' sweep: warning band SweepWarn, then the slash crosses the room in SweepTime. DECISIONS 45: LOW = up (perch) / down (lane),
     // HIGH = stay on the deck / the lane, dash through either. The escapes need moving, so the warning is longer than DECISIONS 33's 0.5.
     static readonly float[] SweepWarn = { 1f, 0.9f, 0.85f }; // by phase (T): rope to a perch ~0.45 s, perch -> deck drop ~0.65 s
@@ -206,6 +207,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     float slamFlashT, shockSpeed;
     int shockA = -1, shockB = -1; // the pair the latest slam launched (a late parry cancels it)
 
+    // E storm slam (playtest 11-13): the blade charges red lightning over the centre, slams, and the whole floor stays live for
+    // StormFloorTime (one hit for feet on it). Safe: a wall perch, a hook (rope), a roof chunk, or a dash at the right moment.
+    static readonly float[] StormCharge = { 1.6f, 1.4f, 1.25f }; // by phase (T): s of crackle before the slam (plus the tell)
+    const float StormX = 15f, StormFloorTime = 1.5f /* < GrappleHangMax 2.5: a rope caught late in the charge holds through it */, StormFloorH = 0.4f, StormFlick = 0.06f;
+    static readonly Color StormRed = new Color32(0xFF, 0x2A, 0x2A, 0xFF), StormCore = new Color32(0xFF, 0xD6, 0xCC, 0xFF);
+    DiceSkillKit.Segs stormSegs;
+    SpriteRenderer stormFloor;
+    float stormCharge = -1f, stormLeft, stormFlickT;
+    bool stormHit, stormDrawn;
+
     SpriteRenderer zoneFloor, zoneLane, white, sweepFill; // DECISIONS 40: no red lines (sweep centre line, danger lane side lines)
     float sweepY = -1f; // band centre while the B' warning shows, < 0 = off
     BossDebris debris; // DECISIONS 40: falling roof chunks to ride / rope
@@ -290,6 +301,11 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         zoneFloor.transform.localScale = new Vector3(ZoneHalf * 2f, 0.25f, 1f);
         zoneLane.color = new Color(1f, 0.23f, 0.23f, 0.12f);
         zoneLane.enabled = zoneFloor.enabled = false;
+        stormFloor = Make("StormFloor", ParryFx.Square, "World", 5, new Vector2(RoomW * 0.5f, Floor + 0.125f));
+        stormFloor.transform.localScale = new Vector3(RoomW, 0.25f, 1f);
+        stormFloor.enabled = false;
+        stormSegs = DiceSkillKit.Segs.Create("StormBolts");
+        stormSegs.transform.SetParent(transform, false);
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
         sweepFill.enabled = false;
         for (int i = 0; i < shockBody.Length; i++)
@@ -410,6 +426,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         UpdateWaves(Dt);
         UpdateRain(Dt);
         UpdateShock(Dt);
+        UpdateStorm(Dt);
         hookCd -= Dt;
         bool hk = HatchHookable;
         if (hk && !wasHookable) // DECISIONS 38 cue: a cyan ring off the hatch + a soft chime; the cyan corners (DrawBracket) snap on
@@ -439,7 +456,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (GameFlow.IsPlayerDead(player)) yield break; // respawn reload follows
             int ph = Phase;
             if (ph != shownPhase) yield return PhaseShift(ph);
-            // 0 A, 1 B, 2 C, 3 B' sweep, 4 D bug rain. Phase 1 has no C; later phases weight the bug attacks double (DECISIONS 38).
+            // 0 A, 1 B, 2 C, 3 B' sweep, 4 D bug rain, 5 E storm slam (playtest 11-13). Phase 1 has no C; later phases weight the bug attacks double (DECISIONS 38).
             // No repeats, and never two blade attacks in a row.
             int atk;
             int[] pool = ph == 1 ? PhaseOnePool : LaterPool;
@@ -448,19 +465,20 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             last = atk;
             int n = ph == 1 ? Random.Range(4, 6) : ph == 2 ? Random.Range(5, 8) : Random.Range(6, 9); // +1 each (DECISIONS 33)
             float tell = ph == 1 ? 0.8f : 0.65f; // was 1 / 0.8
-            BossArt.DrawHolo(atk == 3 ? BossArt.IconBlade : atk == 4 ? BossArt.IconBug : atk, n); // icon index == attack index (sweep / rain reuse blade / bug)
+            BossArt.DrawHolo(atk == 3 || atk == 5 ? BossArt.IconBlade : atk == 4 ? BossArt.IconBug : atk, n); // icon index == attack index (sweep / rain reuse blade / bug)
             Sfx.Play(SfxId.EnemyTell);
-            if (atk != 2 && (ph == 3 ? atk == 1 || Random.value < 0.5f : ph == 2 && Random.value < 0.35f)) // overlap (phase 2 too, DECISIONS 33)
+            // playtest 11-13 (user: three patterns at once is too hard): no side barrage over A (it already fires bug shots) or the storm
+            if (atk != 2 && atk != 0 && atk != 5 && (ph == 3 ? atk == 1 || Random.value < 0.5f : ph == 2 && Random.value < 0.35f)) // overlap (phase 2 too, DECISIONS 33)
                 StartCoroutine(AttackC(Mathf.Max(3, n - 2), tell, true));
-            yield return atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : atk == 4 ? AttackRain(n, tell) : AttackC(n, tell, false);
+            yield return atk == 5 ? AttackStorm(tell) : atk == 0 ? AttackA(n, tell) : atk == 1 ? AttackB(n, tell) : atk == 3 ? AttackSweep(n, tell) : atk == 4 ? AttackRain(n, tell) : AttackC(n, tell, false);
             BossArt.DrawHolo(-1, -1);
             while (sideRunning) yield return null;
             yield return CoreWindow();
         }
     }
 
-    static readonly int[] PhaseOnePool = { 0, 4, 1, 3 }, LaterPool = { 0, 0, 4, 4, 1, 2, 3 };
-    static bool IsBlade(int atk) => atk == 1 || atk == 3;
+    static readonly int[] PhaseOnePool = { 0, 4, 1, 3, 5 }, LaterPool = { 0, 0, 4, 4, 1, 2, 3, 5 };
+    static bool IsBlade(int atk) => atk == 1 || atk == 3 || atk == 5;
 
     IEnumerator PhaseShift(int ph)
     {
@@ -590,7 +608,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         for (int i = 0; i < n; i++)
         {
             LaunchWave(GapLows[Random.Range(0, GapLows.Length)]);
-            if (Phase == 3) LaunchColumn(player.transform.position.x); // DECISIONS 38: phase 3 drops a rain column with every wall
             if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
             if (i < n - 1) yield return Conduct(WaveEvery);
         }
@@ -670,14 +687,15 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 Sfx.Play(SfxId.Swing, 0.5f, 1.4f);
             }
             float head = RainTop - RainSpeed * rainT[c];
-            if (rainStage[c] == 2 && head <= g) // landed: the clump scatters into a floor carpet
+            if (rainStage[c] == 2 && head <= g) // landed: a puff of dust and the clump is gone (playtest 11-13: no lingering floor carpet)
             {
-                rainStage[c] = 3;
-                rainT[c] = 0f;
+                rainStage[c] = 0;
                 rainMark[c].enabled = false;
+                for (int i = c * BugsPerCol; i < (c + 1) * BugsPerCol; i++) rainBugs[i].enabled = false;
                 SpriteFx.Play("land-dust", new Vector2(x - 0.6f, g), true, 101);
                 SpriteFx.Play("land-dust", new Vector2(x + 0.6f, g), false, 101);
                 Sfx.Play(SfxId.Hit, 0.35f, 1.4f);
+                continue;
             }
             if (rainStage[c] == 3 && rainT[c] >= CarpetTime)
             {
@@ -813,7 +831,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         // First slam: the blade is already above zx (tell), slam at FirstSlam as before.
         float aim = SlamAim[Phase - 1], s = FirstSlam, tt = 0f, lockedUntil = -10f, fromX = zx, pressAt = -1f;
         int k = 0;
-        bool struck = false, parried = false;
+        bool struck = false, parried = false, hitAtImpact = false;
         ParryHeight h = ParryRing.RandomHeight(); // per slam, presentation only
         while (k < n)
         {
@@ -839,7 +857,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
                 // k > 0: rise off the floor while sliding sideways to the new target, then hold high; drop in the last 0.12 s
                 float u = k > 0 ? Smooth(tt / SlamShift) : 1f;
                 float x = Mathf.Lerp(fromX, zx, u);
-                float y = tt >= s - 0.12f ? Mathf.Lerp(BladeHigh, Floor, (tt - (s - 0.12f)) / 0.12f) : k > 0 ? Mathf.Lerp(Floor, BladeHigh, u) : BladeHigh;
+                float y = tt >= s - SlamDrop ? Mathf.Lerp(BladeHigh, Floor, (tt - (s - SlamDrop)) / SlamDrop) : k > 0 ? Mathf.Lerp(Floor, BladeHigh, u) : BladeHigh;
                 blade.Pos = new Vector2(x, y);
                 ShowZone(Snap(x), true); // the danger zone travels with the blade
             }
@@ -847,6 +865,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             if (!struck && tt >= s)
             {
                 struck = true;
+                hitAtImpact = inZone && player.CurrentState != PlayerController.State.Dash && player.CurrentState != PlayerController.State.Issen; // judged at impact too: stepping out during the parry window must not dodge it (a dash through the impact still does)
                 blade.Pos = new Vector2(zx, last ? BladeStuckY : Floor);
                 // DECISIONS 43: a big impact (whole-number scales keep the pixel grid): 3x ring, burst, sparks, wide dust
                 Juice.Shake(0.22f, 0.25f, Vector2.down);
@@ -864,11 +883,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             }
             if (struck && (parried || tt > s + WindowLate))
             {
-                if (inZone && parried) { Clang(zx, h); CancelShock(); } // late parry (after the impact frame): take the waves back
-                else if (inZone) player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(zx, player.transform.position.y), Unparryable = true });
-                if (!inZone || !parried) ring.Hide();
+                bool z = inZone || hitAtImpact;
+                if (z && parried) { Clang(zx, h); CancelShock(); } // late parry (after the impact frame): take the waves back
+                else if (z) player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(zx, player.transform.position.y), Unparryable = true });
+                if (!z || !parried) ring.Hide();
                 k++;
-                struck = parried = false;
+                struck = parried = hitAtImpact = false;
                 h = ParryRing.RandomHeight();
                 if (k < n) // re-target the player's x right now (DECISIONS 29); the anti-mash lock carries over into the new clock
                 {
@@ -930,6 +950,117 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         yield return ReattachBlade();
     }
 
+    // ---- E storm slam (playtest 11-13, the blade arm's own big move): charge red lightning over the centre, slam, live floor ----
+    IEnumerator AttackStorm(float tell)
+    {
+        blade.Glow = true;
+        stormFloor.color = new Color(1f, 0.23f, 0.23f, 0.3f);
+        stormFloor.enabled = true; // blinking floor warning while it charges
+        stormCharge = 0f;
+        yield return Move(blade, new Vector2(StormX, BladeHigh + 1.5f), tell);
+        Sfx.Play(SfxId.LastTell);
+        float charge = StormCharge[Phase - 1];
+        for (float t = 0f; t < charge; t += Dt)
+        {
+            stormCharge = t / charge;
+            blade.Pos = new Vector2(StormX + (Time.frameCount / 2 % 2 == 0 ? 1f : -1f) * 0.04f * stormCharge, BladeHigh + 1.5f);
+            yield return null;
+        }
+        stormCharge = -1f;
+        yield return Move(blade, new Vector2(StormX, Floor), SlamDrop);
+        Juice.Shake(0.3f, 0.45f, Vector2.down);
+        DiceSkillKit.Overlay.Get().Flash(StormRed, 0.35f, 0.2f);
+        Sfx.Play(SfxId.Stunned, 1f, 0.6f); // electric fizz, pitched down
+        Sfx.Play(SfxId.Hit, 1f, 0.5f);
+        SpriteFx.Play("impact-ring", new Vector2(StormX, Floor + 0.25f), false, 101, 3f);
+        SpriteFx.Play("kill-burst", new Vector2(StormX, Floor + 0.3f), false, 102, 3f);
+        for (int i = 1; i <= 4; i++)
+        {
+            SpriteFx.Play("land-dust", new Vector2(StormX - i * 3f, Floor), true, 101, 2f);
+            SpriteFx.Play("land-dust", new Vector2(StormX + i * 3f, Floor), false, 101, 2f);
+        }
+        stormHit = false;
+        stormLeft = StormFloorTime;
+        if (InZone(StormX) && player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(StormX, player.transform.position.y), Unparryable = true }) == HitResult.Hit)
+            stormHit = true; // under the blade: that was the hit, the floor spares them
+        for (float t = 0f; t < StormFloorTime; t += Dt)
+        {
+            blade.Pos = new Vector2(StormX + (Time.frameCount / 2 % 2 == 0 ? 1f : -1f) * 0.03f, Floor); // planted, humming
+            yield return null;
+        }
+        stormLeft = 0f;
+        stormFloor.enabled = false;
+        blade.Glow = false;
+        yield return Move(blade, new Vector2(StormX, BladeHigh + 2f), 0.2f);
+        yield return ReattachBlade();
+    }
+
+    void UpdateStorm(float dt)
+    {
+        bool charging = stormCharge >= 0f, live = stormLeft > 0f;
+        if (!charging && !live)
+        {
+            if (stormDrawn) { stormSegs.Begin(); stormSegs.Flush(); stormDrawn = false; }
+            return;
+        }
+        bool blink = Mathf.FloorToInt(Time.time * 8f) % 2 == 0;
+        if (live)
+        {
+            stormLeft -= dt;
+            float fade = Mathf.Clamp01(stormLeft / 0.3f);
+            stormFloor.color = new Color(1f, 0.16f, 0.16f, (blink ? 0.75f : 0.55f) * fade);
+            Vector2 pp = player.transform.position; // centre = feet + 1, same feet line as the other hit tests
+            if (!stormHit && dt > 0f && pp.y - 0.85f < Floor + StormFloorH && pp.y - 0.85f > Floor - 0.5f &&
+                player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(pp.x, Floor), Unparryable = true }) == HitResult.Hit)
+                stormHit = true; // one hit per storm (a dash / i-frames pass)
+        }
+        else stormFloor.color = new Color(1f, 0.23f, 0.23f, blink ? 0.7f : 0.3f); // warning: get off the floor
+        if (dt <= 0f && stormDrawn) return; // frozen: keep the last frame
+        stormFlickT -= dt;
+        if (stormFlickT > 0f && stormDrawn) return;
+        stormFlickT = StormFlick;
+        stormDrawn = true;
+        stormSegs.Begin();
+        if (charging) // crackle around the blade's steel, more and longer as it charges
+        {
+            int bolts = 1 + Mathf.FloorToInt(stormCharge * 5f);
+            Vector2 tip = blade.Pos;
+            for (int b = 0; b < bolts; b++)
+            {
+                Vector2 a = tip + new Vector2(Random.Range(-BladeHalfW, BladeHalfW), Random.Range(0f, BladeLen));
+                Vector2 end = a + Random.insideUnitCircle.normalized * Random.Range(0.6f, 0.8f + 1.4f * stormCharge);
+                Bolt(a, end, 3, 1f);
+            }
+            stormSegs.Dot(tip, (6f + 10f * stormCharge) * Px, DiceSkillKit.A(StormCore, 0.9f), 110, 45f); // hot tip
+        }
+        else // live floor: jagged arcs crawling over the whole bridge
+        {
+            float fade = Mathf.Clamp01(stormLeft / 0.3f);
+            for (float x = 0f; x < RoomW; x += Random.Range(2f, 3.5f))
+            {
+                Vector2 a = new Vector2(x, Floor + Random.Range(0f, 0.15f));
+                Vector2 end = new Vector2(Mathf.Min(RoomW, x + Random.Range(1.5f, 3f)), Floor + Random.Range(0f, 0.15f));
+                Bolt(a, end, 4, fade, StormFloorH);
+            }
+        }
+        stormSegs.Flush();
+    }
+
+    // one jagged red bolt a -> end (glow + light core); upOnly > 0 = a floor arc whose kinks only rise (up to upOnly)
+    void Bolt(Vector2 a, Vector2 end, int jags, float alpha, float upOnly = 0f)
+    {
+        Vector2 d = end - a, n = new Vector2(-d.y, d.x).normalized, prev = a;
+        for (int i = 1; i <= jags; i++)
+        {
+            float u = i / (float)jags;
+            Vector2 p = Vector2.Lerp(a, end, u);
+            if (i < jags) p += upOnly > 0f ? new Vector2(0f, Random.Range(0f, upOnly)) : n * Random.Range(-0.3f, 0.3f);
+            stormSegs.Seg(prev, p, 6f * Px, DiceSkillKit.A(StormRed, 0.6f * alpha), 108);
+            stormSegs.Seg(prev, p, 2f * Px, DiceSkillKit.A(StormCore, alpha), 109);
+            prev = p;
+        }
+    }
+
     // The blade arm goes back onto its socket (DECISIONS 36): slides to the rest spot, overshoots a little, settles, clamps (spark + clank)
     IEnumerator ReattachBlade()
     {
@@ -949,6 +1080,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     bool InZone(float zx)
     {
         Rect r = BladeBox(new Vector2(zx, Floor), 0f);
+        r.xMin = Mathf.Min(r.xMin, zx - SlamHitHalf);
+        r.xMax = Mathf.Max(r.xMax, zx + SlamHitHalf);
         r.yMin = OverLane(zx, BladeHalfW) ? LaneY : Floor + 0.1f;
         return PlayerIn(r);
     }
@@ -1351,6 +1484,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     {
         dead = true;
         StopAllCoroutines();
+        stormCharge = -1f; stormLeft = 0f; stormFloor.enabled = false; // killed mid-storm: UpdateStorm clears the bolts
         armVulnerable = BladeStuck = aimOn = bugAim = sideRunning = coreOpen = false;
         core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
