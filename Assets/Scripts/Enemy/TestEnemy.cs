@@ -766,14 +766,14 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public bool ReceivePlayerHit(HitInfo info)
     {
         if (state == State.Stunned) return false;
-        if (Guarded) { GetComponent<FrontShieldFx>()?.Flash(); Flash(Juice.BlockTint); Sfx.Play(SfxId.Parry, 0.5f); return false; } // tutorial: this enemy only falls to the move being taught
+        if (Guarded) { GetComponent<FrontShieldFx>()?.Flash(); Flash(Juice.BlockTint); Sfx.Play(SfxId.Block, 0.8f); return false; } // tutorial: this enemy only falls to the move being taught
         if (kind == Kind.Android && !info.Pierce && state != State.Overload && !AndroidExposedTo(info.SourcePosition)) // frontal hit on a guarding Android
         {
             GetComponent<FrontShieldFx>()?.Flash();
             Flash(Juice.BlockTint); // white was invisible on the (white) draft sprite
             Vector2 p = (Vector2)transform.position + new Vector2(0.45f * facing, 0.3f); // deflect spark on its front
             SpriteFx.Play("hit-spark", p - new Vector2(facing * 12f, 16f) / SpriteFx.Ppu, facing < 0);
-            Sfx.Play(SfxId.Parry, 0.5f);
+            Sfx.Play(SfxId.Block, 0.8f); // playtest 11-13 (user pick): a heavy metal clank, not the parry clang
             return false;
         }
         // Citizen/Bug/Sniper in any state; Android overloaded, or hit from behind / above: one hit knocks it down. Elite: maxHp hits.

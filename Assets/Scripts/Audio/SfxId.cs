@@ -13,6 +13,9 @@ public enum SfxId
     Broadcast,  // SFX-01 billboard number changed (AI)
     HackOk,     // player hack confirmed
     UiSelect,
+    Block,      // a frontal cut bounces off a guarding Android / guarded dummy (Hove Audio, playtest 11-13)
+    Issen,      // Shift flash cut (Hove Audio stab + whoosh, playtest 11-13)
+    HitStab,    // layered under Hit when the hero's cut lands (Hove Audio stab, playtest 11-13)
 }
 
 public enum BgmId

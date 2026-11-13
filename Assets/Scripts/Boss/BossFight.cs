@@ -509,8 +509,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     {
         // DECISIONS 32: the core / chest bursts first (white flash, burst, gold debris, shake), then the cracks show
         Vector2 c = core.Sr.enabled ? core.Pos : HatchAt;
+        // Playtest 11-13 (user: make the phase change scarier, pixelfx): phase 2 = "override rupture" (red shockwave + glitch tear),
+        // phase 3 = "crimson crown" (red pillar + forked lightning). Both charge first and burst ~0.4 s in, so the old burst waits for it.
+        SpriteFx.Play(ph >= 3 ? "boss-phase-crown" : "boss-phase-rupture", c, false, 103);
+        Sfx.Play(SfxId.LastTell);
+        yield return Wait(ph >= 3 ? 0.36f : 0.42f);
         body.FlashUntil = Time.time + 0.2f;
         DiceSkillKit.Overlay.Get().Flash(Color.white, 0.7f, 0.25f);
+        DiceSkillKit.Overlay.Get().Glitch(0.35f);
         SpriteFx.Play("kill-burst", c, false, 102, 2f);
         CoreHitFx(3, c);
         Sfx.Play(SfxId.Hit, 1f, 0.6f);
@@ -1605,6 +1611,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         hint.gameObject.SetActive(true);
         while (finishHits < FinishHits) yield return null;
         hint.gameObject.SetActive(false);
+        SpriteFx.Play("boss-phase-fracture", CoreLow, false, 103); // playtest 11-13: the core shatters (glass cracks, red seams)
         Say("@mode radio\nbroadcast | 다음 숫자는… | The next number is… | 2.5\n"); // B05: it never says the number
         for (int i = 0; i < props.Length; i++) if (!propBroken[i]) BreakProp(i); // the last blow takes the rest
         yield return Wait(0.5f);

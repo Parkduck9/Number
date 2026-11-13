@@ -1,0 +1,765 @@
+{
+ "frames": [
+  {
+   "filename": "number-boss-phase-rupture 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 1",
+   "frame": {
+    "x": 384,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 2",
+   "frame": {
+    "x": 768,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 3",
+   "frame": {
+    "x": 1152,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 4",
+   "frame": {
+    "x": 1536,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 5",
+   "frame": {
+    "x": 0,
+    "y": 224,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 6",
+   "frame": {
+    "x": 384,
+    "y": 224,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 7",
+   "frame": {
+    "x": 768,
+    "y": 224,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 8",
+   "frame": {
+    "x": 1152,
+    "y": 224,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 9",
+   "frame": {
+    "x": 1536,
+    "y": 224,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 10",
+   "frame": {
+    "x": 0,
+    "y": 448,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 11",
+   "frame": {
+    "x": 384,
+    "y": 448,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 12",
+   "frame": {
+    "x": 768,
+    "y": 448,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 13",
+   "frame": {
+    "x": 1152,
+    "y": 448,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 14",
+   "frame": {
+    "x": 1536,
+    "y": 448,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 15",
+   "frame": {
+    "x": 0,
+    "y": 672,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 16",
+   "frame": {
+    "x": 384,
+    "y": 672,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 17",
+   "frame": {
+    "x": 768,
+    "y": 672,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 18",
+   "frame": {
+    "x": 1152,
+    "y": 672,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 19",
+   "frame": {
+    "x": 1536,
+    "y": 672,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 20",
+   "frame": {
+    "x": 0,
+    "y": 896,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 21",
+   "frame": {
+    "x": 384,
+    "y": 896,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 22",
+   "frame": {
+    "x": 768,
+    "y": 896,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 23",
+   "frame": {
+    "x": 1152,
+    "y": 896,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 24",
+   "frame": {
+    "x": 1536,
+    "y": 896,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 25",
+   "frame": {
+    "x": 0,
+    "y": 1120,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 26",
+   "frame": {
+    "x": 384,
+    "y": 1120,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 27",
+   "frame": {
+    "x": 768,
+    "y": 1120,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 28",
+   "frame": {
+    "x": 1152,
+    "y": 1120,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 29",
+   "frame": {
+    "x": 1536,
+    "y": 1120,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 30",
+   "frame": {
+    "x": 0,
+    "y": 1344,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 31",
+   "frame": {
+    "x": 384,
+    "y": 1344,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  },
+  {
+   "filename": "number-boss-phase-rupture 32",
+   "frame": {
+    "x": 768,
+    "y": 1344,
+    "w": 384,
+    "h": 224
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 384,
+    "h": 224
+   },
+   "sourceSize": {
+    "w": 384,
+    "h": 224
+   },
+   "duration": 42
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "number-boss-phase-rupture.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 1920,
+   "h": 1568
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "number-boss-phase-rupture",
+    "from": 0,
+    "to": 32,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "scifi/number-boss-phase-rupture",
+   "name": "Number boss phase: override rupture",
+   "fps": 24,
+   "loop": false,
+   "frames": 33,
+   "frameSize": [
+    384,
+    224
+   ],
+   "pivot": [
+    192,
+    112
+   ],
+   "columns": 5
+  }
+ }
+}

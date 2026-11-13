@@ -865,7 +865,7 @@ public class PlayerController : MonoBehaviour
         transform.position = spot; // same-frame queries (HitInfo.SourcePosition) see the new spot
         float dx = at.x - spot.x;
         Facing = Mathf.Abs(dx) > 0.01f ? (dx > 0f ? 1 : -1) : -travel; // ends facing the enemy
-        Sfx.Play(SfxId.Dash);
+        Sfx.Play(SfxId.Issen); // playtest 11-13: its own sharp stab, apart from the dash whoosh
         ParryFx.Slash(at, null, travel);
         if (alt) IssenAlt.IssenHit(at);
         else if (target.IsAndroid && target.Current != TestEnemy.State.Overload) // playtest 11-12: the cut overloads an android (stunned look, next hit kills)
@@ -1401,6 +1401,7 @@ public class PlayerController : MonoBehaviour
         if (!damaged) return false;
         swingDamaged++;
         Sfx.Play(SfxId.Hit);
+        Sfx.Play(SfxId.HitStab, 0.7f); // playtest 11-13: a blade-in stab under the metal hit
         Vector2 contactPoint = col.ClosestPoint(from);
         PlayHitSpark(contactPoint, Facing);
         SpriteFx.Play("impact-ring", contactPoint, false, 101); // pivot = ring centre
