@@ -9,7 +9,10 @@ public class Stg01LayerImporter : AssetPostprocessor
     public const string Dir = "Assets/Art/Backgrounds/STG01_Layers/";
     // STG-02..05 parts (docs/design/concept/bg_assets/parts_manifest.md): same rules; hanging lanterns / cables pivot at the top; strips over 4096 px are repacked as grids (GridCols).
     public const string PartsDir = "Assets/Art/Backgrounds/STG02_05_Parts/";
-    public override uint GetVersion() => 2;
+    public override uint GetVersion() => 3; // 3: shop_2f is a single picture ("2-floor"), not a 2-frame strip
+
+    // Names that end in _<N>f but are not frame strips.
+    static readonly System.Collections.Generic.HashSet<string> NotStrips = new System.Collections.Generic.HashSet<string> { "shop_2f" };
 
     // Frame columns for strips repacked into a grid to stay within 4096 px (WebGL MAX_TEXTURE_SIZE).
     static readonly System.Collections.Generic.Dictionary<string, int> GridCols = new System.Collections.Generic.Dictionary<string, int>
@@ -52,7 +55,7 @@ public class Stg01LayerImporter : AssetPostprocessor
         ti.SetTextureSettings(st);
 
         Match m = Regex.Match(name, @"_(\d+)f$");
-        if (!m.Success) { ti.spriteImportMode = SpriteImportMode.Single; return; }
+        if (!m.Success || NotStrips.Contains(name)) { ti.spriteImportMode = SpriteImportMode.Single; return; }
         int count = int.Parse(m.Groups[1].Value);
         ti.GetSourceTextureWidthAndHeight(out int w, out int h);
         // Strips wider than 4096 px are packed as a grid (row-major, top row first); default is a single row.

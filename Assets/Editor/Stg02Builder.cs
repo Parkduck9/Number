@@ -143,8 +143,8 @@ public static class Stg02Builder
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 30f, 33.5f, 11.5f, 15.5f); // high rail, left end
 
     // Ledges drawn by the backdrop (no placeholder bar; colliders stay): the rail (world-fixed track on each RAIL-B ledge), the shaft girders,
-    // and the END-B stop post behind the goal gate's left wing.
-    static bool HasArt(Box b) => b.id.StartsWith("RAIL-B") || b.id.StartsWith("SH-A") || b.id == "END-B";
+    // (END-B used to hide behind the goal gate's left wing; that wing is cleared now (playtest 11-14), so it gets its own post art.)
+    static bool HasArt(Box b) => b.id.StartsWith("RAIL-B") || b.id.StartsWith("SH-A");
 
     // Platform art supports (PartsBackdropKit.PlatformArt): rail_pillar columns under the roof walkways, (floor they stand on, x list).
     // x 60 is shared so the ROOF-A4 column continues the ROOF-A3 one.
