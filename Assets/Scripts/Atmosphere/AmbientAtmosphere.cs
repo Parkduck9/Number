@@ -35,9 +35,9 @@ public class AmbientAtmosphere : MonoBehaviour
         {
             case "STG00": return new Profile { dust = 1f, embers = 0.4f, ash = 0f, rain = 0f, mist = 0f, wind = 0.1f };  // morning market: calm
             case "STG01": return new Profile { dust = 0.6f, embers = 0.6f, ash = 0f, rain = 1f, mist = 0f, wind = -0.2f }; // neon market: rain
-            case "STG02": return new Profile { dust = 0.8f, embers = 1f, ash = 1f, rain = 0f, mist = 1f, wind = -0.6f };  // rooftop rail: wind, haze
+            case "STG02": return new Profile { dust = 0.8f, embers = 1f, ash = 1f, rain = 0f, mist = 0f, wind = -0.6f };  // rooftop rail: wind (mist off, playtest 11-14: the dithered puffs read as floating grey discs)
             case "STG03": return new Profile { dust = 1.5f, embers = 0.5f, ash = 0f, rain = 0f, mist = 0f, wind = 0f };   // hideout: indoor dust
-            case "STG04": return new Profile { dust = 0.8f, embers = 1.6f, ash = 1f, rain = 0f, mist = 1f, wind = 0.2f }; // factory: sparks, steam
+            case "STG04": return new Profile { dust = 0.8f, embers = 1.6f, ash = 1f, rain = 0f, mist = 0f, wind = 0.2f }; // factory: sparks (mist off, same as STG02)
             default:      return new Profile { dust = 0.6f, embers = 0.5f, ash = 0f, rain = 0.7f, mist = 0f, wind = -0.3f }; // STG05 HQ roof
         }
     }
