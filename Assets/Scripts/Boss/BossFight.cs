@@ -51,7 +51,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float CoreHitEvery = 0.1f, CoreHalf = 0.75f, CoreIssenPast = 1.6f; // s between LMB hits (safety only: Swung fires once per swing, swings are >= attackDuration 0.3 s apart minus one frame); u half size; u issen lands past it
     public static int DiceDamage(int face) => (face + 1) / 2; // faces 1..6 -> 1, 1, 2, 2, 3, 3
     const float WaveSpeed = 10.5f, WaveEvery = 1.1f, // was 9 / 1.3 (DECISIONS 33)
- WaveHalfW = 0.6f, WaveTop = 16.5f /* playtest 11-13: was 9.5, the walls now reach the ceiling (the gap is the way through) */, GapH = 3f, SlumpTime = 1.5f;
+ WaveHalfW = 0.6f, WaveTop = 16.5f /* playtest 11-13: was 9.5, the walls now reach the ceiling (the gap is the way through) */, GapH = 3.6f /* playtest 11-13: 3 -> 3.6 */, SlumpTime = 1.5f;
     // gap on the floor (stand) / at jump height (or a hook hang) / up at the wall perches (rope up, or a roof chunk). Picked at random,
     // the high gap at half the weight; never high twice in a row (playtest 11-13: walls over the whole room height)
     static readonly float[] GapLows = { 2f, 2f, 3.8f, 3.8f, PerchTop - 0.2f };
@@ -169,7 +169,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     float hatchOpen, sink, coreHitAt, mashHitAt, stuckX, conductT;
     bool coreOpen;
     int hp = MaxHp, shownPhase = 1, mashHits;
-    bool started, dead, breakable, armVulnerable, sideRunning, ownLock;
+    bool started, dead, breakable, armVulnerable, sideRunning, ownLock; // breakable: the ending finish (strike the core) is on
+    const int FinishHits = 5;
+    int finishHits;
+    float finishHitAt;
     int playerMask, groundMask;
     ParryRing ring;
 
@@ -1376,7 +1379,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
 
     void OnSwing(Vector2 centre, Vector2 size)
     {
-        if (dead) { if (breakable) BreakNear(centre, size); return; }
+        if (dead) { if (breakable) FinishNear(centre, size); return; }
         if (coreOpen && Time.time >= coreHitAt &&
             Mathf.Abs(centre.x - core.Pos.x) <= size.x * 0.5f + CoreHalf && Mathf.Abs(centre.y - core.Pos.y) <= size.y * 0.5f + CoreHalf)
         {
@@ -1528,11 +1531,19 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         StartCoroutine(Move(bugArm, BugSlump, 0.8f));
         StartCoroutine(Move(blade, new Vector2(blade.Pos.x, BladeStuckY), 0.8f));
         yield return Wait(1.2f);
-        hint.text = Loc.T("SMASH THE MACHINES  [LMB]", "기계를 부숴라  [좌클릭]");
-        hint.gameObject.SetActive(true);
+        // playtest 11-13 (user): the finish is striking the boss itself, not the machines around it. The core drops onto the bridge
+        // and stays; FinishHits LMB swings on it, each one bursts a machine prop too; the last one is a big blow.
         breakable = true;
-        while (propsLeft > 0) yield return null;
+        Vector2 from = core.Pos;
+        for (float t = 0f; t < 0.4f; t += Time.deltaTime) { core.Pos = Vector2.Lerp(from, CoreLow, Smooth(t / 0.4f)); yield return null; }
+        core.Pos = CoreLow;
+        SpriteFx.Play("impact-ring", CoreLow, false, 101, 2f);
+        Juice.Shake(Juice.ShakeHurtAmp, 0.2f, Vector2.down);
+        hint.text = Loc.T("STRIKE THE CORE  [LMB]", "핵을 베어라  [좌클릭]");
+        hint.gameObject.SetActive(true);
+        while (finishHits < FinishHits) yield return null;
         hint.gameObject.SetActive(false);
+        for (int i = 0; i < props.Length; i++) if (!propBroken[i]) BreakProp(i); // the last blow takes the rest
         yield return Wait(0.5f);
         GameFlow.InputLocked = ownLock = true;
         white.enabled = true;
@@ -1584,29 +1595,35 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         Destroy(canvas.gameObject);
     }
 
-    void BreakNear(Vector2 centre, Vector2 size)
+    // Ending finish: a swing touching the dropped core = one blow (gold burst, body flash, a machine prop bursts); the last is bigger
+    void FinishNear(Vector2 centre, Vector2 size)
     {
-        int best = -1;
-        float bestD = float.MaxValue;
-        for (int i = 0; i < props.Length; i++)
-        {
-            if (propBroken[i]) continue;
-            Bounds b = props[i].bounds;
-            b.Expand(new Vector3(size.x + 1.2f, size.y + 1.2f, 0f)); // "near": the swing box plus 0.6 u
-            float d = Mathf.Abs(b.center.x - centre.x);
-            if (b.Contains(new Vector3(centre.x, centre.y, b.center.z)) && d < bestD) { best = i; bestD = d; }
-        }
-        if (best < 0) return;
-        propBroken[best] = true;
+        if (finishHits >= FinishHits || Time.time < finishHitAt) return;
+        if (Mathf.Abs(centre.x - core.Pos.x) > size.x * 0.5f + CoreHalf || Mathf.Abs(centre.y - core.Pos.y) > size.y * 0.5f + CoreHalf) return;
+        finishHitAt = Time.time + CoreHitEvery;
+        finishHits++;
+        bool last = finishHits >= FinishHits;
+        Vector2 at = core.Pos + Vector2.ClampMagnitude(centre - core.Pos, CoreHalf);
+        float dir = core.Pos.x >= player.transform.position.x ? 1f : -1f;
+        CoreHitFx(3, at);
+        SpriteFx.Play("kill-burst", at, dir < 0f, 102, last ? 3f : 2f);
+        body.FlashUntil = core.FlashUntil = Time.time + 0.1f;
+        Sfx.Play(SfxId.Hit, 1f, last ? 0.5f : 0.8f);
+        Juice.Shake(last ? 0.35f : Juice.ShakeKillAmp, last ? 0.5f : Juice.ShakeKillTime, new Vector2(dir, 0f));
+        player.DuelHitStop(last ? Juice.HitStopKill * 2f : Juice.HitStopKill);
+        if (last) DiceSkillKit.Overlay.Get().Flash(Color.white, 0.6f, 0.25f);
+        for (int i = 0; i < props.Length; i++) if (!propBroken[i]) { BreakProp(i); break; }
+    }
+
+    void BreakProp(int i)
+    {
+        propBroken[i] = true;
         propsLeft--;
-        Vector2 c = props[best].bounds.center;
+        Vector2 c = props[i].bounds.center;
         float dir = c.x >= player.transform.position.x ? 1f : -1f;
-        ShatterFx.Play(props[best], new Vector2(dir, 0.5f), c, Cyan);
-        props[best].enabled = false;
+        ShatterFx.Play(props[i], new Vector2(dir, 0.5f), c, Cyan);
+        props[i].enabled = false;
         SpriteFx.Play("kill-burst", c, dir < 0f, 102);
-        Sfx.Play(SfxId.Hit);
-        Juice.Shake(Juice.ShakeKillAmp, Juice.ShakeKillTime, new Vector2(dir, 0f));
-        player.DuelHitStop(Juice.HitStopKill);
     }
 
     // ------------------------------------------------------------------ view
@@ -1627,7 +1644,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         hatchR.Pos = HatchAt + new Vector2(1f + open, 0f);
         Show(hatchL, tint, now, blink, 0f);
         Show(hatchR, tint, now, blink, 0f);
-        core.Sr.enabled = coreCable.enabled = !dead && core.Pos.y < HatchAt.y - 0.05f;
+        core.Sr.enabled = coreCable.enabled = (!dead || breakable) && core.Pos.y < HatchAt.y - 0.05f;
         if (core.Sr.enabled)
         {
             bool beat = coreOpen && Mathf.FloorToInt(now * 4f) % 2 == 0; // 2 Hz pulse while it can be hit: one step bigger + gold
@@ -1663,9 +1680,6 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             aimDots[i].transform.position = new Vector3(Snap(p.x), Snap(p.y), 0f);
             aimDots[i].color = new Color(GoldShot.r, GoldShot.g, GoldShot.b, blink ? 0.9f : 0.5f);
         }
-        if (breakable)
-            for (int i = 0; i < props.Length; i++)
-                if (!propBroken[i]) props[i].color = blink ? Color.white : new Color(0.65f, 0.95f, 1f); // "hit me"
     }
 
     // Gold lock-on corners around the open core (DECISIONS 32): snap in from wide when it lands, then a 2 Hz squeeze.
