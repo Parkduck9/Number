@@ -183,7 +183,7 @@ public class GameAudio : MonoBehaviour
     void OnBroadcast(BroadcastBoard board, int newNumber, int oldNumber)
     {
         if (board.IsHacked) Sfx.Play(SfxId.HackOk); // the player's hack just set this number
-        else Sfx.Play(SfxId.Broadcast);            // AI broadcast or counter-hack restore
+        else Sfx.Play(SfxId.Broadcast, 0.4f);      // AI broadcast or counter-hack restore; quiet, it sat over the music (playtest 11-13)
         if (BreathStopOnZero && newNumber == 0) breathStopAt = Time.unscaledTime + (board.IsHacked ? HackOkLength : ChimeLength);
     }
 
