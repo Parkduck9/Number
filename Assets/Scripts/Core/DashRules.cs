@@ -52,8 +52,8 @@ public static class DashRules
     public const float GrapplePopFrac = 0.8f;    // release with the anchor above: vy >= this * jump speed (slingshot onto the ledge)
     public const float GrappleCarryTime = 0.4f;  // s after release the horizontal momentum eases into normal air control instead of snapping to it
     public const float GrappleAirAccel = 40f;    // u/s^2: how fast that carried momentum blends to the held direction
-    public const float GrappleMissCooldown = 0.12f; // s before another rope after a miss (DECISIONS 44: was 0.25)
-    public const float GrappleCooldown = 0.2f;   // s before another rope after a release (ground ropes refill at once) (DECISIONS 44: was 0.4)
+    public const float GrappleMissCooldown = 0f; // playtest 11-13 (user): no rope cooldown. Was 0.12; // s before another rope after a miss (DECISIONS 44: was 0.25)
+    public const float GrappleCooldown = 0f; // playtest 11-13 (user): no rope cooldown. Was 0.2;   // s before another rope after a release (ground ropes refill at once) (DECISIONS 44: was 0.4)
     public const float GrappleHookRegrab = 1f;   // s after letting go of a boss ceiling hook before that same hook can be grabbed again (no endless hang)
     public const float GrappleMouseSnap = 1.5f;  // (T) u: the rope aims at the ground / platform collider nearest the mouse within this (playtest 11-12)
     public const float GrappleLedgeSnap = 2f;    // u: a wall hit within this below a ledge top anchors on the top corner instead

@@ -5,7 +5,7 @@ using UnityEngine;
 // everything else is held (GameFlow.EnemiesHeld; the elite is exempt via TestEnemy.InDuel), the player is input-locked (LMB is read
 // here through PlayerInputReader.AttackPressedRaw), the camera punches in one PPU step, letterbox bars slide in.
 // The head number N (3..9, never counted down) = exchanges. Exchange k: the elite strikes at S_k (ParryRing tell; LMB within
-// -WindowEarly / +WindowLate = clang, one press per strike, a stray press locks presses out for Lockout), then the hero's automatic
+// -WindowEarly / +WindowLate = clang, one press per strike, a stray press = Fail: shoved back + locked out, every press in the lockout restarts it), then the hero's automatic
 // counter at S_k + gap/2 that the elite parries (second clang, presentation only). Clang pitch +1 semitone per exchange.
 // All N parried: finisher (blink through, shatter, hit-stop, shake), a kill. Any miss: a normal hit, duel over, the elite back to its AI.
 // Close-in (DECISIONS 49): over CloseTime both slide toward each other to FightGap centre to centre (each stops short of walls and
@@ -34,7 +34,9 @@ public class EliteDuel : MonoBehaviour
     const float FirstHit = 0.9f;                         // (T) s from the start to the first elite strike
     static readonly float[] Gaps = { 0.8f, 0.75f, 0.7f, 0.65f, 0.6f, 0.56f, 0.52f }; // (T) s between elite strikes, N = 3..9
     const float WindowEarly = 0.25f, WindowLate = 0.1f;  // (T) LMB parry window around each strike
-    const float Lockout = 0.25f;                         // (T) s
+    const float Lockout = 0.3f;                          // (T) s; every press inside it restarts it (playtest 11-13: mashing must fail)
+    const float KnockDist = 1.6f, KnockTime = 0.15f;     // (T) mistimed press: the hero is shoved this far from the elite (walls/ledges respected)
+    const float KnockHold = 0.1f, KnockReturn = 0.2f;    // (T) s, then steps back to the fight spot
     const float FocusPpuMul = 2f;                        // PPU 32 -> 64 in one step (playtest 11-13: closer, and the smaller view lets the
                                                          // bounds clamp keep a floor-level duel nearer the screen centre without showing past the map)
     const float FocusFlash = 0.06f;
@@ -61,6 +63,7 @@ public class EliteDuel : MonoBehaviour
     DuelFocusFx focus;
     Rigidbody2D pBody, eBody;
     float pFromX, pToX, eFromX, eToX, closeAt = -1f; // closeAt = Time.time the close-in started (-1 = not sliding)
+    float knockFrom, knockTo, knockAt = -1f;         // knockAt = Time.time of the mistimed-press shove (-1 = none)
     static readonly RaycastHit2D[] castHits = new RaycastHit2D[8];
     static readonly List<Collider2D> bodyCols = new List<Collider2D>(4);
     readonly SpriteRenderer[] pipRim = new SpriteRenderer[9], pipCore = new SpriteRenderer[9];
@@ -129,7 +132,7 @@ public class EliteDuel : MonoBehaviour
         eBody = e.transform.GetComponent<Rigidbody2D>();
         pFromX = pToX = p.transform.position.x;
         eFromX = eToX = e.transform.position.x;
-        closeAt = -1f;
+        closeAt = knockAt = -1f;
         float need = Mathf.Abs(pFromX - eFromX) - FightGap;
         if (pBody == null || eBody == null || need <= 0f) return;
         int ground = LayerMask.GetMask("Ground");
@@ -179,12 +182,48 @@ public class EliteDuel : MonoBehaviour
     // The close-in slide (physics step, so the interpolated bodies move smoothly). Velocities zeroed: nothing else pushes them.
     void FixedUpdate()
     {
-        if (closeAt < 0f || !HasFoe) return;
-        float u = Mathf.Clamp01((Time.time - closeAt) / CloseTime);
-        float w = 1f - (1f - u) * (1f - u) * (1f - u);
-        Slide(pBody, Mathf.Lerp(pFromX, pToX, w));
-        Slide(eBody, Mathf.Lerp(eFromX, eToX, w));
-        if (u >= 1f) closeAt = -1f;
+        if (!HasFoe) return;
+        if (closeAt >= 0f)
+        {
+            float u = Mathf.Clamp01((Time.time - closeAt) / CloseTime);
+            float w = 1f - (1f - u) * (1f - u) * (1f - u);
+            if (knockAt < 0f) Slide(pBody, Mathf.Lerp(pFromX, pToX, w)); // a shove overrides the hero's close-in
+            Slide(eBody, Mathf.Lerp(eFromX, eToX, w));
+            if (u >= 1f) closeAt = -1f;
+        }
+        if (knockAt >= 0f)
+        {
+            float a = Time.time - knockAt, x;
+            if (a < KnockTime) { float u = 1f - a / KnockTime; x = Mathf.Lerp(knockFrom, knockTo, 1f - u * u * u); }
+            else if (a < KnockTime + KnockHold) x = knockTo;
+            else
+            {
+                float u = Mathf.Clamp01((a - KnockTime - KnockHold) / KnockReturn);
+                x = Mathf.Lerp(knockTo, pToX, u * u * (3f - 2f * u));
+                if (u >= 1f) knockAt = -1f;
+            }
+            Slide(pBody, x);
+        }
+    }
+
+    // A mistimed / mashed press: locked out (restarted by every press inside it) and, on a fresh fail, shoved back from the elite.
+    const float StartGrace = 0.3f; // s at the duel start where presses are ignored
+
+    void Fail()
+    {
+        bool fresh = t >= lockedUntil;
+        lockedUntil = t + Lockout;
+        if (!fresh || pBody == null) return;
+        knockFrom = pBody.position.x;
+        float dist = Mathf.Max(0f, KnockDist - face * (knockFrom - pToX)); // measured from the fight spot: repeated fails never walk the hero away
+        knockTo = knockFrom + face * Room(pBody, face, dist, LayerMask.GetMask("Ground")); // the hero is on the +face side
+        knockAt = Time.time;
+        Vector2 c = Contact(), feet = (Vector2)player.transform.position + Vector2.down;
+        SpriteFx.Play("hit-spark", c, face < 0, 102);
+        SpriteFx.Play("land-dust", feet, face < 0, 101);
+        DiceSkillKit.Ring(c, 0.35f, 2f * Px, DigitRed, 0.18f, 2f, 101);
+        Sfx.Play(SfxId.Parry, 0.7f, 0.6f); // dull, low clank: the blade knocked aside
+        Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, new Vector2(face, 0f));
     }
 
     static void Slide(Rigidbody2D b, float x)
@@ -209,11 +248,11 @@ public class EliteDuel : MonoBehaviour
         if (k < n)
         {
             float s = StrikeAt(k);
-            if (input != null && input.AttackPressedRaw)
+            if (input != null && input.AttackPressedRaw && !(k == 0 && t < StartGrace)) // a click carried over from the fight before is not a fail
             {
-                if (t < lockedUntil) { } // locked out: ignored
+                if (t < lockedUntil) Fail(); // pressing while locked out keeps it locked: mashing never parries
                 else if (!parried && t >= s - WindowEarly && t - Time.deltaTime <= s + WindowLate) { parried = true; if (struck) PlayerClang(); } // judged over the frame interval: a WebGL hitch can't eat the press
-                else if (t < s - WindowEarly || t > s + WindowLate) lockedUntil = t + Lockout; // no strike in its window: anti-mash (a repeat inside a parried window is free)
+                else if (t < s - WindowEarly || t > s + WindowLate) Fail(); // no strike in its window: shoved + locked out (a repeat inside a parried window is free)
             }
             if (!struck && t >= s)
             {
@@ -274,6 +313,7 @@ public class EliteDuel : MonoBehaviour
 
     void Finish()
     {
+        knockAt = -1f; // a shove still returning must not drag the hero back from the finisher blink
         finishedAt = t;
         Vector2 ep = elite.transform.position;
         int dir = -face; // the hero's swing: toward the elite
@@ -295,7 +335,7 @@ public class EliteDuel : MonoBehaviour
     {
         if (ownHeld) { ownHeld = false; GameFlow.EnemiesHeld = false; }
         if (ownLock) { ownLock = false; GameFlow.InputLocked = false; }
-        closeAt = -1f;
+        closeAt = knockAt = -1f;
         CameraFollow2D.DuelUnfocus(CamEaseOut);
         if (bars != null) bars.Show(false);
         if (focus != null) focus.End();

@@ -127,7 +127,6 @@ public class PlayerController : MonoBehaviour
     Vector2 grappleAnchor;
     bool grappleCeiling;      // anchor on a ceiling (hit normal down): no upward pop into it
     bool grappleAttached;     // the rope reached the anchor (after GrappleExtendTime): pulling
-    bool grappleUsed;         // spent this airtime; refilled on landing
     float grappleReadyAt;     // miss cooldown
     float grappleCarryUntil;  // after release: horizontal momentum eases into air control
     bool pendingGrapple;      // pressed during a hit-stop
@@ -347,7 +346,6 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < hitCount && !grounded; i++) // a platform a down-lunge is still passing through is not ground
             grounded = !groundHits[i].OverlapPoint(feet + Vector2.up * 0.03f) && !passedPlatforms.Contains(groundHits[i]);
         if (grounded && rb.linearVelocity.y <= 0.1f) lastGroundedAt = now;
-        if (grounded && rb.linearVelocity.y <= 0.1f && state != State.Grapple) grappleUsed = false; // one rope per airtime (a rope fired from the ground is still this airtime's)
 
         if (input.JumpPressed) jumpBufferedUntil = now + jumpBuffer;
         if (input.AttackPressed && state != State.Locomotion && state != State.Hurt && state != State.Dead)
@@ -970,10 +968,10 @@ public class PlayerController : MonoBehaviour
     }
 
     // DECISIONS 16: RMB fires the rope at the mouse. Hit (ground / wall / ceiling / one-way platform within GrappleRange) -> Grapple state;
-    // miss -> the rope shoots out and snaps back, short cooldown. One attached rope per airtime.
+    // miss -> the rope shoots out and snaps back. No cooldown and no per-airtime limit (playtest 11-13, user).
     bool TryGrapple(float now)
     {
-        if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt || grappleUsed) return false;
+        if (!(input.GrapplePressed || pendingGrapple || now <= grappleBufferedUntil) || now < grappleReadyAt) return false; // playtest 11-13 (user): no cooldown, so no one-rope-per-airtime limit either
         grappleBufferedUntil = -999f;
         Vector2 hand = HandPosition;
         bool aimed = MouseCrosshair.MouseWorld(out Vector2 mouse);
@@ -992,7 +990,6 @@ public class PlayerController : MonoBehaviour
             grappleHang = grappleSwing = hang;
             swingLen = Vector2.Distance(altAnchor, altPull);
             grappleStrike = !hang;
-            grappleUsed = true;
             EnterState(State.Grapple);
             rope.Shoot(grappleAnchor, true);
             Sfx.Play(SfxId.Dash);
@@ -1056,7 +1053,6 @@ public class PlayerController : MonoBehaviour
         grappleHang = grappleStrike = false;
         grappleSwing = grappleCeiling && !best.collider.usedByEffector; // solid ceiling / overhang swings; a one-way platform keeps the pop through it
         swingLen = DashRules.GrappleSwingLen;
-        grappleUsed = true;
         EnterState(State.Grapple);
         rope.Shoot(grappleAnchor, true);
         Sfx.Play(SfxId.Dash);
@@ -1105,7 +1101,6 @@ public class PlayerController : MonoBehaviour
             {
                 SwingRelease();
                 if (!grappleHang) return;
-                grappleUsed = false;
                 grappleReadyAt = now;
                 TryGrapple(now);
             }
@@ -1190,7 +1185,7 @@ public class PlayerController : MonoBehaviour
         rb.linearVelocity = v;
         jumpCut = true; // the pop is not a held jump: releasing Space must not halve it
         grappleCarryUntil = Time.time + DashRules.GrappleCarryTime;
-        grappleReadyAt = Time.time + DashRules.GrappleCooldown; // ground ropes refill at once: no spammed wall zip
+        grappleReadyAt = Time.time + DashRules.GrappleCooldown; // 0 since playtest 11-13 (user: no rope cooldown)
     }
 
     // DECISIONS 39: Space / RMB off a swing. The swing velocity x GrappleSwingBoost plus a small lift; the momentum eases into air control slowly.

@@ -149,15 +149,16 @@ public class LuckyDice : MonoBehaviour
     }
 
     // Playtest 11-13 (user): the field roll reads the crowd instead of chance. 6+ on screen -> 6; 2+ inside the rope whirl (a bit smaller
-    // than its reach, so they really get hit) -> 2; else the count on screen (1, 3, 4, 5); two apart -> 3 (lightning hits both); none -> random.
+    // than its reach, so they really get hit) -> 2; else the count on screen (1, 3, 4, 5); two apart -> 1; 30% of rolls -> 6 first; none -> random.
     const float WhirlCheck = 0.8f; // fraction of Skill2Rope.Radius
+    const float SixChance = 0.3f;  // any field roll with enemies on screen: 30% -> 6 first
 
     int FaceForCrowd()
     {
         List<TestEnemy> on = EnemiesOnCamera();
         int n = on.Count;
         if (n == 0) return UnityEngine.Random.Range(1, 7);
-        if (n >= 6) return 6;
+        if (n >= 6 || UnityEngine.Random.value < SixChance) return 6; // playtest 11-13 (user): 6 was too rare
         Vector2 o = Player.Body.position;
         float r = Skill2Rope.Radius * WhirlCheck;
         int near = 0;
@@ -168,7 +169,7 @@ public class LuckyDice : MonoBehaviour
             if ((cp - o).sqrMagnitude <= r * r) near++;
         }
         if (near >= 2) return 2;
-        return n == 2 ? 3 : n;
+        return n == 2 ? 1 : n; // playtest 11-13 (user: 3 came up too often): two apart -> 1 (blink-cut the nearest), not 3
     }
 
     IEnumerator SkillFor(int face)

@@ -3,11 +3,12 @@
 # "#title English | Korean" is the card header, "#clip <name>" an optional looping clip (Assets/StreamingAssets/Tutorial/<name>.mp4),
 # "#prompt English | Korean" the controls line (card) and the goal line (top-left), "#info English | Korean" a line in the card's list,
 # the rest are the card's text lines (speaker | ko | en | seconds; the seconds are not used by the card).
+# Step 1 is "show" (playtest 11-13, user): the move card, then straight into the cut card and the fight (its guard aggroed through the closed gate).
 # Each step has its own fenced-off area and one enemy (TutorialBuilder); the barrier opens when the step is done. Esc skips all.
 @mode radio
 
 #step 1
-#check move
+#check show
 #title Move | 이동
 #prompt A / D: move   Space: jump | A / D: 이동   Space: 점프
 helper | 먼저 한 걸음. | Take the first step. | 5

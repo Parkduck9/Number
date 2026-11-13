@@ -67,7 +67,7 @@
 ## External CC0 audio (layered into the v3 sound effects, edited / cropped / EQ / varispeed)
 | 에셋 | 제작자 | 라이선스 | 쓴 파일 | 사용 위치 |
 |---|---|---|---|---|
-| [20 Sword Sound Effects (Attacks and Clashes)](https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes) | StarNinjas | CC0 1.0 | sword_clash.4, sword.4, sword.6 | sfx_parry, sfx_swing, sfx_dash |
+| [20 Sword Sound Effects (Attacks and Clashes)](https://opengameart.org/content/20-sword-sound-effects-attacks-and-clashes) | StarNinjas | CC0 1.0 | sword_clash.1 (parry, user choice 11-13; was sword_clash.4), sword.4, sword.6 | sfx_parry (.ogg), sfx_swing, sfx_dash |
 | [Impact Sounds](https://kenney.nl/assets/impact-sounds) | Kenney | CC0 1.0 | impactPunch_heavy_002 / _003, impactSoft_heavy_003 | sfx_hit, sfx_hurt, sfx_shockwave |
 | [Interface Sounds](https://kenney.nl/assets/interface-sounds) | Kenney | CC0 1.0 | click_002 | sfx_ui_select |
 | [RPG Audio](https://kenney.nl/assets/rpg-audio) | Kenney | CC0 1.0 | cloth1, handleCoins2, metalClick, metalLatch | sfx_dash, sfx_hurt, sfx_hack_ok, sfx_broadcast, sfx_hit, sfx_enemy_tell, sfx_stunned |

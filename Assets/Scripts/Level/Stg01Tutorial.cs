@@ -315,7 +315,7 @@ public class Stg01Tutorial : MonoBehaviour
         var fill = UiKit.Frame("Panel", rootRt, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(CardW, 300f), out _);
         cardRect = (RectTransform)fill.parent;
 
-        cardHeader = Text("Header", fill, 24, Accent, TextAlignmentOptions.Center, out headerLoc);
+        cardHeader = Text("Header", fill, 28, Accent, TextAlignmentOptions.Center, out headerLoc);
         var vr = UiKit.Rect("Video", fill, new Vector2(0f, 1f), Vector2.zero, new Vector2(VidW, VidH));
         video = vr.gameObject.AddComponent<RawImage>();
         video.raycastTarget = false;
@@ -323,8 +323,8 @@ public class Stg01Tutorial : MonoBehaviour
         portrait = pr.gameObject.AddComponent<Image>();
         portrait.raycastTarget = false;
         portrait.preserveAspect = true;
-        cardBody = Text("Body", fill, 20, t.text, TextAlignmentOptions.TopLeft, out bodyLoc);
-        cardPrompt = Text("Prompt", fill, 20, Accent, TextAlignmentOptions.TopLeft, out promptLoc);
+        cardBody = Text("Body", fill, 17, t.dim, TextAlignmentOptions.TopLeft, out bodyLoc);
+        cardPrompt = Text("Prompt", fill, 26, Color.white, TextAlignmentOptions.TopLeft, out promptLoc);
         cardInfo = Text("Info", fill, 18, t.text, TextAlignmentOptions.TopLeft, out infoLoc);
         var footer = UiKit.Label("Footer", fill, new Vector2(0f, 1f), Vector2.zero, new Vector2(CardW - 2f * CardPadX, 18f), "Click / E: continue    Esc: skip tutorial", "클릭 / E: 계속    Esc: 튜토리얼 건너뛰기", 14, t.dim);
         footerRt = footer.rectTransform;
@@ -336,7 +336,7 @@ public class Stg01Tutorial : MonoBehaviour
         goalPlate.anchoredPosition = new Vector2(GoalX, -GoalY);
         UiKit.FilledImage(goalPlate, PlateColor);
         goalTitle = Text("GoalTitle", goalPlate, 16, Accent, TextAlignmentOptions.TopLeft, out goalTitleLoc);
-        goalText = Text("GoalText", goalPlate, 18, t.text, TextAlignmentOptions.TopLeft, out goalTextLoc);
+        goalText = Text("GoalText", goalPlate, 18, Color.white, TextAlignmentOptions.TopLeft, out goalTextLoc);
         goalSkip = UiKit.Label("GoalSkip", goalPlate, new Vector2(0f, 1f), Vector2.zero, new Vector2(GoalW - 2f * GoalPad, 16f), "Esc: skip tutorial", "Esc: 튜토리얼 건너뛰기", 12, t.dim);
         goalSkip.alignment = TextAlignmentOptions.TopLeft;
         goalPlate.gameObject.SetActive(false);
@@ -363,13 +363,22 @@ public class Stg01Tutorial : MonoBehaviour
         rt.sizeDelta = new Vector2(w, h);
     }
 
+    // Key names in a controls line become talisman gold (colour only: the pixel font has no real bold).
+    static readonly System.Text.RegularExpressions.Regex KeyRx = new System.Text.RegularExpressions.Regex(
+        @"\b(?:A / D|Space|Shift|Esc|E|(?:left|right) click)\b|좌클릭|우클릭",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    static string Keys(string line)
+    {
+        return KeyRx.Replace(line, "<color=#F2C94C>$0</color>");
+    }
+
     static float TextH(TMP_Text t, float w) => Mathf.Ceil(t.GetPreferredValues(t.text, w, 0f).y);
 
     void ShowCard(Step s, int n, int count)
     {
         headerLoc.Set(cardHeader, $"{n}/{count} · {s.titleEn}", $"{n}/{count} · {s.titleKo}");
         bodyLoc.Set(cardBody, s.bodyEn, s.bodyKo);
-        promptLoc.Set(cardPrompt, s.promptEn, s.promptKo);
+        promptLoc.Set(cardPrompt, Keys(s.promptEn), Keys(s.promptKo));
         hasInfo = !string.IsNullOrEmpty(s.infoEn);
         if (hasInfo) infoLoc.Set(cardInfo, s.infoEn, s.infoKo);
         cardInfo.gameObject.SetActive(hasInfo);
@@ -426,7 +435,7 @@ public class Stg01Tutorial : MonoBehaviour
     void ShowGoal(Step s, int n, int count)
     {
         goalTitleLoc.Set(goalTitle, $"Goal {n}/{count}", $"목표 {n}/{count}");
-        goalTextLoc.Set(goalText, s.promptEn, s.promptKo);
+        goalTextLoc.Set(goalText, Keys(s.promptEn), Keys(s.promptKo));
         goalPlate.gameObject.SetActive(true);
         LayoutGoal();
     }
