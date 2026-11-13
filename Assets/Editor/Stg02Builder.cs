@@ -63,7 +63,7 @@ public static class Stg02Builder
         Ledge("RAIL-B6", B, 50f, 55f, 10.0f),
         // ---- high rail back over the street (x 30~49.5, y 11.5) -> goal at its left end
         Beam("RAIL-B7", B, 30f, 49.5f, 11.5f),
-        new Box("END-B", B, Kind.Solid, 29f, 30f, 11.25f, 15f), // stop post: a refused goal (enemies / spawner left) must not drop the player to the street
+        // (END-B stop post removed, playtest 11-14: the rail's left end is open so the player can come and go freely)
         // ---- sniper perch (DECISIONS 58): high over the right end of the rail, rope up from RAIL-B4 (7.0) or the shop roof (8.25)
         Ledge("PERCH-B", B, 68f, 72f, 14.5f),
     })
@@ -143,7 +143,6 @@ public static class Stg02Builder
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 30f, 33.5f, 11.5f, 15.5f); // high rail, left end
 
     // Ledges drawn by the backdrop (no placeholder bar; colliders stay): the rail (world-fixed track on each RAIL-B ledge), the shaft girders,
-    // (END-B used to hide behind the goal gate's left wing; that wing is cleared now (playtest 11-14), so it gets its own post art.)
     static bool HasArt(Box b) => b.id.StartsWith("RAIL-B") || b.id.StartsWith("SH-A");
 
     // Platform art supports (PartsBackdropKit.PlatformArt): rail_pillar columns under the roof walkways, (floor they stand on, x list).
@@ -154,9 +153,9 @@ public static class Stg02Builder
         { "ROOF-A4", (13.0f, new[] { 60f }) }, // stands on ROOF-A3
     };
 
-    // Rail art spans = the RAIL-B ledges (x1, x2, top); RAIL-B7's track runs on under the END-B post to the gate's left edge (x 29).
+    // Rail art spans = the RAIL-B ledges (x1, x2, top); the track ends where the walkable ledge ends (no END-B post any more).
     static (float x1, float x2, float top)[] RailLedges() =>
-        Boxes.Where(b => b.id.StartsWith("RAIL-B")).Select(b => (b.id == "RAIL-B7" ? b.x1 - 1f : b.x1, b.x2, b.y2)).ToArray();
+        Boxes.Where(b => b.id.StartsWith("RAIL-B")).Select(b => (b.x1, b.x2, b.y2)).ToArray();
 
     [MenuItem("NUMBER/Build STG-02")]
     public static void Build()
