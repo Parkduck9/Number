@@ -26,6 +26,9 @@ public class EnemySpawner : MonoBehaviour
     const float ShakeAmp = 0.12f, ShakeTime = 0.15f;
 
     SpriteRenderer sr;
+    Sprite[] art; // intact / damaged / broken (52x48, centre pivot); null = placeholder look
+    // StageBuildKit puts the device 0.8 above the floor; the 48 px (1.5 u) art is lowered so its base stands on the floor.
+    const float ArtY = 0.75f - 0.8f;
     BoxCollider2D box;
     PlayerController player;
     PlayerController.State prevState;
@@ -44,10 +47,20 @@ public class EnemySpawner : MonoBehaviour
         {
             sr = new GameObject("Look").AddComponent<SpriteRenderer>();
             sr.transform.SetParent(transform, false);
-            sr.sprite = Resources.Load<Sprite>("DraftHud/holo_window_red"); // placeholder look: 20x16 holo window, tinted and scaled up
             sr.sortingLayerName = "World"; // behind the characters, like the other level props
             sr.sortingOrder = 5;
-            sr.transform.localScale = new Vector3(size.x / 0.625f, size.y / 0.5f, 1f); // sprite is 20x16 px at PPU 32
+            art = new[] { Resources.Load<Sprite>("DraftUi/spawner_intact"), Resources.Load<Sprite>("DraftUi/spawner_damaged"), Resources.Load<Sprite>("DraftUi/spawner_broken") };
+            if (art[0] != null)
+            {
+                sr.sprite = art[0];
+                sr.transform.localPosition = new Vector3(0f, ArtY, 0f);
+            }
+            else
+            {
+                art = null;
+                sr.sprite = Resources.Load<Sprite>("DraftHud/holo_window_red"); // placeholder look: 20x16 holo window, tinted and scaled up
+                sr.transform.localScale = new Vector3(size.x / 0.625f, size.y / 0.5f, 1f); // sprite is 20x16 px at PPU 32
+            }
         }
         basePos = transform.localPosition;
         BuildTemplates();
@@ -178,8 +191,10 @@ public class EnemySpawner : MonoBehaviour
     void UpdateLook()
     {
         if (sr == null) return;
-        Color tint = Broken ? new Color(0.35f, 0.35f, 0.4f) : hits > 0 ? new Color(1f, 0.6f, 0.6f) : Color.white;
-        SpriteFlash.Apply(sr, tint, Time.time < flashUntil, Color.white, Color.white, Broken ? 0.6f : 0f);
+        Color tint = Color.white;
+        if (art != null) sr.sprite = art[Broken ? 2 : hits > 0 ? 1 : 0]; // the art shows the damage itself
+        else tint = Broken ? new Color(0.35f, 0.35f, 0.4f) : hits > 0 ? new Color(1f, 0.6f, 0.6f) : Color.white;
+        SpriteFlash.Apply(sr, tint, Time.time < flashUntil, Color.white, Color.white, Broken && art == null ? 0.6f : 0f);
         transform.localPosition = basePos + (Time.time < shakeUntil ? (Vector3)(UnityEngine.Random.insideUnitCircle * ShakeAmp) : Vector3.zero);
     }
 }
