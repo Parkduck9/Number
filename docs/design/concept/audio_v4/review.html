@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NUMBER — hit v4 drafts</title>
+<style>
+:root{color-scheme:dark}
+body{font:16px/1.5 system-ui,sans-serif;background:#111821;color:#e6e6db;max-width:1180px;margin:36px auto;padding:0 20px}
+h1{font-size:26px}h2{font-size:20px;margin-top:30px}button,input,select{font:inherit}
+button,select{background:#22333e;color:#f4cf7d;border:1px solid #71828a;padding:6px 10px;border-radius:3px}
+button{cursor:pointer}button:hover{background:#304854}button:focus-visible,a:focus-visible{outline:2px solid #f4cf7d;outline-offset:3px}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #35434b;padding:12px 8px;vertical-align:top}
+th{color:#f4cf7d}small,p{color:#bcc8ce}audio{display:block;width:280px;max-width:100%;margin-bottom:8px}
+.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:20px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.table-wrap{overflow-x:auto}code,a{color:#f4cf7d}
+.note{font-size:13px}.state{min-height:1.5em;border-left:3px solid #71828a;padding-left:12px}
+.single{font-size:12px;color:#f4cf7d}a{overflow-wrap:anywhere}
+@media(max-width:700px){body{margin:20px auto;padding:0 12px}td,th{padding:10px 6px}audio{width:230px}.table-wrap table{min-width:700px}}
+</style>
+<h1>NUMBER — hit v4 / DRAFTS ONLY</h1>
+<p>Five short blade-on-robot hit designs. The agent measured the signals but could not hear them.
+Compare their attack, metal body and repetition fatigue. All WAVs are mono 44.1 kHz / 16-bit, peaking at −1 dBFS. Assets are unchanged.</p>
+<div class="controls">
+ <label>SFX volume <input id="volume" type="range" min="0" max="1" step=".01" value=".55"> <output id="level">55%</output></label>
+ <label>Single-play pitch <select id="rate">
+  <option value=".45">0.45× (game minimum)</option><option value=".7">0.70×</option>
+  <option value=".9">0.90×</option><option value="1" selected>1.00×</option>
+  <option value="1.1">1.10×</option><option value="1.4">1.40× (game maximum)</option>
+ </select></label>
+ <button id="stop" type="button">Stop all</button>
+</div>
+<p class="note">“Rapid fire ×6” uses Web Audio playbackRate: six hits exactly 0.18 s apart, at
+1.00, 0.94, 1.08, 0.91, 1.04 and 0.98×. It ignores the single-play pitch selector.
+Playing anything stops the previous audition, including queued hits. The volume slider affects every player.
+Peaks are matched; perceived loudness can differ. At 0.45×, file length and tails expand by 2.22×.</p>
+<p id="status" class="state" role="status" aria-live="polite">Ready. Start at a comfortable speaker volume.</p>
+<div class="table-wrap"><table>
+ <thead><tr><th scope="col">Candidate / target character</th><th scope="col">v4 draft</th><th scope="col">Current game hit</th></tr></thead>
+ <tbody id="candidates"></tbody>
+</table></div>
+<h2>Contrast references</h2>
+<p>Parry should remain a bright, ringing clang. Hurt should remain low and dull.
+Judge the drafts against both, especially at 0.45×. These references are the actual Assets WAVs.</p>
+<div class="table-wrap"><table>
+ <thead><tr><th scope="col">Reference / role</th><th scope="col">Current game sound</th></tr></thead>
+ <tbody id="references"></tbody>
+</table></div>
+<p class="note">Review: listen once at 1×, compare with the current hit, repeat several rapid bursts, then compare with parry/hurt.
+Check the 0.45× and 1.4× extremes before choosing. Numeric checks cannot establish whether a sound feels metallic or non-fatiguing.</p>
+<p><a href="README.md">Recipes and source credits</a> · <a href="validation.json">Signal validation</a> ·
+<a href="build_audio_v4.py">Build script</a></p>
+<script>
+'use strict';
+const entries = [
+ ['hit_a',140,'Metallic slice','Dry metal chk. Single source, lightly filtered; a useful first comparison.'],
+ ['hit_b',130,'Punch + tick','Firm midrange body with a tiny steel tick.'],
+ ['hit_c',175,'Crunchy robot','Metal bite with a short irregular shell crunch.'],
+ ['hit_d',155,'Bright shing','The brightest cutting edge; deliberately short, with no long ring.'],
+ ['hit_e',145,'Dark steel','Lower metal knock with the sub-bass removed.']
+];
+const ASSETS = '../../../../Assets/Audio/Resources/Sfx/';
+const rapidRates = [1.00,.94,1.08,.91,1.04,.98];
+const tracks = [], sources = new Set(), buffers = new Map();
+const volume = document.querySelector('#volume'), rate = document.querySelector('#rate');
+const status = document.querySelector('#status');
+let context, master, generation = 0;
+
+function stopAll(except = null, announce = false) {
+ ++generation;
+ for (const audio of tracks) if (audio !== except) {
+  audio.pause();
+  if (audio.readyState > 0) audio.currentTime = 0;
+ }
+ for (const source of sources) {
+  source.onended = null;
+  try { source.stop(); } catch {}
+  source.disconnect();
+ }
+ sources.clear();
+ if (announce) status.textContent = 'Stopped.';
+}
+
+function applyRate(audio) {
+ audio.playbackRate = Number(rate.value);
+ audio.preservesPitch = false;
+}
+
+function playerCell(file, label) {
+ const td = document.createElement('td'), audio = document.createElement('audio');
+ audio.controls = true;
+ audio.preload = 'none';
+ audio.src = file;
+ audio.setAttribute('aria-label', label);
+ audio.volume = Number(volume.value);
+ applyRate(audio);
+ audio.addEventListener('play', () => {
+  stopAll(audio);
+  applyRate(audio);
+  status.textContent = label + ' · ' + rate.value + '× · native player';
+ });
+ audio.addEventListener('error', () => {
+  status.textContent = 'Cannot load ' + file + '. Serve this page from the repository HTTP server; see README.';
+ });
+ tracks.push(audio);
+ td.append(audio);
+ const actions = document.createElement('div');
+ actions.className = 'actions';
+ for (const rapid of [false,true]) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = rapid ? 'Rapid fire ×6' : 'Play once';
+  button.setAttribute('aria-label', button.textContent + ': ' + label);
+  button.onclick = () => audition(file, label, rapid);
+  actions.append(button);
+ }
+ td.append(actions);
+ return td;
+}
+
+for (const [name, ms, title, desc] of entries) {
+ const tr = document.createElement('tr'), titleCell = document.createElement('th');
+ titleCell.scope = 'row';
+ const link = document.createElement('a');
+ link.href = name + '.wav';
+ link.textContent = name + '.wav';
+ titleCell.append(link, document.createElement('br'), title);
+ const detail = document.createElement('small');
+ detail.style.fontWeight = 'normal';
+ detail.textContent = ms + ' ms · ' + desc;
+ titleCell.append(document.createElement('br'), detail);
+ if (name === 'hit_a') {
+  const tag = document.createElement('div');
+  tag.className = 'single';
+  tag.textContent = 'Single raw source edit';
+  titleCell.append(tag);
+ }
+ tr.append(titleCell, playerCell(name + '.wav', name + ' / ' + title), playerCell(ASSETS + 'sfx_hit.wav', 'Current sfx_hit'));
+ document.querySelector('#candidates').append(tr);
+}
+for (const [name, desc] of [['sfx_parry','Bright ringing clang · 760 ms'],['sfx_hurt','Low dull impact · 300 ms']]) {
+ const tr = document.createElement('tr'), titleCell = document.createElement('th');
+ titleCell.scope = 'row';
+ titleCell.textContent = name + ' — ' + desc;
+ tr.append(titleCell, playerCell(ASSETS + name + '.wav', name));
+ document.querySelector('#references').append(tr);
+}
+
+async function loadBuffer(file) {
+ if (!buffers.has(file)) {
+  const pending = (async () => {
+   const response = await fetch(file);
+   if (!response.ok) throw new Error(file + ': HTTP ' + response.status);
+   return context.decodeAudioData(await response.arrayBuffer());
+  })();
+  buffers.set(file, pending);
+  pending.catch(() => buffers.delete(file));
+ }
+ return buffers.get(file);
+}
+
+async function audition(file, label, rapid) {
+ stopAll();
+ const ticket = generation;
+ status.textContent = 'Loading ' + label + '…';
+ try {
+  if (!context) {
+   context = new (window.AudioContext || window.webkitAudioContext)();
+   master = context.createGain();
+   master.gain.value = Number(volume.value);
+   master.connect(context.destination);
+  }
+  await context.resume();
+  if (ticket !== generation) return;
+  const buffer = await loadBuffer(file);
+  if (ticket !== generation) return;
+  const rates = rapid ? rapidRates : [Number(rate.value)];
+  const start = context.currentTime + .035;
+  rates.forEach((pitch, i) => {
+   const source = context.createBufferSource();
+   source.buffer = buffer;
+   source.playbackRate.value = pitch;
+   source.connect(master);
+   sources.add(source);
+   source.onended = () => {
+    sources.delete(source);
+    source.disconnect();
+    if (ticket === generation && sources.size === 0) status.textContent = 'Finished ' + label + '.';
+   };
+   source.start(start + i * .18);
+  });
+  status.textContent = label + (rapid ? ' · six cuts / 0.18 s spacing / pitch 0.9–1.1×' : ' · ' + rates[0] + '×');
+ } catch (error) {
+  if (ticket === generation) {
+   stopAll();
+   status.textContent = 'Playback failed: ' + error.message + '. Use http://localhost:8766/docs/design/concept/audio_v4/review.html';
+  }
+ }
+}
+
+volume.addEventListener('input', () => {
+ const value = Number(volume.value);
+ document.querySelector('#level').textContent = Math.round(value * 100) + '%';
+ for (const audio of tracks) audio.volume = value;
+ if (master) master.gain.setTargetAtTime(value, context.currentTime, .01);
+});
+rate.addEventListener('change', () => {
+ stopAll();
+ for (const audio of tracks) applyRate(audio);
+ status.textContent = 'Single-play pitch set to ' + rate.value + '×. Rapid fire remains 0.9–1.1×.';
+});
+document.querySelector('#stop').onclick = () => stopAll(null, true);
+window.addEventListener('pagehide', () => stopAll());
+</script>
+</html>

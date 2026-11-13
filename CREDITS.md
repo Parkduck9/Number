@@ -67,7 +67,8 @@
 | [Interface Sounds](https://kenney.nl/assets/interface-sounds) | Kenney | CC0 1.0 | click_002 | sfx_ui_select |
 | [RPG Audio](https://kenney.nl/assets/rpg-audio) | Kenney | CC0 1.0 | cloth1, handleCoins2, metalClick, metalLatch | sfx_dash, sfx_hurt, sfx_hack_ok, sfx_broadcast, sfx_hit, sfx_enemy_tell, sfx_stunned |
 | [Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds) | Kenney | CC0 1.0 | computerNoise_003, explosionCrunch_000 | sfx_stunned, sfx_shockwave (sfx_last_tell kept at v1) |
-Per-file recipes: docs/design/concept/audio_v3/README.md (build script build_audio_v3.py).
+| [75 CC0 breaking / falling / hit sfx](https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx) | rubberduck | CC0 1.0 | bfh1_metal_hit_06 (0–0.14 s, HP 180 / LP 7000 Hz) | sfx_hit (v4 draft A, 2026-11-13 user choice; replaces the v3 sfx_hit) |
+Per-file recipes: docs/design/concept/audio_v3/README.md (build script build_audio_v3.py); sfx_hit: docs/design/concept/audio_v4/README.md (build_audio_v4.py).
 
 ## External music
 | 에셋 | 제작자 | 라이선스 | 쓴 파일 | 사용 위치 |
