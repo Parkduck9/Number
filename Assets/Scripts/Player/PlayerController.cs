@@ -858,7 +858,7 @@ public class PlayerController : MonoBehaviour
         else if (target.IsAndroid && target.Current != TestEnemy.State.Overload) // playtest 11-12: the cut overloads an android (stunned look, next hit kills)
         {
             target.Overload(DiceSkillKit.AndroidOverloadSeconds); // 3 s like the dice overload: the issen cooldown (2.5 s) leaves LMB to finish it
-            LuckyDice.AddHitCharge(); // a landed cut counts toward the dice (7 hits)
+            // (no dice charge: the field charges on kills now, TestEnemy)
             MomentFx.HackPulse(target.BodyCollider != null ? (Vector2)target.BodyCollider.bounds.center : (Vector2)target.transform.position);
             Sfx.Play(SfxId.Stunned);
         }
@@ -1362,7 +1362,6 @@ public class PlayerController : MonoBehaviour
         bool damaged = enemy.ReceivePlayerHit(info);
         if (!damaged) return false;
         swingDamaged++;
-        LuckyDice.AddHitCharge(); // lucky dice: +1 per landed hit (skill strikes are filtered inside)
         Sfx.Play(SfxId.Hit);
         Vector2 contactPoint = col.ClosestPoint(from);
         PlayHitSpark(contactPoint, Facing);

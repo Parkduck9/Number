@@ -45,7 +45,7 @@ helper | 너무 높죠? 우클릭으로 지붕 끝에 밧줄을 걸어요. | Too
 #check dice
 #title Lucky dice | 행운의 주사위
 #clip 6_dice
-#prompt 7 hits roll the dice by themselves (one more hit this time) | 7번 맞히면 주사위가 저절로 굴러요 (이번엔 한 번만 맞히면 돼요)
+#prompt 7 kills roll the dice by themselves (one more this time) | 7명 쓰러뜨리면 주사위가 저절로 굴러요 (이번엔 한 명만 더)
 #info The face you roll is the skill you get: | 굴려서 나온 눈이 그대로 스킬이 돼요:
 #info 1  Shrink-earth step: blink behind the nearest enemy and cut | 1  축지법: 가장 가까운 적 뒤로 순간이동해 베기
 #info 2  Binding rope: a whirl that strikes everyone around you | 2  오랏줄: 한 바퀴 휘둘러 주변 적 모두 타격
@@ -53,6 +53,6 @@ helper | 너무 높죠? 우클릭으로 지붕 끝에 밧줄을 걸어요. | Too
 #info 4  Sheath cut: slashes the nearest four | 4  칼집 일섬: 가까운 적 넷을 한 번에 베기
 #info 5  Five talismans: mark five, strike one, all burst | 5  부적 다섯 장: 다섯을 표시, 하나를 치면 모두 터짐
 #info 6  Divination path: chain blinks through every enemy | 6  점괘 길: 모든 적을 이어 순간이동 연속 베기
-helper | 그 주사위가 당신을 부른 이유예요. 거의 채워 뒀으니 한 번만 베요. | That die is why we called you. It's nearly charged: one more hit. | 6
-helper | 일곱 번 맞히면 저절로 굴러요. 나온 눈이 기술이 돼요. | Seven hits and it rolls itself. The face picks your skill. | 6
+helper | 그 주사위가 당신을 부른 이유예요. 거의 채워 뒀으니 한 명만 쓰러뜨려요. | That die is why we called you. It's nearly charged: one more down. | 6
+helper | 일곱 명 쓰러뜨리면 저절로 굴러요. 나온 눈이 기술이 돼요. | Seven down and it rolls itself. The face picks your skill. | 6
 yudo | 남이 부르는 숫자 말고, 내가 굴리는 숫자라. 좋네. | Not a number called out for me. One I roll. I like it. | 5

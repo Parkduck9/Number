@@ -779,6 +779,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
         if (kind == Kind.Elite && --hp > 0) return true;
         hp = 0;
         EnterState(State.Stunned);
+        if (!IsBossWave) LuckyDice.AddKillCharge(); // playtest 11-13: the dice charge on kills in the field (7 kills = an auto roll)
         if (ring != null) ring.Hide(); // killed under InputLocked (dice skill 6): Update won't run to hide them
         float dir = Mathf.Approximately(info.SourcePosition.x, transform.position.x) ? -facing : Mathf.Sign(transform.position.x - info.SourcePosition.x);
         rb.linearVelocity = new Vector2(dir * Juice.KillKnockback.x, Juice.KillKnockback.y);

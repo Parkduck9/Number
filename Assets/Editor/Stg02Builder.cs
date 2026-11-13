@@ -106,6 +106,16 @@ public static class Stg02Builder
         new Foe("E-B9",  B, 37f, 11.5f, 1, 0f,    12f, ranged: true, bug: true),
         new Foe("ELITE-B1", B, 60f, 1.0f, 0, 0.7f, 8f, elite: true),           // clash-duel elite on the open street under the rising rail (not respawned)
         new Foe("ELITE-B2", B, 16f, 1.0f, 0, 0.4f, 8f, cap: 6, elite: true, minNumber: 3), // second elite (DECISIONS 22): early street below the fence run, 3~6, flat 8u each side
+        // Playtest 11-13 (user): ~7 single kills charge the dice (DECISIONS 53), then a PACK of weak enemies (number 2) right ahead, on screen
+        // when the 7th falls, so the auto-rolled skill takes the whole crowd at once.
+        new Foe("P-A1", A, 55f, 13.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-A2", A, 56f, 13.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-A3", A, 58.5f, 13.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-A4", A, 60f, 13.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-B1", B, 46f, 1.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-B2", B, 47.5f, 1.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-B3", B, 49f, 1.0f, 0, 0.2f, 6f, cap: 2),
+        new Foe("P-B4", B, 51f, 1.0f, 0, 0.2f, 6f, cap: 2),
     };
 
     // Breakable spawner (DECISIONS 15): one per map, at the top of the last climb, watching only SEG-B enemies (doors are one way).

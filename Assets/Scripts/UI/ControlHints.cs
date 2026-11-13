@@ -30,7 +30,7 @@ public class ControlHints : MonoBehaviour
         } },
         { "LuckyDice", new[] // not a scene: shown by Show("LuckyDice") when the Luddite unlocks it (STG03)
         {
-            new[] { "ctrl_key_e", "E", "Lucky dice · rolls itself after 7 hits", "점괘 주사위 · 적중 7번이면 자동 굴림" },
+            new[] { "ctrl_key_e", "E", "Lucky dice · rolls itself after 7 kills", "점괘 주사위 · 7명 쓰러뜨리면 자동 굴림" },
         } },
     };
 

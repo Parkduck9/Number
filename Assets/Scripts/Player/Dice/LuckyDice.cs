@@ -86,6 +86,10 @@ public class LuckyDice : MonoBehaviour
         Charges++;
     }
 
+    // Playtest 11-13: in the field a roll charges on KILLS (TestEnemy, any player kill: cut, issen, reflected shot). The boss keeps
+    // charging on hits (BossFight calls AddHitCharge), so this one ignores kills while the boss is up. Skill kills don't count (Busy).
+    public static void AddKillCharge() { if (!BossActive) AddHitCharge(); }
+
     void Update()
     {
         if (Time.timeScale == 0f) { pendingPress |= input.DicePressed; return; } // hit-stop / pause: keep the press
