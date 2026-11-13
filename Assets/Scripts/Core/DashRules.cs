@@ -25,6 +25,13 @@ public static class DashRules
     public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (at least parryActiveTime; the Parry state stretches to cover it)
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
     public const float ParryIFrames = 0.4f;     // s after a landed parry: other parryable hits are Dodged (playtest 11-13: a 2nd bullet right behind the first hurt)
+    // Playtest 11-13 (user: parry had no taste, and mashing LMB parried everything):
+    public const float ParrySpamLock = 0.25f;   // an LMB press within this (real s) of the previous one cannot parry (mashing never parries)
+    public const float ParrySlowScale = 0.35f;  // after the parry hit-stop, time runs at this scale...
+    public const float ParrySlowTime = 0.3f;    // ...for this long (real s)
+    public const float ParryZoom = 1.25f;       // camera zooms in on the clash (PPU x this, CameraFollow2D.DuelFocus)...
+    public const float ParryZoomHold = 0.35f;   // ...holds this long (real s)...
+    public const float ParryZoomEase = 0.25f;   // ...then eases back out
     public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 
     // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter). Unbound since playtest 11-11 (Shift = issen, else a plain dash) ----
@@ -71,7 +78,7 @@ public static class DashRules
     // ---- Issen flash strike (DECISIONS 26; on Shift since playtest 11-11, PlayerController.TryIssen / FindIssenTarget / PlanIssen) ----
     public const float IssenMaxDy = 1f;          // (T) u, player centre to the target centre: only enemies roughly level with the player ("1자", playtest 11-11)
     public const float IssenCooldown = 2.5f;      // (T) s after a strike; a press on cooldown does nothing
-    public const float IssenRange = 9f;          // (T) u, player centre to the target centre (also the aim line length)
+    public const float IssenRange = 12f; // playtest 11-13: 9 -> 12, reads apart from the 5 u lunge         // (T) u, player centre to the target centre (also the aim line length)
     public const float IssenMouseRadius = 1.5f;  // (T) u: no lunge lock -> the enemy collider nearest the mouse within this
     public const float IssenHitStop = 0.08f;     // (T) s freeze on arrival (a kill extends it to Juice.HitStopKill)
     public const float IssenPoseTime = 0.15f;    // (T) s the hero holds the follow-through pose (gravity off, invulnerable)

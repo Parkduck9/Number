@@ -74,6 +74,9 @@ public class PlayerController : MonoBehaviour
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float hitStopEndedAt = -10f; // real time the last hit-stop ended (DashRules.HitStopGap)
     float parryGuardUntil;
+    float lastAttackPressAt = -999f; // real time of the last LMB press (DashRules.ParrySpamLock)
+    bool pressSpam;                  // the latest LMB press came within ParrySpamLock of the one before: it cannot parry
+    float parrySlowUntil = -1f, parryUnfocusAt = -1f; // real time: the post-parry slow-mo / zoom ends
     float parryIFramesUntil; // playtest 11-13: a landed parry also makes the hero briefly untouchable (DashRules.ParryIFrames)
 
     Rigidbody2D rb;
@@ -213,7 +216,15 @@ public class PlayerController : MonoBehaviour
         rope = GrappleRope.Create(this); // DECISIONS 16
     }
 
-    void OnDisable() { EndHitStop(); RestorePassedPlatforms(true); if (rope != null) rope.Hide(); }
+    void OnDisable()
+    {
+        parrySlowUntil = -1f; // EndHitStop then restores timeScale 1
+        EndHitStop();
+        if (Mathf.Approximately(Time.timeScale, DashRules.ParrySlowScale)) Time.timeScale = 1f;
+        if (parryUnfocusAt > 0f) { CameraFollow2D.DuelUnfocus(0f); parryUnfocusAt = -1f; }
+        RestorePassedPlatforms(true);
+        if (rope != null) rope.Hide();
+    }
 
     // Freezes time briefly (real-time length). Never starts during a pause / dialogue, and only ever extends a running hit-stop.
     bool hitStopCountsForGap; // false while only a parry stop runs: the riposte kill right after a parry keeps its freeze
@@ -236,6 +247,8 @@ public class PlayerController : MonoBehaviour
         if (state != State.Locomotion) EnterState(State.Locomotion);
         Facing = face;
         parryGuardUntil = parryPoseUntil = parryIFramesUntil = -999f;
+        parryUnfocusAt = -1f; // the duel owns the camera focus now: a parry's pending unfocus must not undo it
+        if (parrySlowUntil > 0f) { parrySlowUntil = -1f; if (Mathf.Approximately(Time.timeScale, DashRules.ParrySlowScale)) Time.timeScale = 1f; }
     }
     public void DuelClash(bool counter, ParryHeight height, Vector2? contact = null)
     {
@@ -283,11 +296,13 @@ public class PlayerController : MonoBehaviour
         if (hitStopEndsAt < 0f) return;
         hitStopEndsAt = -1f;
         if (hitStopCountsForGap) hitStopEndedAt = Time.unscaledTime;
-        Time.timeScale = 1f;
+        Time.timeScale = Time.unscaledTime < parrySlowUntil ? DashRules.ParrySlowScale : 1f; // a parry's slow-mo follows its freeze
     }
 
     void Update()
     {
+        NotePress();
+        UpdateParryFeel();
         if (hitStopEndsAt >= 0f)
         {
             if (Time.unscaledTime >= hitStopEndsAt) EndHitStop();
@@ -421,7 +436,7 @@ public class PlayerController : MonoBehaviour
 
     bool TryEnterParry()
     {
-        if (!FaceParryThreat(out float eta)) return false;
+        if (pressSpam || !FaceParryThreat(out float eta)) return false; // mashing never parries
         EnterState(State.Parry);
         // No upper cap: a strike seen at eta 0.3 lands up to 2 frames later (Windup->Strike->DoStrike); the Parry state stretches to match.
         // Shots are bounded by their eligibility (ParryShotRange / ParryShotWindow), so the guard always lasts until they land.
@@ -863,9 +878,37 @@ public class PlayerController : MonoBehaviour
             Sfx.Play(SfxId.Stunned);
         }
         else if (!((target.IsHuman || target.IsAndroid) && StrikeEnemy(target, col, from, true))) Sfx.Play(SfxId.Parry, 0.4f, 0.7f); // passed untouched: dull tick
+        IssenCutPath(from, spot, alt ? null : target);
         StartHitStop(DashRules.IssenHitStop); // only extends a kill's longer stop
-        Juice.Shake(Juice.ShakeHitAmp, Juice.ShakeHitTime, path);
+        Juice.Shake(Juice.ShakeKillAmp, Juice.ShakeHitTime, path); // playtest 11-13: heavier than a lunge hit
         return true;
+    }
+
+    // Playtest 11-13 (user: Shift felt like the normal cut): the flash cut leaves a long white/red/cyan slash along its path with a
+    // white screen flash, and cuts every other human on the path too (androids on it overload). Bugs / the elite are passed, as before.
+    const float IssenPathHalfH = 1.1f; // (T) u above / below the path line that counts as "on the path"
+    void IssenCutPath(Vector2 from, Vector2 to, TestEnemy skip)
+    {
+        Vector2 a = from + Vector2.up * 0.3f, b = to + Vector2.up * 0.3f;
+        DiceSkillKit.Line(a, b, 14f * DiceSkillKit.Px, DiceSkillKit.A(DiceSkillKit.Red, 0.5f), 0.35f, 95);
+        DiceSkillKit.Line(a, b, 8f * DiceSkillKit.Px, DiceSkillKit.A(DiceSkillKit.Cyan, 0.7f), 0.3f, 96);
+        DiceSkillKit.Line(a, b, 3f * DiceSkillKit.Px, Color.white, 0.25f, 97);
+        DiceSkillKit.Overlay.Get().Flash(Color.white, 0.35f, 0.12f);
+        float x0 = Mathf.Min(from.x, to.x), x1 = Mathf.Max(from.x, to.x);
+        var hits = new System.Collections.Generic.List<TestEnemy>();
+        foreach (TestEnemy e in TestEnemy.All)
+        {
+            if (e == null || e == skip || e.IsDown || e.IsBossWave || !e.isActiveAndEnabled || !(e.IsHuman || e.IsAndroid) || e.BodyCollider == null) continue;
+            Vector2 c = e.BodyCollider.bounds.center;
+            if (c.x < x0 || c.x > x1) continue;
+            float lineY = Mathf.Lerp(from.y, to.y, x1 > x0 ? (c.x - from.x) / (to.x - from.x) : 0f);
+            if (Mathf.Abs(c.y - lineY) <= IssenPathHalfH) hits.Add(e); // collected first: a kill may change TestEnemy.All
+        }
+        foreach (TestEnemy e in hits)
+        {
+            if (e.IsAndroid && e.Current != TestEnemy.State.Overload) { e.Overload(DiceSkillKit.AndroidOverloadSeconds); Sfx.Play(SfxId.Stunned); }
+            else StrikeEnemy(e, e.BodyCollider, from, true);
+        }
     }
 
     // Side-effect-free mirror of TryIssen's decision (DECISIONS 50): would a Shift press issen right now? Used by the crosshair cue.
@@ -1496,7 +1539,8 @@ public class PlayerController : MonoBehaviour
         float dx = info.SourcePosition.x - transform.position.x;
         // DECISIONS 44: LMB pressed on this very frame, but the blow resolved before this Update read the press (script order is not
         // fixed): it parries, turned to the blow like FaceParryThreat would have. PlayerInputReader runs first (-100), so the press is known.
-        bool pressedNow = input.AttackPressed && !info.Unparryable && !lunging && (state == State.Locomotion || state == State.Attack);
+        NotePress();
+        bool pressedNow = input.AttackPressed && !pressSpam && !info.Unparryable && !lunging && (state == State.Locomotion || state == State.Attack);
         if (pressedNow)
         {
             if (!Mathf.Approximately(info.TravelDirX, 0f)) Facing = info.TravelDirX > 0f ? -1 : 1;
@@ -1508,7 +1552,9 @@ public class PlayerController : MonoBehaviour
             ? Mathf.Sign(info.TravelDirX) == -Facing
             : Mathf.Approximately(dx, 0f) || Mathf.Sign(dx) == Facing;
         // An LMB lunge parries what it runs into (playtest 11-10: a shot met on the way in counted as a hit). The lunge keeps going.
-        if ((ParryActive || Time.time < parryGuardUntil || lunging || pressedNow) && fromFront && !info.Unparryable)
+        // Playtest 11-13: a lunge only parries shots it runs into (a mashed lunge into a melee strike no longer parries it).
+        bool lungeParry = lunging && !Mathf.Approximately(info.TravelDirX, 0f);
+        if ((ParryActive || Time.time < parryGuardUntil || lungeParry || pressedNow) && fromFront && !info.Unparryable)
         {
             // No knockback for either side. Hit-stop + flash + parry FX. A guard parry during an attack must not abort the swing.
             if (state == State.Parry) EnterState(State.Locomotion);
@@ -1525,6 +1571,7 @@ public class PlayerController : MonoBehaviour
             Sfx.Play(SfxId.Parry, 1f, ParryPitch); // DECISIONS 26: high clang (hurt is low)
             StartHitStop(Mathf.Max(hitStopTime, DashRules.ParryHitStop), false);
             Juice.Shake(Juice.ShakeParryAmp, Juice.ShakeParryTime);
+            ParryFeel(contact);
             return HitResult.Parried;
         }
 
@@ -1540,6 +1587,40 @@ public class PlayerController : MonoBehaviour
         PlayHitSpark(transform.position, away); // blow travels away from the source
         rb.linearVelocity = new Vector2(health.IsDead ? 0f : away * knockback.x, knockback.y); // dying: no sideways push (could carry the corpse into an exit)
         return HitResult.Hit;
+    }
+
+    // Mash check on real time (hit-stop freezes Time.time). Once per frame: also called from ReceiveEnemyHit, which can run before
+    // this Update on the blow's frame (DECISIONS 44 same-frame parry), so it must judge this frame's press, not the last one.
+    int pressNotedFrame = -1;
+    void NotePress()
+    {
+        if (pressNotedFrame == Time.frameCount) return;
+        pressNotedFrame = Time.frameCount;
+        if (!input.AttackPressed) return;
+        pressSpam = Time.unscaledTime - lastAttackPressAt < DashRules.ParrySpamLock;
+        lastAttackPressAt = Time.unscaledTime;
+    }
+
+    // Playtest 11-13: a landed parry zooms in on the clash and runs slow-mo for a beat after its hit-stop (real time).
+    void ParryFeel(Vector2 contact)
+    {
+        if (GameFlow.InputLocked) return; // an elite duel owns the camera and the clock
+        float hold = Mathf.Max(0f, hitStopEndsAt - Time.unscaledTime);
+        parrySlowUntil = Time.unscaledTime + hold + DashRules.ParrySlowTime;
+        parryUnfocusAt = Time.unscaledTime + DashRules.ParryZoomHold;
+        Camera cam = Camera.main; // zoom only: focus on where the camera already looks, so the view does not jump sideways
+        CameraFollow2D.DuelFocus(cam != null ? (Vector2)cam.transform.position : Vector2.Lerp(transform.position, contact, 0.5f), DashRules.ParryZoom);
+    }
+
+    void UpdateParryFeel()
+    {
+        float t = Time.unscaledTime;
+        if (parryUnfocusAt > 0f && t >= parryUnfocusAt) { CameraFollow2D.DuelUnfocus(DashRules.ParryZoomEase); parryUnfocusAt = -1f; }
+        if (parrySlowUntil > 0f && hitStopEndsAt < 0f && t >= parrySlowUntil)
+        {
+            parrySlowUntil = -1f;
+            if (Mathf.Approximately(Time.timeScale, DashRules.ParrySlowScale)) Time.timeScale = 1f; // only our own slow-mo (pause / cards set 0)
+        }
     }
 
     void UpdateVisual(float now)

@@ -121,7 +121,7 @@ public class LuckyDice : MonoBehaviour
     {
         rolling = true;
         Charges = 0;
-        int face = forcedFace != 0 ? forcedFace : UnityEngine.Random.Range(1, 7);
+        int face = forcedFace != 0 ? forcedFace : BossActive ? UnityEngine.Random.Range(1, 7) : FaceForCrowd();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (debugFace != 0) { face = debugFace; debugFace = 0; }
 #endif
@@ -146,6 +146,29 @@ public class LuckyDice : MonoBehaviour
             yield return skill.Current;
         }
         skill = null;
+    }
+
+    // Playtest 11-13 (user): the field roll reads the crowd instead of chance. 6+ on screen -> 6; 2+ inside the rope whirl (a bit smaller
+    // than its reach, so they really get hit) -> 2; else the count on screen (1, 3, 4, 5); two apart -> 3 (lightning hits both); none -> random.
+    const float WhirlCheck = 0.8f; // fraction of Skill2Rope.Radius
+
+    int FaceForCrowd()
+    {
+        List<TestEnemy> on = EnemiesOnCamera();
+        int n = on.Count;
+        if (n == 0) return UnityEngine.Random.Range(1, 7);
+        if (n >= 6) return 6;
+        Vector2 o = Player.Body.position;
+        float r = Skill2Rope.Radius * WhirlCheck;
+        int near = 0;
+        foreach (TestEnemy e in on)
+        {
+            Collider2D col = e.BodyCollider;
+            Vector2 cp = col != null ? col.ClosestPoint(o) : (Vector2)e.transform.position; // same measure as Skill2Rope's hit test
+            if ((cp - o).sqrMagnitude <= r * r) near++;
+        }
+        if (near >= 2) return 2;
+        return n == 2 ? 3 : n;
     }
 
     IEnumerator SkillFor(int face)
