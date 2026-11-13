@@ -116,15 +116,88 @@ public static class UiKit
         return btn;
     }
 
-    // Compact in-game controls guide (EN/KO): 4 lines at size 18 in a 600x104 frame. Returns the frame root (for toggling).
+    // Controls guide rows (playtest 11-13, user: the wall of text read badly). Each row is groups of three:
+    // keys, EN, KO. Keys are comma-separated "sprite:letter" tokens ("+" draws a plus between two keys).
+    static readonly string[][] ControlRows =
+    {
+        new[] { "ctrl_key_a:A,ctrl_key_d:D", "Move", "이동",
+                "ctrl_key_space:SPACE", "Jump", "점프",
+                "ctrl_key_a:S,+,ctrl_key_space:SPACE", "Drop through a ledge", "발판 아래로" },
+        new[] { "ctrl_key_shift:SHIFT", "Issen (level enemy)", "일섬 (같은 높이 적)",
+                "ctrl_key_e:E", "Interact / hack (when near)", "상호작용 / 해킹 (가까이서)" },
+        new[] { "ctrl_mouse_left:", "Attack / Parry", "공격 / 패링",
+                "ctrl_mouse_right:", "Grapple rope", "갈고리 줄" },
+        new[] { "ctrl_key_e:E", "Lucky dice (after unlock)", "점괘 주사위 (해금 후)",
+                "ctrl_key_space:ESC", "Pause", "일시정지" },
+    };
+
+    const float KeyScale = 2f;  // 16 px icon art at 2x = 32 reference px, as ControlHints draws it
+
+    // Compact in-game controls guide (EN/KO): key icons + short labels. Returns the frame root (for toggling).
+    // No icon art (DraftSprites.Use off, or a missing file) falls back to the old four text lines.
     public static GameObject ControlsPanel(Transform parent, Vector2 anchor, Vector2 pos)
     {
-        var fill = Frame("Controls", parent, anchor, pos, new Vector2(600f, 104f), out _);
-        Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
-            "A/D  Move      Space  Jump      S + Space  Drop through a ledge\nShift  Issen (level enemy)      E (when near)  Interact / hack\nLeft click  Attack / Parry      Right click  Grapple rope\nE  Lucky dice (after unlock)      Esc / P  Pause",
-            "A/D  이동      Space  점프      S + Space  발판 아래로 내려가기\nShift  일섬(같은 높이 적)      E(가까이서)  상호작용 / 해킹\n좌클릭  공격 / 패링      우클릭  갈고리 줄\nE  점괘 주사위(해금 후)      Esc / P  일시정지",
-            18, UiTheme.Current.dim);
+        bool icons = DraftHud.Ui("ctrl_key_a") != null && DraftHud.Ui("ctrl_key_space") != null
+                     && DraftHud.Ui("ctrl_key_shift") != null && DraftHud.Ui("ctrl_key_e") != null
+                     && DraftHud.Ui("ctrl_mouse_left") != null && DraftHud.Ui("ctrl_mouse_right") != null;
+        var fill = Frame("Controls", parent, anchor, pos, new Vector2(620f, icons ? 168f : 104f), out _);
+        if (!icons)
+        {
+            Label("Text", fill, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(590f, 100f),
+                "A/D  Move      Space  Jump      S + Space  Drop through a ledge\nShift  Issen (level enemy)      E (when near)  Interact / hack\nLeft click  Attack / Parry      Right click  Grapple rope\nE  Lucky dice (after unlock)      Esc / P  Pause",
+                "A/D  이동      Space  점프      S + Space  발판 아래로 내려가기\nShift  일섬(같은 높이 적)      E(가까이서)  상호작용 / 해킹\n좌클릭  공격 / 패링      우클릭  갈고리 줄\nE  점괘 주사위(해금 후)      Esc / P  일시정지",
+                18, UiTheme.Current.dim);
+            return fill.parent.gameObject;
+        }
+
+        var column = Stretch("Rows", fill, 8f);
+        var vertical = column.gameObject.AddComponent<VerticalLayoutGroup>();
+        vertical.spacing = 4f;
+        vertical.childAlignment = TextAnchor.MiddleCenter;
+        vertical.childControlWidth = vertical.childControlHeight = true;
+        vertical.childForceExpandWidth = vertical.childForceExpandHeight = false;
+        foreach (var entries in ControlRows) BuildControlRow(column, entries);
         return fill.parent.gameObject;
+    }
+
+    static void BuildControlRow(Transform column, string[] entries)
+    {
+        var row = Rect("Row", column, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        var dim = UiTheme.Current.dim;
+        for (int i = 0; i + 2 < entries.Length; i += 3)
+        {
+            foreach (string token in entries[i].Split(','))
+            {
+                if (token == "+") { TextItem(row, "+", "+", 16, dim); continue; }
+                int colon = token.IndexOf(':');
+                KeyIcon(row, token.Substring(0, colon), token.Substring(colon + 1));
+            }
+            TextItem(row, entries[i + 1], entries[i + 2], 16, dim);
+            if (i + 3 < entries.Length) TextItem(row, "   ", "   ", 16, dim); // gap before the next pair
+        }
+    }
+
+    // One key cap: the icon sprite at 2x with its letter drawn on top (the art has no letters).
+    static void KeyIcon(Transform row, string sprite, string letter)
+    {
+        Sprite art = DraftHud.Ui(sprite);
+        var img = FilledImage(Rect("Key " + letter, row, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero), Color.white);
+        img.sprite = art;
+        var le = img.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = art.rect.width * KeyScale;
+        le.preferredHeight = art.rect.height * KeyScale;
+        if (letter != "") Label("Letter", img.transform, new Vector2(0.5f, 0.5f), Vector2.zero, art.rect.size * KeyScale, letter, letter, letter.Length > 2 ? 10 : 12, Color.white);
+    }
+
+    static void TextItem(Transform row, string en, string ko, int size, Color color)
+    {
+        var text = Label("Text", row, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, en, ko, size, color);
+        text.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
 
     public static void EnsureEventSystem(out GameObject created)

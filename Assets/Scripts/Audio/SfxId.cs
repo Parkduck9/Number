@@ -15,6 +15,7 @@ public enum SfxId
     UiSelect,
     Block,      // a frontal cut bounces off a guarding Android / guarded dummy (Hove Audio, playtest 11-13)
     Issen,      // Shift flash cut (Hove Audio stab + whoosh, playtest 11-13)
+    StunFlesh,  // a human enemy reels: a wet stab, where the android keeps the metal ring (user pick, playtest 11-13)
     HitStab,    // layered under Hit when the hero's cut lands (Hove Audio stab, playtest 11-13)
 }
 

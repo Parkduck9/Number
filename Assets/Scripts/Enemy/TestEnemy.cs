@@ -78,6 +78,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public bool IsDown => state == State.Stunned || !isActiveAndEnabled;
     public bool IsBossWave { get; set; } // set by BossFight: dice skills skip it
     public bool Guarded { get; set; } // Stg01Tutorial: blocks every player hit until the step's move is done
+    SfxId StunSfx => IsAndroid ? SfxId.Stunned : SfxId.StunFlesh; // metal ring for the machine, a wet stab for a person (user pick, playtest 11-13)
+
     public bool IsAndroid => kind == Kind.Android; // DECISIONS 32 dice face 3: androids overload instead of taking the bolt
     public bool IsHuman => kind == Kind.Citizen || kind == Kind.Sniper; // DECISIONS 26: the RMB issen kills these in one hit (not bugs / androids / elite)
     public Collider2D BodyCollider { get; private set; }
@@ -637,7 +639,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             case State.Staggered:
                 number.SetFlame(false);
                 openDuration = broadcast == BroadcastRules.Num3Number && !ranged ? BroadcastRules.Num3OpenTime : openTime;
-                if (next == State.Open) Sfx.Play(SfxId.Stunned, 0.6f); // counter window opens
+                if (next == State.Open) Sfx.Play(StunSfx, 0.6f); // counter window opens
                 break;
             case State.Frozen:
                 number.SetPulse(false);
@@ -657,7 +659,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
                 break;
             case State.Stunned:
                 number.Hide();
-                Sfx.Play(SfxId.Stunned);
+                Sfx.Play(StunSfx);
                 rb.linearVelocity = Vector2.zero;
                 if (visual != null && !(draftSprite && draftStunned != null)) visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f * -facing);
                 break;
