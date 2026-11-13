@@ -1,3 +1,3 @@
 # New story 11-12: the contact (who sent the invitation) radios in. File name kept: scenes reference it.
 @mode radio
-helper | 도사님, 들려요? 초대장을 보낸 쪽이에요. 경비 로봇이 당신을 노려요. 달려요! | Can you hear me? We sent your invitation. The guard robots are after you. Run! | 4
+helper | 도사님, 초대장 보낸 사람이에요. 경비 로봇이 와요. 달려요! | It's me, I sent the invitation. Guard robots incoming. Run! | 4

@@ -74,6 +74,7 @@ public class PlayerController : MonoBehaviour
     float hitStopEndsAt = -1f; // real time; <0 = no hit-stop running
     float hitStopEndedAt = -10f; // real time the last hit-stop ended (DashRules.HitStopGap)
     float parryGuardUntil;
+    float parryIFramesUntil; // playtest 11-13: a landed parry also makes the hero briefly untouchable (DashRules.ParryIFrames)
 
     Rigidbody2D rb;
     PlayerInputReader input;
@@ -234,7 +235,7 @@ public class PlayerController : MonoBehaviour
     {
         if (state != State.Locomotion) EnterState(State.Locomotion);
         Facing = face;
-        parryGuardUntil = parryPoseUntil = -999f;
+        parryGuardUntil = parryPoseUntil = parryIFramesUntil = -999f;
     }
     public void DuelClash(bool counter, ParryHeight height, Vector2? contact = null)
     {
@@ -300,6 +301,7 @@ public class PlayerController : MonoBehaviour
             stateEnteredAt += dt;
             dashCooldownUntil += dt;
             parryGuardUntil += dt;
+            parryIFramesUntil += dt;
             jumpBufferedUntil += dt;
             attackBufferedUntil += dt;
             lastGroundedAt += dt;
@@ -1513,6 +1515,7 @@ public class PlayerController : MonoBehaviour
             if (state == State.Parry) EnterState(State.Locomotion);
             if (pressedNow) { pressSpentFrame = Time.frameCount; attackBufferedUntil = -999f; } // that press is spent: no swing buffered behind the parry hit-stop (or already buffered by this frame's Update, mid-swing)
             parryGuardUntil = Time.time + parryGuardTime;
+            parryIFramesUntil = Time.time + DashRules.ParryIFrames;
             ParryCount++;
             // Shot: where the bullet is. Melee: the hero's front edge at the strike height, where the ring merges (TestEnemy.ParryContact).
             Vector2 contact = !Mathf.Approximately(info.TravelDirX, 0f) ? info.SourcePosition
@@ -1526,6 +1529,7 @@ public class PlayerController : MonoBehaviour
             return HitResult.Parried;
         }
 
+        if (Time.time < parryIFramesUntil && !info.Unparryable) return HitResult.Dodged; // right after a parry: a 2nd shot / a blow from behind passes (duel losses and boss hazards are Unparryable)
         if (state == State.Parry) ParryFailHits++;
         HurtFrame = Time.frameCount;
         health.TakeDamage(info.Damage);

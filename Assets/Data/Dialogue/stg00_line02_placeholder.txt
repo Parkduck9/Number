@@ -1,4 +1,4 @@
 # New story 11-12: Yudo arrives as an invited guest. Line 2 is GDD LINE-02 [확정]. File name kept: scenes reference it.
 @mode talk
-yudo | 초대장대로 오긴 왔는데… 마중은 없고 방송만 요란하네. | The invitation brought me here... no one to greet me, just a loud broadcast.
-yudo | 오늘의 숫자가 0이라고? 누가 정한 건데. | Today's number is zero? Says who?
+yudo | 초대받아 왔더니, 마중 대신 방송이네. | I came on an invitation. Got a broadcast instead.
+yudo | 0이라고? 누가 정했는데. | Zero? Says who?

@@ -93,7 +93,7 @@ public class LuckyDice : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         DebugKeys();
 #endif
-        bool pressed = input.DicePressed || pendingPress;
+        bool pressed = input.DicePressed || pendingPress || Charges >= ChargesPerRoll; // playtest 11-13: the 7th hit rolls by itself (E kept as a no-op fallback)
         pendingPress = false;
         if (pressed && CanRoll()) StartCoroutine(Roll());
     }

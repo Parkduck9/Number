@@ -41,9 +41,12 @@ public static class BossArt
         Props[0] = Resources.Load<Sprite>("BossArt/prop_rack") ?? RackPix().Make(new Vector2(0.5f, 0f));
         Props[1] = Resources.Load<Sprite>("BossArt/prop_screen") ?? ScreenPix().Make(new Vector2(0.5f, 0f));
         Props[2] = Resources.Load<Sprite>("BossArt/prop_cables") ?? CablesPix().Make(new Vector2(0.5f, 0f));
-        var bug = new Pix(3, 3); // . R .  /  R R R  /  r . r
-        bug.Dot(1, 2, C(0xD8343A)); bug.Rect(0, 1, 3, 1, C(0xD8343A)); bug.Dot(0, 0, C(0x7A1018)); bug.Dot(2, 0, C(0x7A1018));
-        Bug = bug.Make(new Vector2(0f, 0f));
+        // playtest 11-13 (user: "darker / stronger"): same 3x3 bug, deeper saturated red + a near-black rim so it reads on any background
+        var bug = new Pix(5, 5); // rim K around:  . R .  /  R H R  /  r . r   (H = hot centre)
+        Color32 K = C(0x14040A), R = C(0xF0141E), H = C(0xFF6A4A), r = C(0x8C0010);
+        bug.Rect(1, 2, 3, 3, K); bug.Rect(0, 2, 5, 2, K); bug.Rect(0, 0, 2, 2, K); bug.Rect(3, 0, 2, 2, K);
+        bug.Dot(2, 3, R); bug.Rect(1, 2, 3, 1, R); bug.Dot(2, 2, H); bug.Dot(1, 1, r); bug.Dot(3, 1, r);
+        Bug = bug.Make(new Vector2(0.2f, 0.2f)); // pivot keeps the old 3x3 body where it was
         holoTex = null;
         holoIcon = holoN = -2;
         holoBuf = new Color32[HoloW * HoloH];

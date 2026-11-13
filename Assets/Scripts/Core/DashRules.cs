@@ -15,15 +15,16 @@ public static class DashRules
     public const float HitStopGap = 0.25f;      // s (real time): a hit/kill hit-stop never starts within this after the previous one ended (parry exempt)
 
     // ---- LMB parry merge (PlayerController.FaceParryThreat): parry wins over the lunge when a threat is about to land ----
-    public const float ParryShotRange = 3f;     // a parryable shot this close (u) and flying at the player (playtest 11-09: 2 was too late for humans)
+    public const float ParryShotRange = 3.5f;   // playtest 11-13: 3 -> 3.5 (bullet parry felt late);     // a parryable shot this close (u) and flying at the player (playtest 11-09: 2 was too late for humans)
     // ...or (fast shots) one arriving within this many seconds, whatever the distance. QA R2-04: the 14 u/s sniper shot inside 3 u gave a
     // 0.16 s window; 0.25 s = ~4.2 u for it. The guard lasts until arrival + ParryCoverMargin.
-    public const float ParryShotWindow = 0.3f;  // DECISIONS 44: was 0.25 (playtest 11-11: "parry timing feels off")
+    public const float ParryShotWindow = 0.35f; // playtest 11-13: 0.3 -> 0.35. DECISIONS 44: was 0.25 (playtest 11-11: "parry timing feels off")
     public const float ParryShotLateral = 1.3f; // ...whose line passes within this of the player's centre (half height 1 + shot 0.25)
     // melee: an enemy in Windup/Strike whose attack box overlaps the player box and whose strike lands within this (TestEnemy.MeleeThreatens)
     public const float ParryMeleeWindow = 0.35f; // s; was parryActiveTime 0.2 (playtest 11-09: too strict), 0.3 (DECISIONS 44). TestEnemy's ring arms at the same eta
     public const float ParryCoverMargin = 0.1f;  // an LMB parry stays active until the chosen threat's arrival + this (at least parryActiveTime; the Parry state stretches to cover it)
                                                  // >= 2 frames at 30 fps (WebGL): TestEnemy lands a melee strike 1-2 Updates after WindupWait elapses (Windup->Strike, then DoStrike next frame)
+    public const float ParryIFrames = 0.4f;     // s after a landed parry: other parryable hits are Dodged (playtest 11-13: a 2nd bullet right behind the first hurt)
     public const float ParryHitStop = 0.15f;    // minimum hit-stop on a successful parry (0.06, then 0.1 read as nothing; playtest 11-09). Longer than a kill (Juice.HitStopKill)
 
     // ---- Shift dodge + counter (DECISIONS 13, PlayerController.TryPlanDashBehind / DoShiftCounter). Unbound since playtest 11-11 (Shift = issen, else a plain dash) ----

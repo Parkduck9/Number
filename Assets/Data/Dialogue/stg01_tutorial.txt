@@ -10,42 +10,42 @@
 #check move
 #title Move | 이동
 #prompt A / D: move   Space: jump | A / D: 이동   Space: 점프
-helper | 일단 움직여요! A, D로 걷고 스페이스로 상자를 넘어요. | Move first! Walk with A and D, jump the crates with Space. | 6
+helper | A, D로 걷고 스페이스로 상자를 넘어요. | A and D to walk, Space to hop the crates. | 5
 
 #step 2
 #check kill
 #title Strike | 베기
 #clip 2_strike
 #prompt Left click: strike (lunges toward the mouse) | 좌클릭: 베기 (마우스 쪽으로 돌진)
-helper | 경비 로봇이에요! 좌클릭으로 베요. 마우스 쪽으로 파고들어요. | A guard robot! Left click to strike. You lunge toward the mouse. | 6
+helper | 경비 로봇이에요. 좌클릭으로 베요. 마우스 쪽으로 파고들어요. | A guard robot. Left click to cut. You lunge toward the mouse. | 5
 
 #step 3
 #check shift
 #title Issen | 일섬
 #clip 3_issen
 #prompt Shift: issen, a flash cut through an enemy on your level | Shift: 일섬, 같은 높이 적을 꿰뚫고 지나가며 베기
-helper | 이 녀석은 그냥 베면 막아요. 같은 높이에서 Shift! 번개처럼 꿰뚫고 지나가요. | This one blocks plain strikes. On its level, press Shift: flash right through it. | 7
+helper | 이 녀석은 그냥 베면 막아요. 같은 높이에서 Shift! | This one blocks plain cuts. Get level with it and press Shift! | 5
 
 #step 4
 #check parry
 #title Parry | 패링
 #clip 4_parry
 #prompt Rings meet = left click: parry | 두 고리가 겹칠 때 좌클릭: 패링
-helper | 안드로이드는 앞에서 베면 다 막아요. 얼굴 앞 숫자가 공격까지 남은 박자예요. | Androids block everything from the front. The number before its face counts the beats to its strike. | 7
-helper | 두 고리가 겹칠 때 좌클릭, 패링! 막으면 과부하로 멈춰요. 그때 베요. | When the two rings meet, left click to parry! It overloads and stops. Then cut it. | 7
+helper | 안드로이드는 앞에서 베면 막아요. 숫자는 공격까지 남은 박자예요. | Androids block cuts from the front. Its number counts down to the strike. | 6
+helper | 고리가 겹칠 때 좌클릭, 패링! 멈추면 그때 베요. | Click when the rings meet to parry. When it stalls, cut. | 6
 
 #step 5
 #check rope
 #title Rope | 밧줄
 #clip 5_rope
 #prompt Too high to jump: right click near the roof edge (rope) | 점프로 못 올라가요: 지붕 끝 근처에 우클릭 (밧줄)
-helper | 벽이 막혔죠? 우클릭은 밧줄이에요. 마우스 가까운 지붕 끝에 걸려서 끌어올려 줘요. | Blocked by a wall? Right click throws your rope. It catches the roof edge nearest the mouse and pulls you up. | 7
+helper | 너무 높죠? 우클릭으로 지붕 끝에 밧줄을 걸어요. | Too high? Right click to hook the roof edge. | 5
 
 #step 6
 #check dice
 #title Lucky dice | 행운의 주사위
 #clip 6_dice
-#prompt E: roll the lucky dice (charged this once) · 7 hits recharge it | E: 행운의 주사위 굴리기 (이번만 충전됨) · 적중 7번이면 다시 충전
+#prompt 7 hits roll the dice by themselves (one more hit this time) | 7번 맞히면 주사위가 저절로 굴러요 (이번엔 한 번만 맞히면 돼요)
 #info The face you roll is the skill you get: | 굴려서 나온 눈이 그대로 스킬이 돼요:
 #info 1  Shrink-earth step: blink behind the nearest enemy and cut | 1  축지법: 가장 가까운 적 뒤로 순간이동해 베기
 #info 2  Binding rope: a whirl that strikes everyone around you | 2  오랏줄: 한 바퀴 휘둘러 주변 적 모두 타격
@@ -53,6 +53,6 @@ helper | 벽이 막혔죠? 우클릭은 밧줄이에요. 마우스 가까운 지
 #info 4  Sheath cut: slashes the nearest four | 4  칼집 일섬: 가까운 적 넷을 한 번에 베기
 #info 5  Five talismans: mark five, strike one, all burst | 5  부적 다섯 장: 다섯을 표시, 하나를 치면 모두 터짐
 #info 6  Divination path: chain blinks through every enemy | 6  점괘 길: 모든 적을 이어 순간이동 연속 베기
-helper | 그 주사위, 우리가 당신을 부른 이유예요. 이번엔 채워 뒀어요, E로 굴려요. | That die is why we invited you. I charged it this time: press E to roll. | 7
-helper | 나온 눈마다 기술이 달라요. 다음부턴 적중 일곱 번이면 다시 차요. | Every face is a different skill. After this, seven hits charge it again. | 7
-yudo | 남이 불러 주는 숫자 말고, 내가 굴리는 숫자라. 좋지. | Not a number someone calls out, but one I roll myself. Good. | 5
+helper | 그 주사위가 당신을 부른 이유예요. 거의 채워 뒀으니 한 번만 베요. | That die is why we called you. It's nearly charged: one more hit. | 6
+helper | 일곱 번 맞히면 저절로 굴러요. 나온 눈이 기술이 돼요. | Seven hits and it rolls itself. The face picks your skill. | 6
+yudo | 남이 부르는 숫자 말고, 내가 굴리는 숫자라. 좋네. | Not a number called out for me. One I roll. I like it. | 5

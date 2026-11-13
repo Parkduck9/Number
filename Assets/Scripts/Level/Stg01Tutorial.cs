@@ -73,7 +73,7 @@ public class Stg01Tutorial : MonoBehaviour
         {
             var tg = Target(k);
             if (k < nextStep) { OpenGate(k); if (tg != null) tg.gameObject.SetActive(false); continue; } // a death reload: steps already done stay done
-            if (tg != null && steps[k].check is "shift" or "parry" or "dice") tg.Guarded = true;
+            if (tg != null && steps[k].check is "shift" or "parry") tg.Guarded = true;
         }
         BuildUi();
         running = true;
@@ -94,7 +94,8 @@ public class Stg01Tutorial : MonoBehaviour
             bool jumped = false, ok = false;
             var target = Target(i);
             var dice = FindFirstObjectByType<LuckyDice>();
-            if (steps[i].check == "dice" && LuckyDice.Charges < LuckyDice.ChargesPerRoll) LuckyDice.Charges = LuckyDice.ChargesPerRoll; // one free roll to try it
+            if (steps[i].check != "dice") LuckyDice.Charges = 0; // no surprise auto-roll before its step
+            else if (LuckyDice.Charges < LuckyDice.ChargesPerRoll - 1) LuckyDice.Charges = LuckyDice.ChargesPerRoll - 1; // one hit short: the next hit rolls it
             while (true)
             {
                 if (skipped) { Finish(); yield break; }

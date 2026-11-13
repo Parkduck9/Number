@@ -2,10 +2,10 @@
 @mode talk
 broadcast | 오늘의… 행운의… 숫자… 는… | Today's... lucky... number... is...
 broadcast | ……………… | ................
-helper | 방송이 멈췄어요. 도시가… 다시 움직여요! | The broadcast stopped. The city is... moving again!
-yudo | 버튼이 너무 많길래 그냥 다 부쉈어. | There were too many buttons, so I just broke them all.
-citizen | …어? 숫자가… 안 보여. | ...Huh? I can't see the number anymore.
-citizen | 오늘 운은… 내가 정해도 되는 건가? | Do I... get to decide my own luck today?
-yudo | 남이 불러 주는 숫자는 끝났어. 읽고, 쌓고, 직접 굴려. | No more numbers called out for you. Read, build up, and roll it yourself.
-yudo | 오늘은… 대길. | Today is... great luck.
+helper | 방송이 멈췄어요. 도시가 다시 움직여요! | The broadcast is dead. The city's moving again!
+yudo | 버튼이 많길래 다 부쉈어. | Too many buttons. I broke them all.
+citizen | …어? 숫자가 안 보여. | ...Huh? The number's gone.
+citizen | 오늘 운은… 내가 정해도 돼? | So today's luck... is up to me?
+yudo | 그래. 읽고, 쌓고, 직접 굴려. | Yeah. Read it, build it, roll it yourself.
+yudo | 오늘은… 대길. | Today... great luck.
 broadcast | [END] | [END]

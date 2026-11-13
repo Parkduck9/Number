@@ -14,16 +14,16 @@ public class StageRadio : MonoBehaviour
     {
         { "STG02",
             "@mode radio\n" +
-            "helper | 지붕 위로 올라가요! 저격수 붉은 선을 읽어요. 선이 굳으면 쏩니다. | Get up on the roofs! Read the snipers' red lines. When a line locks, it fires. | 6\n" +
-            "yudo | 읽고, 쌓고, 굴린다. 점괘 보는 거랑 똑같네. | Read, build up, roll. Same as reading a fortune. | 4\n" },
+            "helper | 지붕으로 올라가요! 저격수의 붉은 선이 굳으면 쏴요. | Get on the roofs! When a sniper's red line locks, it fires. | 5\n" +
+            "yudo | 읽고, 쌓고, 굴린다. 점보는 거랑 같네. | Read, build, roll. Just like telling fortunes. | 4\n" },
         { "STG04",
             "@mode radio\n" +
-            "helper | 여기가 매일 아침 행운의 숫자를 찍어 내는 공장이에요. 방송 장치는 궁 안 왕좌실에 있어요. | This is the factory that stamps out the lucky number every morning. The broadcast device is in the palace throne room. | 6\n" +
-            "yudo | 숫자를 찍어 낸다라… 운도 공장에서 나오는 줄은 몰랐네. | Stamping out numbers... didn't know luck came off a production line. | 5\n" },
+            "helper | 매일 아침 행운의 숫자를 찍어 내는 공장이에요. 방송 장치는 궁 왕좌실에 있어요. | This factory stamps out the lucky number every morning. The broadcaster is in the throne room. | 6\n" +
+            "yudo | 운도 공장에서 찍어 내는군. | So luck comes off a production line. | 4\n" },
         { "STG05",
             "@mode radio\n" +
-            "helper | 저게 도시의 운을 혼자 쥔 기계예요. 코어가 열릴 때를 노려요! | That machine holds the whole city's luck. Strike when the core opens! | 5\n" +
-            "yudo | 네 숫자는 다 읽었어. 이제 내가 굴릴 차례야. | I've read all your numbers. Now it's my turn to roll. | 4\n" },
+            "helper | 저 기계가 도시의 운을 쥐고 있어요. 코어가 열리면 쳐요! | That machine holds the city's luck. Hit the core when it opens! | 5\n" +
+            "yudo | 네 숫자는 다 읽었어. 이제 내가 굴린다. | I've read all your numbers. My roll now. | 4\n" },
     };
 
     static readonly HashSet<string> Played = new HashSet<string>(); // once per run: a death reload does not replay it

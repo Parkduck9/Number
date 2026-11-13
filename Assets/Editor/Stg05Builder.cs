@@ -126,7 +126,7 @@ public static class Stg05Builder
             new Color32(0x0B, 0x0F, 0x1E, 0xFF), -70);
         var boxes = new[]
         {
-            StageBuildKit.Ledge("DECK-GRATE", 0, x1, x2, 2f),
+            StageBuildKit.Beam("DECK-GRATE", 0, x1, x2, 2f), // playtest 11-13 (user): solid now, no S + Space drop into the lane (still drawn as a grate)
             new StageBuildKit.Box("LANE-FLOOR", 0, StageBuildKit.Kind.Solid, x1, x2, 0f, ly),
             StageBuildKit.Ledge("PERCH-L", 0, 0f, pw, pt),
             StageBuildKit.Ledge("PERCH-R", 0, RoomW - pw, RoomW, pt),
