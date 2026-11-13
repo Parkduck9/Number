@@ -50,6 +50,52 @@ public class FaceHealthHud : MonoBehaviour
             bz.transform.SetSiblingIndex(0); // under the hit flash overlay
         }
         if (label != null) { label.gameObject.SetActive(false); label = null; }
+        BuildHearts();
+    }
+
+    // ---- HP hearts (playtest 11-13, user: the degrading face alone did not show how much HP is left). One heart per HP,
+    // right of the face at the same 2x; a lost heart cracks (hp_heart_lose_0/1) then stays hollow. hud_hp option B.
+    const float HeartPitch = 30f, HeartFrame0 = 0.08f, HeartFrame1 = 0.18f; // 15 native px pitch at 2x; crack 80 ms, split 100 ms, then hollow
+    Image[] hearts;
+    Sprite heartFull, heartEmpty, heartLose0, heartLose1;
+    float[] heartLostAt;
+
+    void BuildHearts()
+    {
+        heartFull = Resources.Load<Sprite>("DraftHud/hp_heart_full");
+        heartEmpty = Resources.Load<Sprite>("DraftHud/hp_heart_empty");
+        heartLose0 = Resources.Load<Sprite>("DraftHud/hp_heart_lose_0");
+        heartLose1 = Resources.Load<Sprite>("DraftHud/hp_heart_lose_1");
+        if (heartFull == null || heartEmpty == null) return;
+        var fr = face.rectTransform;
+        hearts = new Image[5];
+        heartLostAt = new float[hearts.Length];
+        for (int i = 0; i < hearts.Length; i++)
+        {
+            var rt = UiKit.Rect("Heart", fr.parent, new Vector2(0f, 1f), Vector2.zero, new Vector2(20f, 32f));
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(fr.anchoredPosition.x + 112f + i * HeartPitch, fr.anchoredPosition.y - 4f); // past the 112 px bezel
+            hearts[i] = UiKit.FilledImage(rt, Color.white);
+            hearts[i].sprite = heartFull;
+            hearts[i].raycastTarget = false;
+            heartLostAt[i] = -10f;
+        }
+    }
+
+    void UpdateHearts(int hp, bool hitNow)
+    {
+        if (hearts == null) return;
+        float now = Time.unscaledTime;
+        for (int i = 0; i < hearts.Length; i++)
+        {
+            bool full = i < hp;
+            if (!full && hitNow && hearts[i].sprite == heartFull) heartLostAt[i] = now; // just lost this one: play the crack
+            float t = now - heartLostAt[i];
+            hearts[i].sprite = full ? heartFull
+                : t < HeartFrame0 && heartLose0 != null ? heartLose0
+                : t < HeartFrame1 && heartLose1 != null ? heartLose1
+                : heartEmpty;
+        }
     }
 
     void Update()
@@ -62,6 +108,7 @@ public class FaceHealthHud : MonoBehaviour
         }
 
         int hits = Mathf.Clamp(health.MaxHp - health.Hp, 0, Names.Length - 1);
+        UpdateHearts(health.Hp, shown >= 0 && hits > shown);
         if (hits == shown) return;
         if (shown >= 0 && hits > shown && flash != null) { hitAt = Time.unscaledTime; hitFx = true; } // took a hit (not a respawn heal / first frame)
         shown = hits;

@@ -1,0 +1,21 @@
+{
+  "palette": {"o":"#080B14","y":"#FFD43B","h":"#FFF6C8","s":"#B8862E","r":"#BB213F","v":"#F22D52","p":"#D77E54","d":"#3A3F4B","g":"#8A90A0","n":"#1A1D33"},
+  "A": {
+    "full": ["..........","..oooooo..",".ohyyyyso.",".oyrrrrso.",".oyyryyso.",".oyrrryso.",".oyyryyso.",".oyyryrso.",".oyrrryso.",".oyryryso.",".oyyryyso.",".oyrrryso.",".oyyyyyso.",".osssssso.","..oooooo..",".........."],
+    "empty": ["..........","..oooooo..",".ogddddno.",".odddddno.",".oddddnno.",".odddnno..","..odoo....","...o......","..........","..........","..........","..........","..........","..........","..........",".........."],
+    "crack": ["..........","..oooooo..",".ohyyyyso.",".oyrrrhoo.",".oyryho.o.",".oyrho.oo.",".oyhooyso.",".oho.ryso.",".o.rryso..",".ooryryso.",".oyyryyso.",".oyrrryso.",".oyyyyyso.",".osssssso.","..oooooo..",".........."],
+    "break": ["..........","..oooooo..",".ogddddno.",".odddddno.",".oddddnno.",".odddnno..","..odoo....","...o......",".......yo.","....oo.so.","...oryoo..","..oryyo...","..ossso...","...ooo....","......so..",".........."]
+  },
+  "B": {
+    "full": ["..........","..........","..........",".ooo..ooo.","ohvrovvvro","ohvvvvvvro","ovvvvvvvro","orvvvvvrro",".orvvvrro.","..orvrro..","...orro...","....oo....","..........","..........","..........",".........."],
+    "empty": ["..........","..........","..........",".ooo..ooo.","ogdoodddno","odnnnnndno","odnnnnndno","odnnnnndno",".odnnndno.","..odndno..","...odno...","....oo....","..........","..........","..........",".........."],
+    "crack": ["..........","..........","..........",".ooo..ooo.","ohvrovvvro","ohvvhovvro","ovvhovvvro","orvvhovrro",".orhovrro.","..ororro..","...orro...","....oo....","..........","..........","..........",".........."],
+    "break": ["..........","..........","ooo....ooo","ohvo..ovro","ohvo..ovro","ovro..ovro",".oro..oro.","..oo..oo..","..........","..or..ro..","..orooro..","...orro...","....oo....",".ro.......",".......ro.",".........."]
+  },
+  "C": {
+    "full": ["............","............","....oooo....","..oohyyyoo..",".ohyyyyyyso.",".ohyyyyyyso.","ohyyooooysso","oyyyo..oyyso","oyyyo..oyyso","oyyyooooysso",".oyyyyyysso.",".ossyyyssso.","..oossssoo..","....oooo....","............","............"],
+    "empty": ["............","............","....oooo....","..oogdddoo..",".ogddddddno.",".ogddddddno.","ogddoooodnno","oddno..odnno","oddno..odnno","oddnoooodnno",".odddnoddno.",".onddo.odno.","..ooo...oo..","............","............","............"],
+    "crack": ["............","............","....oooo....","..oohyhooo..",".ohyyhoyyso.",".ohyyhoyyso.","ohyyooooysso","oyyyo..oyyso","oyyyo..oyyso","oyyyooooysso",".oyyyyohsso.",".ossyohssso.","..oooossoo..","....oooo....","............","............"],
+    "break": ["....o..o....","...oy..so...",".oohy..yoo..","ohyyy..yyso.","ohyyy..yyso.","oyooo..oyso.","oyo....oyso.","oyo....oyso.","oyooo..oyso.","..oyy..so...","..osy..so...","...oo..o....","............",".so.....so..","..o.....o...","............"]
+  }
+}
