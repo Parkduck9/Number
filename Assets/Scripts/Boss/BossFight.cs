@@ -51,10 +51,14 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float CoreHitEvery = 0.1f, CoreHalf = 0.75f, CoreIssenPast = 1.6f; // s between LMB hits (safety only: Swung fires once per swing, swings are >= attackDuration 0.3 s apart minus one frame); u half size; u issen lands past it
     public static int DiceDamage(int face) => (face + 1) / 2; // faces 1..6 -> 1, 1, 2, 2, 3, 3
     const float WaveSpeed = 10.5f, WaveEvery = 1.1f, // was 9 / 1.3 (DECISIONS 33)
- WaveHalfW = 0.6f, WaveTop = 16.5f /* playtest 11-13: was 9.5, the walls now reach the ceiling (the gap is the way through) */, GapH = 3.6f /* playtest 11-13: 3 -> 3.6 */, SlumpTime = 1.5f;
-    // gap on the floor (stand) / at jump height (or a hook hang) / up at the wall perches (rope up, or a roof chunk). Picked at random,
-    // the high gap at half the weight; never high twice in a row (playtest 11-13: walls over the whole room height)
-    static readonly float[] GapLows = { 2f, 2f, 3.8f, 3.8f, PerchTop - 0.2f };
+ WaveHalfW = 0.6f, WaveTop = 16.5f /* playtest 11-13: was 9.5, the walls now reach the ceiling (the gap is the way through) */, SlumpTime = 1.5f;
+    // Wall gaps (playtest 11-13, 2nd: a hanger on a hook kept getting hit at the top; the jump from the floor must still work):
+    //   low  2.0..5.6  stand on the bridge (a hook hanger's head, 6.0, is above it: drop off)
+    //   mid  3.6..8.4  a jump from the bridge (feet over 3.6 as it passes) or hanging from a hook (feet 4.35, head 6.0, with swing room)
+    //   high 10.3..13.9 a wall perch / a roof chunk up there (rope up)
+    // Picked by weight (mid most often); never high twice in a row.
+    static readonly float[] GapLows = { 2f, 3.6f, PerchTop - 0.2f }, GapHs = { 3.6f, 4.8f, 3.6f };
+    static readonly int[] GapPick = { 0, 0, 1, 1, 1, 2 };
     const float ZoneHalf = 1.5f, FirstSlam = 0.5f;
     // Stuck blade = mash window (DECISIONS 36, replaces the EliteDuel exchange): StuckTime s, each LMB swing on the steel = MashDamage;
     // MashCap hits (= the old duel's 6 damage) rip it out early. The arm tugs every TugEvery s (shorter as time runs out).
@@ -189,7 +193,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
 
     // swarm pool: Waves walls x BugsPerWave bugs
     const int Waves = 3, BugsPerWave = 130; // 56 for the old 7.5 u wall; same density over the full height
-    readonly float[] waveX = new float[Waves], gapLo = new float[Waves];
+    readonly float[] waveX = new float[Waves], gapLo = new float[Waves], gapH = new float[Waves];
     readonly bool[] waveOn = new bool[Waves], waveHit = new bool[Waves];
     readonly SpriteRenderer[] bugs = new SpriteRenderer[Waves * BugsPerWave];
     readonly Vector2[] bugOff = new Vector2[Waves * BugsPerWave];
@@ -215,10 +219,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // E storm slam (playtest 11-13): the blade charges red lightning over the centre, slams, and the whole floor stays live for
     // StormFloorTime (one hit for feet on it). Safe: a wall perch, a hook (rope), a roof chunk, or a dash at the right moment.
     static readonly float[] StormCharge = { 1.6f, 1.4f, 1.25f }; // by phase (T): s of crackle before the slam (plus the tell)
-    const float StormX = 15f, StormFloorTime = 1.5f /* < GrappleHangMax 2.5: a rope caught late in the charge holds through it */, StormFloorH = 0.4f, StormFlick = 0.06f;
+    const float StormX = 15f, StormFloorTime = 2f /* < GrappleHangMax 2.5: a rope caught late in the charge holds through it */, StormFloorH = 0.4f, StormFlick = 0.06f;
     static readonly Color StormRed = new Color32(0xFF, 0x2A, 0x2A, 0xFF), StormCore = new Color32(0xFF, 0xD6, 0xCC, 0xFF);
     DiceSkillKit.Segs stormSegs;
-    SpriteRenderer stormFloor;
+    SpriteRenderer stormFloor, stormGlow; // glow: a tall red haze over the live floor
     float stormCharge = -1f, stormLeft, stormFlickT;
     bool stormHit, stormDrawn;
 
@@ -309,6 +313,9 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         stormFloor = Make("StormFloor", ParryFx.Square, "World", 5, new Vector2(RoomW * 0.5f, Floor + 0.125f));
         stormFloor.transform.localScale = new Vector3(RoomW, 0.25f, 1f);
         stormFloor.enabled = false;
+        stormGlow = Make("StormGlow", ParryFx.Square, "World", 4, new Vector2(RoomW * 0.5f, Floor + 0.9f));
+        stormGlow.transform.localScale = new Vector3(RoomW, 1.8f, 1f);
+        stormGlow.enabled = false;
         stormSegs = DiceSkillKit.Segs.Create("StormBolts");
         stormSegs.transform.SetParent(transform, false);
         sweepFill = Make("SweepBand", ParryFx.Square, "World", 4, Vector2.zero);
@@ -606,7 +613,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     }
 
     // ---- A: bug swarm walls, then the arm slumps (opening) ----
-    float lastGap;
+    int lastGap = -1;
 
     IEnumerator AttackA(int n, float tell)
     {
@@ -614,10 +621,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         yield return Wait(tell);
         for (int i = 0; i < n; i++)
         {
-            float lo;
-            do lo = GapLows[Random.Range(0, GapLows.Length)]; while (lo > 5f && lastGap > 5f);
-            lastGap = lo;
-            LaunchWave(lo);
+            int g;
+            do g = GapPick[Random.Range(0, GapPick.Length)]; while (g == 2 && lastGap == 2);
+            lastGap = g;
+            LaunchWave(GapLows[g], GapHs[g]);
             if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
             if (i < n - 1) yield return Conduct(WaveEvery);
         }
@@ -739,7 +746,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         return false;
     }
 
-    void LaunchWave(float lo)
+    void LaunchWave(float lo, float h)
     {
         int w = System.Array.IndexOf(waveOn, false);
         if (w < 0) return;
@@ -747,11 +754,12 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         waveHit[w] = false;
         waveX[w] = -1.5f;
         gapLo[w] = lo;
-        float span = WaveTop - Floor - GapH;
+        gapH[w] = h;
+        float span = WaveTop - Floor - h;
         for (int i = w * BugsPerWave; i < (w + 1) * BugsPerWave; i++)
         {
             float y = Floor + Random.value * span;
-            if (y >= lo) y += GapH;
+            if (y >= lo) y += h;
             if (lo > Floor && i % 8 == 0) y = Random.Range(LaneY, Floor); // a jump-gap wall fills the under-bridge lane too (DECISIONS 45)
             bugOff[i] = new Vector2(Random.Range(-WaveHalfW, WaveHalfW), y);
             bugs[i].enabled = true;
@@ -814,7 +822,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             {
                 float feet = pp.y - 0.85f, top = pp.y + 0.8f;
                 if (InLane) { feet = Floor + 0.15f; top = Floor + 1.8f; } // DECISIONS 45: the lane is judged like the deck (floor gap = safe)
-                if (feet < WaveTop && (feet < gapLo[w] || top > gapLo[w] + GapH) &&
+                if (feet < WaveTop && (feet < gapLo[w] || top > gapLo[w] + gapH[w]) &&
                     player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(waveX[w] - 1f, pp.y), Unparryable = true }) == HitResult.Hit)
                     waveHit[w] = true; // one hit per wall (a dash / i-frames pass through)
             }
@@ -991,6 +999,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         }
         stormHit = false;
         stormLeft = StormFloorTime;
+        stormGlow.enabled = true;
+        StartCoroutine(StormFollowUp()); // playtest 11-13: the boss keeps attacking while the floor is live
         if (InZone(StormX) && player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(StormX, player.transform.position.y), Unparryable = true }) == HitResult.Hit)
             stormHit = true; // under the blade: that was the hit, the floor spares them
         for (float t = 0f; t < StormFloorTime; t += Dt)
@@ -999,10 +1009,39 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             yield return null;
         }
         stormLeft = 0f;
-        stormFloor.enabled = false;
+        stormFloor.enabled = stormGlow.enabled = false;
         blade.Glow = false;
         yield return Move(blade, new Vector2(StormX, BladeHigh + 2f), 0.2f);
         yield return ReattachBlade();
+    }
+
+    // While the floor is live (the player is up on a perch / a hook / a chunk): either bug rain columns dive at them, or the hatch
+    // snipes single aimed shots (parryable from a perch / a chunk). Phase 1 lighter. Holds the director like a side barrage.
+    IEnumerator StormFollowUp()
+    {
+        sideRunning = true;
+        yield return Wait(0.3f);
+        int count = Phase == 1 ? 2 : 3;
+        if (Random.value < 0.5f)
+            for (int i = 0; i < count; i++) { LaunchColumn(player.transform.position.x); yield return Wait(0.5f); }
+        else
+        {
+            aimOn = true;
+            for (float t = 0f; t < 0.25f; t += Dt) { hatchOpen = Mathf.Max(hatchOpen, t / 0.25f); yield return null; }
+            hatchOpen = 1f;
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 d = (Vector2)player.transform.position - HatchAt;
+                Sfx.Play(SfxId.EnemyTell, 0.5f, 1.5f);
+                SpriteFx.Play("sniper-muzzle", HatchAt, d.x < 0f, 102);
+                Fire(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg, ShotSpeed * 0.85f);
+                yield return Wait(0.45f);
+            }
+            aimOn = false;
+            for (float t = 0f; t < 0.25f; t += Dt) { hatchOpen = 1f - t / 0.25f; yield return null; }
+            hatchOpen = 0f;
+        }
+        sideRunning = false;
     }
 
     void UpdateStorm(float dt)
@@ -1018,7 +1057,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         {
             stormLeft -= dt;
             float fade = Mathf.Clamp01(stormLeft / 0.3f);
-            stormFloor.color = new Color(1f, 0.16f, 0.16f, (blink ? 0.75f : 0.55f) * fade);
+            bool hot = Random.value < 0.5f; // harsh flicker (playtest 11-13: "more violent red")
+            stormFloor.color = hot ? new Color(1f, 0.1f, 0.05f, 0.95f * fade) : new Color(0.75f, 0f, 0.02f, 0.85f * fade);
+            stormGlow.color = new Color(1f, 0f, 0f, (hot ? 0.28f : 0.16f) * fade);
+            if (dt > 0f && Random.value < dt * 4f) Juice.Shake(0.05f, 0.08f); // the bridge buzzes
             Vector2 pp = player.transform.position; // centre = feet + 1, same feet line as the other hit tests
             if (!stormHit && dt > 0f && pp.y - 0.85f < Floor + StormFloorH && pp.y - 0.85f > Floor - 0.5f &&
                 player.ReceiveEnemyHit(new HitInfo { Damage = 1, SourcePosition = new Vector2(pp.x, Floor), Unparryable = true }) == HitResult.Hit)
@@ -1046,11 +1088,16 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         else // live floor: jagged arcs crawling over the whole bridge
         {
             float fade = Mathf.Clamp01(stormLeft / 0.3f);
-            for (float x = 0f; x < RoomW; x += Random.Range(2f, 3.5f))
+            for (float x = 0f; x < RoomW; x += Random.Range(1.2f, 2.2f))
             {
                 Vector2 a = new Vector2(x, Floor + Random.Range(0f, 0.15f));
                 Vector2 end = new Vector2(Mathf.Min(RoomW, x + Random.Range(1.5f, 3f)), Floor + Random.Range(0f, 0.15f));
-                Bolt(a, end, 4, fade, StormFloorH);
+                Bolt(a, end, 5, fade, 0.7f);
+            }
+            for (int k = 0; k < 5; k++) // sparks leaping off the floor
+            {
+                Vector2 a = new Vector2(Random.Range(0.5f, RoomW - 0.5f), Floor);
+                Bolt(a, a + new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(0.8f, 1.6f)), 3, fade);
             }
         }
         stormSegs.Flush();
@@ -1065,8 +1112,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
             float u = i / (float)jags;
             Vector2 p = Vector2.Lerp(a, end, u);
             if (i < jags) p += upOnly > 0f ? new Vector2(0f, Random.Range(0f, upOnly)) : n * Random.Range(-0.3f, 0.3f);
-            stormSegs.Seg(prev, p, 6f * Px, DiceSkillKit.A(StormRed, 0.6f * alpha), 108);
-            stormSegs.Seg(prev, p, 2f * Px, DiceSkillKit.A(StormCore, alpha), 109);
+            stormSegs.Seg(prev, p, 8f * Px, DiceSkillKit.A(StormRed, 0.75f * alpha), 108);
+            stormSegs.Seg(prev, p, 3f * Px, DiceSkillKit.A(StormCore, alpha), 109);
             prev = p;
         }
     }
@@ -1494,7 +1541,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     {
         dead = true;
         StopAllCoroutines();
-        stormCharge = -1f; stormLeft = 0f; stormFloor.enabled = false; // killed mid-storm: UpdateStorm clears the bolts
+        stormCharge = -1f; stormLeft = 0f; stormFloor.enabled = stormGlow.enabled = false; // killed mid-storm: UpdateStorm clears the bolts
         armVulnerable = BladeStuck = aimOn = bugAim = sideRunning = coreOpen = false;
         core.Pos = HatchAt;
         bugArm.Glow = blade.Glow = hatchL.Glow = hatchR.Glow = false;
