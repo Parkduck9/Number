@@ -95,7 +95,7 @@ public class Stg01Tutorial : MonoBehaviour
             var target = Target(i);
             var dice = FindFirstObjectByType<LuckyDice>();
             if (steps[i].check != "dice") LuckyDice.Charges = 0; // no surprise auto-roll before its step
-            else if (LuckyDice.Charges < LuckyDice.ChargesPerRoll - 1) LuckyDice.Charges = LuckyDice.ChargesPerRoll - 1; // one hit short: the next hit rolls it
+            else LuckyDice.Charges = LuckyDice.ChargesPerRoll; // playtest 11-13 (user): full after the card, so it rolls by itself right away
             while (true)
             {
                 if (skipped) { Finish(); yield break; }

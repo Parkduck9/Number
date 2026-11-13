@@ -44,5 +44,5 @@ helper | 밧줄을 걸어 건너가라. | Grapple across. | 5
 #check dice
 #title Lucky dice | 행운의 주사위
 #clip 6_dice
-#prompt 7 kills roll the dice by themselves (one more this time) | 7명 쓰러뜨리면 주사위가 저절로 굴러요 (이번엔 한 명만 더)
+#prompt 7 kills roll the dice by themselves (this time it rolls now) | 7명 쓰러뜨리면 주사위가 저절로 굴러요 (이번엔 바로 굴러요)
 helper | 여섯 눈, 여섯 도술. 나온 눈의 도술이 자동 발동한다. | Six faces, six spells. The rolled face casts its spell. | 6
