@@ -55,9 +55,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     // Wall gaps (playtest 11-13, 2nd: a hanger on a hook kept getting hit at the top; the jump from the floor must still work):
     //   low  2.0..5.6  stand on the bridge (a hook hanger's head, 6.0, is above it: drop off)
     //   mid  3.6..8.4  a jump from the bridge (feet over 3.6 as it passes) or hanging from a hook (feet 4.35, head 6.0, with swing room)
-    //   high 10.3..13.9 a wall perch / a roof chunk up there (rope up)
+    //   high 10.3..ceiling a wall perch / a roof chunk up there (rope up); open to the ceiling (playtest 11-13, 3rd: the rope's
+    //        swing threw the hero over a 3.6 u gap into the bugs above it)
     // Picked by weight (mid most often); never high twice in a row.
-    static readonly float[] GapLows = { 2f, 3.6f, PerchTop - 0.2f }, GapHs = { 3.6f, 4.8f, 3.6f };
+    static readonly float[] GapLows = { 2f, 3.6f, PerchTop - 0.2f }, GapHs = { 3.6f, 4.8f, WaveTop - (PerchTop - 0.2f) };
     static readonly int[] GapPick = { 0, 0, 1, 1, 1, 2 };
     const float ZoneHalf = 1.5f, FirstSlam = 0.5f;
     // Stuck blade = mash window (DECISIONS 36, replaces the EliteDuel exchange): StuckTime s, each LMB swing on the steel = MashDamage;

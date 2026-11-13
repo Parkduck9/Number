@@ -3,22 +3,15 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// Title scene UI, built from code. One flickering hologram number is the only focal point; the logo reads
-// "NUMB" solid + "ER" dim (numb-er). Menu: Start / Language / Controls (toggles the controls panel) / Quit (non-WebGL).
-// Style: UiTheme. The number color is the broadcast gold (BroadcastHackUi), not a theme value.
+// Title scene UI, built from code: key art backdrop, logo art (fallback: "NUMB" solid + "ER" dim), and the menu
+// Start / Language / Controls (toggles the controls panel) / Quit (non-WebGL). Style: UiTheme.
 public class TitleScreen : MonoBehaviour
 {
     [SerializeField] string firstScene = "STG00"; // falls back to STG01 if STG00 is not in Build Settings
 
     // Layout at the 960x540 reference. Font sizes are multiples of 12 (Mulmaru native).
-    // Mulmaru's digit 0 has a diagonal notch that reads as a broken 8 at this size; its capital O is the same
-    // plain oval (same width, same 2 px stroke), so the hologram "zero" uses that glyph.
-    const string Number = "O";
-    const int NumberSize = 192, LogoSize = 48;
-    const float NumberY = 150f, LogoY = 0f, MenuTopY = -40f;
-    static readonly Vector2 WindowSize = new Vector2(160f, 192f); // translucent hologram window behind the digit
-    static readonly Color32 Gold = new Color32(0xFF, 0xD2, 0x4A, 0xFF);
-    const byte WindowBorderAlpha = 0x50, WindowFillAlpha = 0x18;
+    const int LogoSize = 48;
+    const float LogoY = 0f, MenuTopY = -40f;
     static readonly Color BackdropTint = new Color(0.4f, 0.4f, 0.45f, 1f);
 
     GameObject controls;
@@ -41,15 +34,8 @@ public class TitleScreen : MonoBehaviour
         var canvas = UiKit.CreateCanvas("TitleCanvas", transform, 0);
         var center = new Vector2(0.5f, 0.5f);
 
-        Sprite bgArt = DraftHud.Ui("title_bg"); // 960x540 key art without logo, dimmed so the hologram, logo and menu stay on top
+        Sprite bgArt = DraftHud.Ui("title_bg"); // 960x540 key art without logo, dimmed so the logo and menu stay on top
         if (bgArt != null) UiKit.FilledImage(UiKit.Stretch("Backdrop", canvas.transform), BackdropTint).sprite = bgArt;
-
-        // Hologram: gold window (border + fill) with the digit on top; all three flicker together.
-        var window = UiKit.Rect("Hologram", canvas.transform, center, new Vector2(0f, NumberY), WindowSize);
-        var border = UiKit.FilledImage(window, WithAlpha(Gold, WindowBorderAlpha));
-        var fill = UiKit.FilledImage(UiKit.Stretch("Fill", window, t.frameWidth), WithAlpha(Gold, WindowFillAlpha));
-        var digit = UiKit.Label("Number", canvas.transform, center, new Vector2(0f, NumberY), new Vector2(400f, 240f), Number, Number, NumberSize, Gold);
-        window.gameObject.AddComponent<HologramFlicker>().Init(border, fill, digit);
 
         Sprite logoArt = DraftHud.Ui("logo_number"); // 200x44 art at 2 ref px per art pixel; falls back to the TMP text
         if (logoArt != null)
@@ -81,8 +67,6 @@ public class TitleScreen : MonoBehaviour
         var kb = Keyboard.current;
         if (controls.activeSelf && kb != null && kb.escapeKey.wasPressedThisFrame) controls.SetActive(false);
     }
-
-    static Color32 WithAlpha(Color32 c, byte a) { c.a = a; return c; }
 
     static void Quit()
     {
