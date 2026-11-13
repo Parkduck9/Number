@@ -4,4 +4,3 @@ helper | 방송이 끊겼어. 다들 제 발로 걷고 있어. | Broadcast's dea
 yudo | 길이 좀 붐비겠네. | Streets will be busy.
 helper | 다음 행운의 숫자는? | What's the next lucky number?
 yudo | 각자 정하는 거지. | Everyone picks their own.
-broadcast | [END] | [END]

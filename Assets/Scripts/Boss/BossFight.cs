@@ -1649,6 +1649,8 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
         Image img = UiKit.FilledImage(UiKit.Stretch("Art", canvas.transform), Color.white);
         img.sprite = art;
         img.preserveAspect = true;
+        // "END" on the illustration (playtest 11-14: replaces the old [END] broadcast line)
+        UiKit.Label("End", canvas.transform, new Vector2(0.5f, 0f), new Vector2(0f, 72f), new Vector2(400f, 72f), "END", "END", 48, Color.white);
         CanvasGroup group = canvas.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
         for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime) { group.alpha = t; yield return null; }
