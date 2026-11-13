@@ -25,7 +25,7 @@ public static class Stg01Builder
     // Both segments: layered, animated street backdrop (StreetBackdropKit, DECISIONS 16-2). Its street surface is the floor, so GROUND stays invisible.
     const float GroundA = 2.25f; // GROUND-A top: where the backdrop's street surface sits
     const float GroundB = 1.0f;  // GROUND-B top: SEG-B's backdrop street surface (backdrop only: no stall / crate colliders, DECISIONS 41 is SEG-A)
-    const string ExitArt = "Assets/Art/Backgrounds/STG02_05_Parts/buildings/gate_scanner.png"; // hanok gate 220 x 140 px, bottom-centre pivot
+    const string ExitArt = "Assets/Art/Backgrounds/STG02_05_Parts/buildings/gate_scanner_open_left.png"; // hanok gate 220 x 140 px, bottom-centre pivot; left wall wing cleared (playtest 11-13: keep the side by the exit glow open)
 
     // Extra street props for climb 1 (DECISIONS 41): crate lid 3.25 at x 38.4~39.0 -> stall roof 4.75 at x 41.0~42.8 -> SH-A1-1 6.75 (x 42~46).
     static readonly (string file, float x)[] ClimbSteps = { ("crates", 38.5f), ("stall_cyan", 42f) };
@@ -63,6 +63,8 @@ public static class Stg01Builder
         // ---- climb (x 46~62): zigzag shaft from the street up to the tower roof 13.0, then the high roof to the goal
         Building("TOWER-B", B, 56f, 62f, 13.0f),
         Beam("ROOF-B2", B, 62f, W, 13.0f),
+        // ---- sniper perch (DECISIONS 58): high over the bridge / shaft top, rope up from SH-B-7 (11.5) or SH-B-8 (13.0)
+        Ledge("PERCH-B", B, 40.5f, 44.5f, 17.0f),
     })
     .Concat(Zigzag("SH-B", B, 46f, 56f, 2.5f, 8))                    // 2.5 L .. 13.0 R (8 ledges), last one level with the tower roof
     .Concat(Walls("B", B, W, SegHeight * 1.5f))
@@ -106,11 +108,10 @@ public static class Stg01Builder
         new Foe("E-A9",  A, 61f, 14.25f, 0, 0.15f, 8f, cap: 4),
         new Foe("E-A10", A, 65f, 14.25f, 1, 0f,    12f, ranged: true),
         new Foe("E-A11", A, 73f, 17.25f, 0, 0.2f,  6f, cap: 4),             // climb 2 ledge (right)
-        // Sniper (DECISIONS 15) on TOWER-A2 (left of the 17.25 right ledge, so its muzzle line is clear): the laser sweeps the roof run.
-        new Foe("S-A1",  A, 68f, 15.75f, 1, 0f,    19f, sniper: true),
         new Foe("E-B3",  B, 22f, 7.5f,  0, 0.3f,  8f, cap: 4),              // on the roof (D2 roof-edge rule)
-        // Sniper on the right end of ROOF-B: covers the open shaft (x 46~56) and the street below while the player climbs.
-        new Foe("S-B1",  B, 39.5f, 7.5f, 1, 0f,   19f, sniper: true),
+        // The stage's one sniper (DECISIONS 58), SEG-B only (SEG-A right after the tutorial stays sniper-free): on PERCH-B above the
+        // bridge, it overlooks the street, ROOF-B, the shaft and ROOF-B2; from the street it is off-screen (edge warning).
+        new Foe("S-B1",  B, 42.5f, 17.0f, 1, 0f,  19f, sniper: true),
         new Foe("E-B1",  B, 30f, 1.0f,  0, 0.3f,  8f, cap: 4),              // pincer pair with E-B2 + ranged E-B4 behind
         new Foe("E-B2",  B, 33f, 1.0f,  0, 0.3f,  8f, cap: 4),
         new Foe("E-B4",  B, 38f, 1.0f,  1, 0f,    12f, ranged: true),
@@ -133,6 +134,15 @@ public static class Stg01Builder
         new Foe("X-B4", B, 28f, 7.5f, 0, 0.3f, 7f, cap: 4),
         new Foe("X-B5", B, 34f, 7.5f, 0, 0.3f, 7f, cap: 4),
         new Foe("X-B6", B, 71f, 13.0f, 0, 0.3f, 7f, cap: 4),
+        // DECISIONS 57: flying bugs (x, body centre y) in open air, clear of the stall roofs / ledges / gates / checkpoints.
+        Flyer("F-A1", A, 24.5f, 4.75f),       // over the street after the crates
+        Flyer("F-A2", A, 35f, 4.75f),         // street, left of the climb crates
+        Flyer("F-A3", A, 53f, 17.25f, 2),     // over the roof run, left of the ridge
+        Flyer("F-A4", A, 61f, 18.5f),         // between the roof run and ROOF-A2
+        Flyer("F-B1", B, 10f, 8.5f),          // over WALLTOP-B
+        Flyer("F-B2", B, 28.5f, 3.5f),        // street under ROOF-B, right of AW-B3
+        Flyer("F-B3", B, 24f, 10f, 2),        // over ROOF-B
+        Flyer("F-B4", B, 64f, 15.5f),         // over ROOF-B2 (CP-B1 x 58, goal x 70)
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only that segment's enemies.

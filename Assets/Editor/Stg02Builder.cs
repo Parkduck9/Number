@@ -64,6 +64,8 @@ public static class Stg02Builder
         // ---- high rail back over the street (x 30~49.5, y 11.5) -> goal at its left end
         Beam("RAIL-B7", B, 30f, 49.5f, 11.5f),
         new Box("END-B", B, Kind.Solid, 29f, 30f, 11.25f, 15f), // stop post: a refused goal (enemies / spawner left) must not drop the player to the street
+        // ---- sniper perch (DECISIONS 58): high over the right end of the rail, rope up from RAIL-B4 (7.0) or the shop roof (8.25)
+        Ledge("PERCH-B", B, 68f, 72f, 14.5f),
     })
     .Concat(Walls("B", B, W, SegHeight * 1.5f))
     .ToArray();
@@ -80,7 +82,7 @@ public static class Stg02Builder
     };
 
     // Numbers: cap 4 in SEG-A, 5+ allowed in SEG-B (late STG-02). Ranged = gold 1 on the player's surface (shot is horizontal);
-    // bug = ranged AI bug (keeps moving on 0, DECISIONS 14), else ranged citizen. sniper = DECISIONS 15 sniper (19u line-of-sight laser).
+    // bug = ranged AI bug (keeps moving on 0, DECISIONS 14), else ranged citizen. sniper = DECISIONS 15 / 58 sniper (laser through walls, whole segment).
     static readonly Foe[] Foes =
     {
         new Foe("E-A1",  A, 22f, 3.6875f, 0, 0.4f, 8f, cap: 4),              // on the fence top above the street (was ROOF-A2 3.8)
@@ -93,14 +95,14 @@ public static class Stg02Builder
         new Foe("E-A8",  A, 57f, 13.0f, 0, 0.45f, 8f, cap: 4),
         new Foe("E-A9",  A, 62f, 13.0f, 1, 0f,    12f, ranged: true, bug: true), // first ranged AI bug
         new Foe("E-A10", A, 71f, 19.0f, 0, 0.5f,  6f, cap: 4),               // climb 2 ledge (right)
-        new Foe("S-A1",  A, 66.5f, 14.5f, 1, 0f,  19f, sniper: true),        // on TOWER-A2, laser along the roof run
+        new Foe("S-A1",  A, 62.5f, 22.0f, 1, 0f,  19f, sniper: true),        // DECISIONS 58: top of the map, right end of ROOF-A4 (gate art ends x 60.7): overlooks the roof run and climb 2, killed on the way to the gate
         new Foe("E-B1",  B, 20f, 3.6875f, 0, 0.6f, 8f, cap: 4),              // on the fence top (was the low rail RAIL-B 5.0)
         new Foe("E-B2",  B, 30f, 1.0f,  0, 0.6f,  8f),                       // 5+ allowed from here (late STG-02)
         new Foe("E-B3",  B, 33f, 1.0f,  0, 0.6f,  8f),                       // pair with E-B2, ranged E-B5 behind
         new Foe("E-B5",  B, 38f, 1.0f,  1, 0f,    12f, ranged: true),
         new Foe("E-B4",  B, 42f, 1.0f,  0, 0.6f,  8f),
         new Foe("E-B6",  B, 58f, 5.5f,  0, 0.7f,  6f),                       // rising rail
-        new Foe("S-B1",  B, 66f, 7.0f,  1, 0f,    19f, sniper: true),        // right end of the rail: covers the rail and the street
+        new Foe("S-B1",  B, 70f, 14.5f, 1, 0f,    19f, sniper: true),        // DECISIONS 58: on PERCH-B, overlooks the street, the rising rail and the high rail
         new Foe("E-B7",  B, 43f, 11.5f, 0, 0.7f,  8f),                       // high rail group: 2 melee + ranged bug, spawner behind
         new Foe("E-B8",  B, 40f, 11.5f, 0, 0.7f,  8f),
         new Foe("E-B9",  B, 37f, 11.5f, 1, 0f,    12f, ranged: true, bug: true),
@@ -119,6 +121,15 @@ public static class Stg02Builder
         new Foe("X-B4", B, 70f, 1.0f, 0, 0.7f, 7f, cap: 4),
         new Foe("X-B5", B, 46.5f, 11.5f, 0, 0.7f, 7f, cap: 4),
         new Foe("X-B6", B, 64.5f, 7.0f, 0, 0.7f, 7f, cap: 4),
+        // DECISIONS 57: flying bugs (x, body centre y) in open air, clear of roofs / ledges / gates / checkpoints.
+        Flyer("F-A1", A, 28f, 6.25f),         // over the fence run
+        Flyer("F-A2", A, 55.5f, 16f),         // over the roof run, right of the ridge
+        Flyer("F-A3", A, 48.5f, 17f, 2),      // over the roof run, left of the ridge
+        Flyer("F-A4", A, 61.5f, 18.5f),       // between the roof run and ROOF-A4
+        Flyer("F-B1", B, 11f, 6.25f),         // over the fence run
+        Flyer("F-B2", B, 24f, 6.25f),
+        Flyer("F-B3", B, 41f, 14f, 2),        // over the high rail
+        Flyer("F-B4", B, 58.5f, 11.5f),       // over the rail switchback (RAIL-B5 / B6)
     };
 
     // Breakable spawner (DECISIONS 15): one per map, at the top of the last climb, watching only SEG-B enemies (doors are one way).

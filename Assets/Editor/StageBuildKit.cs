@@ -59,6 +59,11 @@ public static class StageBuildKit
         { this.id = id; this.seg = seg; this.x = x; this.y = y; this.fixedNumber = fixedNumber; this.progress = progress; this.detect = detect; this.android = android; this.ranged = ranged || sniper; this.cap = cap; this.bug = bug; this.sniper = sniper; this.elite = elite; this.minNumber = minNumber; }
     }
 
+    // Flying ranged bug (DECISIONS 57): hovers with its body centre at cy (segment-local) and roams around it (TestEnemy flyer).
+    // number = shots per chain (1~3; other ranged foes stay a fixed 1). Place it in open air the player can reach.
+    public static Foe Flyer(string id, int seg, float x, float cy, int number = 1, float detect = 10f) =>
+        new Foe(id, seg, x, cy - 1f, number, 0f, detect, ranged: true, bug: true);
+
     // Gold ranged "1" (mirrors Stg05Builder's bug template / EnemyVariantsTestSetup "Ranged").
     // bug = false: ranged citizen (Kind.Citizen, draft hooded sprite, freezes on 0); true: ranged AI bug (Kind.Bug, dot swarm).
     public static void TuneRanged(GameObject go, EnemyNumber number, TestEnemy te, bool bug)
@@ -338,6 +343,12 @@ public static class StageBuildKit
         if (HasProp(te, "groundMask")) SetInt(te, "groundMask", 1 << GroundLayer); // enables the roof-edge rule (D2)
 
         if (f.ranged) TuneRanged(go, number, te, f.bug);
+        if (f.ranged && f.bug && f.fixedNumber > 1) // flyers may shoot 2~3 times a chain (TuneRanged pinned 1)
+        {
+            SetInt(number, "fixedNumber", f.fixedNumber);
+            SetInt(number, "minValue", f.fixedNumber);
+            SetInt(number, "maxValue", f.fixedNumber);
+        }
         if (f.sniper) SetInt(te, "kind", 3); // TestEnemy.Kind.Sniper (after TuneRanged: same gold 1, groundMask set above = line of sight)
 
         if (f.android)

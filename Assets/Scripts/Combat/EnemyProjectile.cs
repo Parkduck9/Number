@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Placeholder ranged-enemy shot: flies straight, one hit test against the player.
+// Placeholder ranged-enemy shot: flies straight, one hit test against the player. Stopped by Ground unless PassThroughWalls (sniper).
 // Hit = destroyed. Parried = flies back harmlessly for a moment. Dodged (dash/invulnerable) = passes through, never tests again.
 public class EnemyProjectile : MonoBehaviour
 {
@@ -23,6 +23,7 @@ public class EnemyProjectile : MonoBehaviour
     public static readonly System.Collections.Generic.List<EnemyProjectile> Active = new System.Collections.Generic.List<EnemyProjectile>();
     public Vector2 Velocity => velocity;
     public bool Parryable => !info.Unparryable && !passedPlayer;
+    public bool StoppedByGround => groundMask.value != 0; // false = PassThroughWalls (sniper): a wall on its path does not save the player
     public bool Reflected { get; private set; }        // parried back (BossFight: a reflected shot that reaches the chest hatch hurts it)
     [System.NonSerialized] public float ReflectLife = Juice.ReflectLife; // s a parried shot keeps flying (the boss sets it longer)
     [System.NonSerialized] public Vector2? ReflectTarget;                 // boss hatch: the weakened shot lobs back into it instead of just dropping
@@ -79,6 +80,14 @@ public class EnemyProjectile : MonoBehaviour
         p.info = info;
         p.dieAt = Time.time + Lifetime;
         return p;
+    }
+
+    // Opt-in (DECISIONS 58 sniper): flies through walls, buildings and one-way platforms, and lives `lifetime` s instead of Lifetime.
+    public EnemyProjectile PassThroughWalls(float lifetime)
+    {
+        groundMask = 0;
+        dieAt = Time.time + lifetime;
+        return this;
     }
 
     void Update()

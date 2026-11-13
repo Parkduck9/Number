@@ -6,7 +6,7 @@ using static StageBuildKit;
 
 // Menu NUMBER/Build STG-04 -> Assets/Scenes/STG04.unity. Idempotent. Data: docs/design/LEVEL_STG04.md "세로 맵" (tables below = that doc).
 // DECISIONS 15 vertical map: each segment = factory floor (old layout, x 0~45) -> conveyor shaft (stacked one-way ledges) -> press/tower roof
-// (checkpoint) -> high run -> exit on top. SEG-A ends at a sniper tower with the gate, SEG-B on a gantry run with the spawner and the goal.
+// (checkpoint) -> high run -> exit on top. SEG-A ends at a tower with the gate, SEG-B on a gantry run with the spawner and the goal.
 public static class Stg04Builder
 {
     const string Tag = "Stg04Builder";
@@ -39,10 +39,12 @@ public static class Stg04Builder
         new Box("GROUND-A", A, Kind.Solid, 0f, W, 0f, 1.0f),
         // ---- SEG-A climb (x 46~56): stacked conveyor ledges 2.5 L .. 10.0 R, flush with the press roof
         Building("PRESS-A", A, 56f, 60f, 10.0f),                   // checkpoint CP-A1 on top; blocks the floor route
-        // ---- SEG-A high run (x 60~72, y 10.0) -> crate stack -> sniper tower with the gate on top
+        // ---- SEG-A high run (x 60~72, y 10.0) -> crate stack -> tower with the gate on top
         Beam("HRUN-A", A, 60f, 72f, 10.0f),
         Ledge("STACK-A", A, 69.5f, 71.5f, 11.5f),                  // right of the ranged bug's back-off reach (its shot is at feet +1.05..1.55)
         Building("TOWER-A", A, 72f, W, 13.0f),
+        // ---- sniper perch (DECISIONS 58): high over the end of the floor fight, rope up from CONV-A-5 (8.5) / CONV-A-6 (10.0)
+        Ledge("PERCH-A", A, 40f, 44f, 15.5f),
     }
     .Concat(Zigzag("CONV-A", A, 46f, 56f, 2.5f, 6))                // 2.5 L, 4.0 R, 5.5 L, 7.0 R, 8.5 L, 10.0 R
     .Concat(new[]
@@ -51,9 +53,11 @@ public static class Stg04Builder
         new Box("GROUND-B", B, Kind.Solid, 0f, W, 0f, 1.0f),
         // ---- SEG-B climb (x 46~56): inspection lift ledges 2.5 R .. 11.5 R, flush with the tower roof
         Building("TOWER-B", B, 56f, 62f, 11.5f),                   // checkpoint CP-B1 on top
-        // ---- SEG-B high run (x 62~76, y 11.5) + gantry for the sniper; goal at the right end
+        // ---- SEG-B high run (x 62~76, y 11.5) + gantry; goal at the right end
         Beam("HRUN-B", B, 62f, W, 11.5f),
         Ledge("GANTRY-B", B, 69f, 72f, 13.0f),
+        // ---- sniper perch (DECISIONS 58): high over the tower top (11.5), one rope up
+        Ledge("PERCH-B", B, 57f, 61f, 17.0f),
     })
     .Concat(Zigzag("LIFT-B", B, 46f, 56f, 2.5f, 7, StepUp, false)) // 2.5 R, 4.0 L, 5.5 R, 7.0 L, 8.5 R, 10.0 L, 11.5 R
     .ToArray();
@@ -91,7 +95,7 @@ public static class Stg04Builder
         new Foe("E-A9", A, 63f, 10.0f, 1, 0f,  12f, ranged: true, bug: true), // ranged bug facing the shaft top (nothing above it to eat its shots)
         new Foe("E-A7", A, 65.5f, 10.0f, 0, 0.7f, 8f),
         new Foe("E-A8", A, 68f, 10.0f, 0, 0.7f, 8f),
-        new Foe("S-A1", A, 73f, 13.0f, 1, 0f,  19f, sniper: true),     // sniper on the gate tower: its laser sweeps the high run
+        new Foe("S-A1", A, 42f, 15.5f, 1, 0f,  19f, sniper: true),     // DECISIONS 58: on PERCH-A, overlooks the android floor, the conveyor shaft and the high run
         // SEG-B floor
         new Foe("E-B1", B, 15f, 1.0f, 0, 0.8f, 8f),
         new Foe("E-B2", B, 23f, 1.0f, 4, 0f,   8f, android: true),     // android 4 (androids 3 -> 4 -> 6, no 7 outside the boss)
@@ -103,7 +107,7 @@ public static class Stg04Builder
         new Foe("E-B8", B, 48.5f, 7.0f, 0, 0.8f, 6f),                  // lift ledge (left)
         new Foe("E-B9", B, 63f, 11.5f, 1, 0f,  12f, ranged: true, bug: true), // ranged bug: keeps shooting on 0 while the citizens freeze
         new Foe("E-B7", B, 66f, 11.5f, 0, 0.8f, 8f),
-        new Foe("S-B1", B, 70.5f, 13.0f, 1, 0f, 19f, sniper: true),    // sniper on the gantry: frozen while the board shows 0, wakes if the player hacks it away
+        new Foe("S-B1", B, 59f, 17.0f, 1, 0f, 19f, sniper: true),      // DECISIONS 58: on PERCH-B over TOWER-B, overlooks the floor, the lift shaft and the high run to the goal
         // Elites (DECISIONS 22), 5~9, on the flat floor, not in the spawner list.
         new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 7, elite: true, minNumber: 5), // under the fence run (overhead one-way, was CW-A1), 5u from the crates at x 8
         new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 7, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
@@ -120,6 +124,15 @@ public static class Stg04Builder
         new Foe("X-B4", B, 44f, 1.0f, 0, 0.8f, 7f, cap: 4),
         new Foe("X-B5", B, 51f, 1.0f, 0, 0.8f, 7f, cap: 4),
         new Foe("X-B6", B, 68f, 11.5f, 0, 0.8f, 7f, cap: 4),
+        // DECISIONS 57: flying bugs (x, body centre y) in open air, clear of roofs / ledges / gates / checkpoints / snipers.
+        Flyer("F-A1", A, 10.5f, 6.25f),       // over the first fence run
+        Flyer("F-A2", A, 35.5f, 6.25f),       // over the second fence run
+        Flyer("F-A3", A, 25f, 8.75f, 2),      // over the watchtower roof
+        Flyer("F-A4", A, 67f, 13.5f),         // over the high run (E-A9 at x 63)
+        Flyer("F-B1", B, 21.5f, 6.25f),       // over the fence run
+        Flyer("F-B2", B, 34.5f, 9.75f, 2),    // over the factory hall roof
+        Flyer("F-B3", B, 10.5f, 9.75f),       // over the factory hall roof
+        Flyer("F-B4", B, 44f, 9.75f),         // over the factory hall roof, left of the lift shaft
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only the climb + high-run group (E-B8, E-B9, E-B7, S-B1): watching the floor too would force a second descent (Fable review).
@@ -130,7 +143,7 @@ public static class Stg04Builder
     static readonly Vector2 BoardPosA = new Vector2(25f, 4.5f), BoardPosB = new Vector2(10f, 4.5f);
     const int BoardA = 7, BoardB = 7;
 
-    static readonly Box GateA = new Box("TR-A-GATE", A, Kind.Solid, 74.3f, W, 13.0f, 17.0f); // right end of the gate tower (the sniper stands left of it)
+    static readonly Box GateA = new Box("TR-A-GATE", A, Kind.Solid, 74.3f, W, 13.0f, 17.0f); // right end of the gate tower
     static readonly Box GoalB = new Box("TR-B-GOAL", B, Kind.Solid, 72.3125f, 75.3125f, 11.5f, 15.5f); // right end of the high run
 
     [MenuItem("NUMBER/Build STG-04")]

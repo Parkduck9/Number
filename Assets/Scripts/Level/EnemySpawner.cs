@@ -63,11 +63,37 @@ public class EnemySpawner : MonoBehaviour
             }
         }
         basePos = transform.localPosition;
+        BuildHint();
         BuildTemplates();
     }
 
-    void OnEnable() => StageClear.Spawners.Add(this);
-    void OnDisable() => StageClear.Spawners.Remove(this);
+    // Playtest 11-13: a standing label above every unbroken device so the player knows to smash it. Hidden once it is Broken.
+    static readonly Color HintColor = new Color32(0xF2, 0xC9, 0x4C, 0xFF); // talisman yellow
+    const float HintY = 1.4f; // above the 1.5 u art (device centre is 0.8 above the floor)
+    TMPro.TextMeshPro hint;
+
+    void BuildHint()
+    {
+        var go = new GameObject("SmashHint");
+        go.transform.SetParent(transform, false);
+        go.transform.localPosition = new Vector3(0f, HintY, 0f);
+        hint = go.AddComponent<TMPro.TextMeshPro>();
+        if (UiTheme.Current != null && UiTheme.Current.font != null) hint.font = UiTheme.Current.font;
+        hint.fontSize = 3.75f; // on Mulmaru's 12 px grid
+        hint.alignment = TMPro.TextAlignmentOptions.Center;
+        hint.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+        hint.color = HintColor;
+        hint.rectTransform.sizeDelta = new Vector2(8f, 1f);
+        var mr = go.GetComponent<MeshRenderer>();
+        mr.sortingLayerName = "FX";
+        mr.sortingOrder = 50;
+        SetHintText();
+    }
+
+    void SetHintText() { if (hint != null) hint.text = Loc.T("SMASH THE SPAWNER", "스폰 장치 부수기"); }
+
+    void OnEnable() { StageClear.Spawners.Add(this); Loc.Changed += SetHintText; }
+    void OnDisable() { StageClear.Spawners.Remove(this); Loc.Changed -= SetHintText; }
 
     void Start() => player = FindFirstObjectByType<PlayerController>();
 
@@ -157,6 +183,7 @@ public class EnemySpawner : MonoBehaviour
     void Break()
     {
         Broken = true;
+        if (hint != null) hint.gameObject.SetActive(false);
         for (int i = 0; i < Juice.KillSparks; i++)
             Spark((Vector2)transform.position + new Vector2(UnityEngine.Random.Range(-size.x, size.x) * 0.5f, UnityEngine.Random.Range(-size.y, size.y) * 0.5f));
         MomentFx.SpawnerBreak(transform.position);

@@ -1285,7 +1285,7 @@ public class PlayerController : MonoBehaviour
             if (dist > DashRules.ParryShotRange && shotEta > DashRules.ParryShotWindow) continue; // QA R2-04: near OR arriving soon
             Vector2 vn = v.normalized;
             if (Mathf.Abs(vn.x * to.y - vn.y * to.x) > DashRules.ParryShotLateral) continue; // passes beside the body
-            if (Physics2D.Raycast(p.transform.position, vn, Mathf.Max(0f, dist - 0.7f), groundMask).collider != null) continue; // dies on a wall first
+            if (p.StoppedByGround && Physics2D.Raycast(p.transform.position, vn, Mathf.Max(0f, dist - 0.7f), groundMask).collider != null) continue; // dies on a wall first (sniper shots fly through: still a threat)
             bestDist = dist;
             face = Mathf.Abs(v.x) > 0.01f ? (v.x > 0f ? -1 : 1) : (to.x < 0f ? 1 : -1); // ReceiveEnemyHit judges shots by travel direction
             eta = shotEta;

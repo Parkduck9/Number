@@ -30,7 +30,9 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     public enum Kind { Citizen, Bug, Android, Sniper, Elite } // new kinds go last (serialized as int)
 
     // ---- Sniper (DECISIONS 15): stands still, laser tracks the player, locks, fires one fast parryable shot along the locked line ----
-    const float SniperRange = 30f;       // (T) u from the muzzle, needs a clear line (groundMask): a whole screen width (was 19, playtest 11-12)
+    // DECISIONS 58: no line-of-sight or on-screen check any more. Laser and shot go through everything; off-screen aim = SniperWarning at the edge.
+    const float SniperRange = 60f;       // (T) u from the muzzle, player in the sniper's own segment only (was 30 + on screen, DECISIONS 46)
+    const float SniperLineLength = 100f; // (T) u: the laser runs on past the hero (range + 40) and the shot flies all of it
     const float SniperTrackTime = 1.0f;  // (T) laser follows the player
     const float SniperLockTime = 0.25f;  // (T) laser fixed + flashing, then the shot
     const float SniperShotSpeed = 14f;   // (T) u/s; LMB parry window = (DashRules.ParryShotRange 3 - contact 0.7) / this = 0.16 s (22 gave 0.1 s: too tight, Fable review)
@@ -46,6 +48,18 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     const float AndroidTurnGrace = 0.35f; // (T) s: a hit this soon after it turned around during a player dash still counts as from behind (Shift dash-behind)
     const float AndroidAboveDy = 1.0f;    // (T) attacker centre at least this far above the android's centre (2.0 was out of reach of every attack; levels/Fable 11-09)
     const float AndroidDescendVy = 0.5f;  // (T) airborne attacker counts as "from above" only while moving down faster than this (u/s)
+
+    // ---- Flyer (ranged bug, DECISIONS 57): no gravity, roams a box around its spawn; spotted the player -> drifts to a shooting spot ----
+    // at the player's height (the shot is horizontal) and fires by the normal ranged rules. Knocked out: gravity back on, falls over.
+    const float Gravity = 4f;
+    const float FlyRoamX = 4f, FlyRoamY = 1.25f;      // (T) idle: waypoints inside home +- this
+    const float FlyLeashX = 6f, FlyLeashY = 2.5f;     // (T) engaged: shooting spot clamped to home +- this
+    const float FlyIdleSpeed = 1.6f, FlyEngagedSpeed = 3f; // (T) u/s
+    const float FlyAccel = 6f;                        // (T) u/s^2: lazy, smooth turns
+    const float FlyArrive = 1f;                       // (T) u: slows down inside this distance of the waypoint
+    const float FlyShootDist = 5.5f;                  // (T) x from the player (just past keepDistance 5: no back-off dance)
+    const float FlyBobAmp = 0.12f, FlyBobFreq = 2.4f; // (T) u, rad/s
+    static readonly Vector2 FlyBody = new Vector2(0.8f, 1.8f); // waypoint / path check box (collider 0.9 x 2, a little slimmer)
 
     [Header("Variants (defaults = melee citizen)")]
     [SerializeField] Kind kind = Kind.Citizen;       // Android uses the gold fan special
@@ -120,7 +134,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     float facingChangedAt = -10f; // Android guard: last turn-around (AndroidTurnGrace)
     float nextDuelAt;         // elite: no new duel before this
     SniperSight sight;
-    ParryRing ring;           // melee parry timing tell (built on first strike)
+    SniperWarning warning;    // sniper: off-screen aim marker (DECISIONS 58)
+    ParryRing ring;          // melee parry timing tell (built on first strike)
     float ringTotal = -1f;    // eta when the current ring started (-1 = not started; reset by EnterState except into Strike)
     Vector2 ringContact;      // target ring centre, fixed for the windup
     ParryHeight strikeHeight; // melee: rolled when a Windup / Charge starts (ring + player parry FX / pose; presentation only)
@@ -131,6 +146,11 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     bool held;                // GameFlow.EnemiesHeld: body parked (no gravity, velocity stored)
     Vector2 heldVelocity;     // restored on release (kill knockback landed during the hold)
     float heldGravity;
+    bool flying;              // ranged bug: hovers and roams (DECISIONS 57), independent of the art (`flyer` is the look)
+    bool flyEngaged;          // last waypoint was a shooting spot
+    Vector2 home, waypoint;
+    float nextWaypointAt, bobPhase;
+    float segMin = float.NegativeInfinity, segMax = float.PositiveInfinity; // this segment's x range (waypoints stay inside)
 
     // NUM-7 clock is the board's (shared by every enemy of the zone): dope for Num7DopeSeconds, then exhaustion, repeating.
     float Num7Phase => zoneBoard != null ? Time.time - zoneBoard.NumberChangedAt : 0f;
@@ -165,7 +185,9 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             baseColor = EliteTint;
             visual.transform.localScale *= EliteScale; // feet pivot: grows upward
         }
-        rb.gravityScale = 4f;
+        flying = bug && ranged;
+        rb.gravityScale = flying ? 0f : Gravity;
+        if (flying) { home = waypoint = transform.position; bobPhase = Random.value * 6.28f; } // a respawned copy is placed at the spawn too
         rb.freezeRotation = true;
         hp = maxHp;
     }
@@ -174,6 +196,8 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
     {
         player = FindFirstObjectByType<PlayerController>();
         if (player != null) playerRb = player.GetComponent<Rigidbody2D>();
+        if (flying) StageClear.SegmentAt(home.x, out segMin, out segMax);
+        if (kind == Kind.Sniper) StageClear.SegmentAt(transform.position.x, out segMin, out segMax); // it only fires at a player in this segment
         EnterState(State.Approach);
         zoneBoard = BroadcastBoard.At(transform.position); // zone is fixed: find it once, then react to its changes
         if (zoneBoard != null)
@@ -209,7 +233,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             nextRushAt += Time.deltaTime;
             nextAimAt += Time.deltaTime;
             if (frozenUntil > 0f) frozenUntil += Time.deltaTime;
-            if (sight != null && state != State.Windup) sight.Hide(); // knocked out / frozen while held: no laser
+            if (sight != null && state != State.Windup) { sight.Hide(); warning.Hide(); } // knocked out / frozen while held: no laser
             if (ring != null) ring.Hide(); // no parry rings while held (LMB attacks then; MeleeThreatens is off); they come back on release
             ApplyVisual();
             return;
@@ -249,8 +273,9 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             return;
         }
         if (held) { held = false; rb.gravityScale = heldGravity; rb.linearVelocity = heldVelocity; }
-        if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); return; }
+        if (GameFlow.InputLocked) { rb.linearVelocity = new Vector2(0f, flying && state != State.Stunned ? 0f : rb.linearVelocity.y); return; }
         if (state == State.Stunned) return; // keep the kill knockback until the body vanishes
+        if (flying) { FlyMove(); return; }
         float vx = 0f;
         bool chasing = false; // spotted the player and heading for them: may drop off a roof edge (see DropOk)
         // Recover also closes the gap so the chain keeps landing after the player's hurt knockback.
@@ -338,6 +363,61 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
         if (groundMask.value == 0) return false;
         Vector2 origin = (Vector2)transform.position + new Vector2(dir * edgeProbeForward, -0.9f);
         return Physics2D.Raycast(origin, Vector2.down, edgeProbeDepth, groundMask).collider == null;
+    }
+
+    // Flyer: steer toward the current waypoint with a capped acceleration, plus a slow bob. Any state but Approach just hovers
+    // (aiming, shooting, frozen, open...). Facing: the player once spotted (UpdateState), else the way it flies.
+    void FlyMove()
+    {
+        Vector2 want = Vector2.zero;
+        if (state == State.Approach && player != null)
+        {
+            bool engaged = IsActive();
+            if (engaged != flyEngaged || Time.time >= nextWaypointAt) { flyEngaged = engaged; PickWaypoint(engaged); }
+            Vector2 to = waypoint - rb.position;
+            float dist = to.magnitude;
+            float speed = (engaged ? FlyEngagedSpeed : FlyIdleSpeed) * (Doped ? BroadcastRules.Num7SpeedMul : 1f);
+            if (dist > 0.05f) want = to / dist * speed * Mathf.Min(1f, dist / FlyArrive);
+            if (!engaged && Mathf.Abs(rb.linearVelocity.x) > 0.3f) facing = rb.linearVelocity.x > 0f ? 1 : -1;
+        }
+        want.y += Mathf.Cos(Time.time * FlyBobFreq + bobPhase) * FlyBobAmp * FlyBobFreq; // velocity of a sine bob
+        rb.linearVelocity = Vector2.MoveTowards(rb.linearVelocity, want, FlyAccel * Time.fixedDeltaTime);
+    }
+
+    // Idle: a random point in the home box every 1.5-3 s. Engaged: a shooting spot FlyShootDist beside the player at its height
+    // (own side first, then the other), leashed to home. Spots inside / behind Ground are skipped; boxed in = hover and retry soon.
+    void PickWaypoint(bool engaged)
+    {
+        Vector2 pos = rb.position;
+        nextWaypointAt = Time.time + (engaged ? Random.Range(0.8f, 1.6f) : Random.Range(1.5f, 3f));
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 wp;
+            if (engaged)
+            {
+                Vector2 p = player.transform.position;
+                float side = (pos.x >= p.x) == (i < 2) ? 1f : -1f;
+                wp = new Vector2(p.x + side * FlyShootDist + Random.Range(-1f, 1f), p.y + Random.Range(-0.3f, 0.6f)); // muzzle +0.3: at the player's body
+                wp.x = Mathf.Clamp(wp.x, home.x - FlyLeashX, home.x + FlyLeashX);
+                wp.y = Mathf.Clamp(wp.y, home.y - FlyLeashY, home.y + FlyLeashY);
+            }
+            else wp = home + new Vector2(Random.Range(-FlyRoamX, FlyRoamX), Random.Range(-FlyRoamY, FlyRoamY));
+            wp.x = Mathf.Clamp(wp.x, segMin + 1f, segMax - 1f);
+            if (FlyClear(pos, wp)) { waypoint = wp; return; }
+        }
+        waypoint = pos;
+        nextWaypointAt = Time.time + 0.5f;
+    }
+
+    // The body fits at `to` and the straight path there crosses no Ground (one-way ledges count too: a flyer never lands).
+    bool FlyClear(Vector2 from, Vector2 to)
+    {
+        if (groundMask.value == 0) return true;
+        if (Physics2D.OverlapBox(to, FlyBody, 0f, groundMask) != null) return false;
+        Vector2 d = to - from;
+        float len = d.magnitude;
+        if (len < 0.01f || Physics2D.OverlapBox(from, FlyBody, 0f, groundMask) != null) return true; // drifted up into a one-way ledge: the cast would hit it at 0 for every target and park the flyer there for good
+        return Physics2D.BoxCast(from, FlyBody, 0f, d / len, len, groundMask).collider == null;
     }
 
     void UpdateState()
@@ -451,14 +531,12 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
 
     Vector2 Muzzle => (Vector2)transform.position + new Vector2(muzzleOffset.x * facing, muzzleOffset.y);
 
-    // Sniper: player within SniperRange of the muzzle and no ground in between.
+    // Sniper: player in this sniper's segment and within SniperRange of the muzzle. Walls / cover / off-screen do not matter (DECISIONS 58).
     bool SniperSees()
     {
         Vector2 m = Muzzle, p = player.transform.position;
-        if ((p - m).sqrMagnitude > SniperRange * SniperRange) return false;
-        var cam = Camera.main; // the longer range must not shoot from off-screen: the sniper has to be in view
-        if (cam != null) { Vector3 v = cam.WorldToViewportPoint(m); if (v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f) return false; }
-        return groundMask.value == 0 || Physics2D.Linecast(m, p, groundMask).collider == null;
+        if (p.x < segMin || p.x > segMax) return false;
+        return (p - m).sqrMagnitude <= SniperRange * SniperRange;
     }
 
     // Sniper Windup: track for SniperTrackTime (losing sight aborts), then lock the line. false = aborted.
@@ -479,20 +557,15 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
         return true;
     }
 
-    // Laser while aiming (Windup), to the first ground hit or SniperRange.
+    // Laser while aiming (Windup): through the hero and on for SniperLineLength, through walls. Muzzle off-screen = edge warning too.
     void UpdateSight()
     {
-        if (sight == null) sight = SniperSight.For(gameObject);
-        if (state != State.Windup) { sight.Hide(); return; }
+        if (sight == null) { sight = SniperSight.For(gameObject); warning = SniperWarning.For(gameObject); }
+        if (state != State.Windup) { sight.Hide(); warning.Hide(); return; }
         Vector2 m = Muzzle;
         Vector2 dir = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
-        float len = SniperRange;
-        if (groundMask.value != 0)
-        {
-            RaycastHit2D h = Physics2D.Raycast(m, dir, SniperRange, groundMask);
-            if (h.collider != null) len = h.distance;
-        }
-        sight.Show(m, m + dir * len, sniperLocked);
+        sight.Show(m, m + dir * SniperLineLength, sniperLocked);
+        warning.Show(m, sniperLocked);
     }
 
     // DECISIONS 25 sniper shot relay: a human going about its pattern (not down, frozen, open, staggered, dueling or a boss wave).
@@ -545,6 +618,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
             {
                 Vector2 shot = sniperDir.sqrMagnitude > 0f ? sniperDir : new Vector2(facing, 0f);
                 EnemyProjectile.Spawn(Muzzle, shot * SniperShotSpeed, playerMask, groundMask, hit, projectileColor, DraftSprites.BulletSniper)
+                    .PassThroughWalls(SniperLineLength / SniperShotSpeed) // DECISIONS 58: no cover; a dodged shot flies the whole laser line
                     .RelayShooter = this; // DECISIONS 25: other humans on its path bat it at the player
                 MomentFx.SniperMuzzle(Muzzle, shot);
             }
@@ -659,6 +733,7 @@ public class TestEnemy : MonoBehaviour, IDuelFoe
                 number.Hide();
                 Sfx.Play(StunSfx);
                 rb.linearVelocity = Vector2.zero;
+                if (flying) { if (held) heldGravity = Gravity; else rb.gravityScale = Gravity; } // knocked out of the air: falls with the kill knockback
                 if (visual != null && !(draftSprite && draftStunned != null)) visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f * -facing);
                 break;
         }
