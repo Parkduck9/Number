@@ -51,8 +51,10 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     const float CoreHitEvery = 0.1f, CoreHalf = 0.75f, CoreIssenPast = 1.6f; // s between LMB hits (safety only: Swung fires once per swing, swings are >= attackDuration 0.3 s apart minus one frame); u half size; u issen lands past it
     public static int DiceDamage(int face) => (face + 1) / 2; // faces 1..6 -> 1, 1, 2, 2, 3, 3
     const float WaveSpeed = 10.5f, WaveEvery = 1.1f, // was 9 / 1.3 (DECISIONS 33)
- WaveHalfW = 0.6f, WaveTop = 9.5f, GapH = 3f, SlumpTime = 1.5f;
-    static readonly float[] GapLows = { 2f, 3.8f };         // gap on the floor (stand) / at jump height
+ WaveHalfW = 0.6f, WaveTop = 16.5f /* playtest 11-13: was 9.5, the walls now reach the ceiling (the gap is the way through) */, GapH = 3f, SlumpTime = 1.5f;
+    // gap on the floor (stand) / at jump height (or a hook hang) / up at the wall perches (rope up, or a roof chunk). Picked at random,
+    // the high gap at half the weight; never high twice in a row (playtest 11-13: walls over the whole room height)
+    static readonly float[] GapLows = { 2f, 2f, 3.8f, 3.8f, PerchTop - 0.2f };
     const float ZoneHalf = 1.5f, FirstSlam = 0.5f;
     // Stuck blade = mash window (DECISIONS 36, replaces the EliteDuel exchange): StuckTime s, each LMB swing on the steel = MashDamage;
     // MashCap hits (= the old duel's 6 damage) rip it out early. The arm tugs every TugEvery s (shorter as time runs out).
@@ -183,7 +185,7 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     static float Dt => GameFlow.InputLocked || Held ? 0f : Time.deltaTime;
 
     // swarm pool: Waves walls x BugsPerWave bugs
-    const int Waves = 3, BugsPerWave = 56;
+    const int Waves = 3, BugsPerWave = 130; // 56 for the old 7.5 u wall; same density over the full height
     readonly float[] waveX = new float[Waves], gapLo = new float[Waves];
     readonly bool[] waveOn = new bool[Waves], waveHit = new bool[Waves];
     readonly SpriteRenderer[] bugs = new SpriteRenderer[Waves * BugsPerWave];
@@ -601,13 +603,18 @@ public class BossFight : MonoBehaviour, PlayerController.IIssenTarget, PlayerCon
     }
 
     // ---- A: bug swarm walls, then the arm slumps (opening) ----
+    float lastGap;
+
     IEnumerator AttackA(int n, float tell)
     {
         bugArm.Glow = true; // stays lit while it controls the swarm (DECISIONS 36)
         yield return Wait(tell);
         for (int i = 0; i < n; i++)
         {
-            LaunchWave(GapLows[Random.Range(0, GapLows.Length)]);
+            float lo;
+            do lo = GapLows[Random.Range(0, GapLows.Length)]; while (lo > 5f && lastGap > 5f);
+            lastGap = lo;
+            LaunchWave(lo);
             if (i == 0) StartCoroutine(BugShots()); // runs until the last wall leaves
             if (i < n - 1) yield return Conduct(WaveEvery);
         }
