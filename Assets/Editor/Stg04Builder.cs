@@ -107,16 +107,19 @@ public static class Stg04Builder
         // Elites (DECISIONS 22), 5~9, on the flat floor, not in the spawner list.
         new Foe("ELITE-A1", A, 13f, 1.0f, 0, 0.7f, 8f, cap: 7, elite: true, minNumber: 5), // under the fence run (overhead one-way, was CW-A1), 5u from the crates at x 8
         new Foe("ELITE-B1", B, 7f, 1.0f, 0, 0.8f, 8f, cap: 7, elite: true, minNumber: 5),  // before the first crate, 5u from the arrival checkpoint
-        // Playtest 11-13 (user): ~7 single kills charge the dice (DECISIONS 53), then a PACK of weak enemies (number 2) right ahead, on screen
-        // when the 7th falls, so the auto-rolled skill takes the whole crowd at once.
-        new Foe("P-A1", A, 46f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A2", A, 47.5f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A3", A, 49f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A4", A, 50.5f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B1", B, 42f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B2", B, 43.5f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B3", B, 45f, 1.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B4", B, 46.5f, 1.0f, 0, 0.2f, 6f, cap: 2),
+        // Playtest 11-13 (user): more enemies spread over the whole map (7 kills = an auto dice roll, DECISIONS 53).
+        new Foe("X-A1", A, 26f, 1.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-A2", A, 29f, 1.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-A3", A, 48f, 1.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-A4", A, 52f, 1.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-A5", A, 61.5f, 10.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-A6", A, 70f, 10.0f, 0, 0.7f, 7f, cap: 4),
+        new Foe("X-B1", B, 19f, 1.0f, 0, 0.8f, 7f, cap: 4),
+        new Foe("X-B2", B, 27f, 1.0f, 0, 0.8f, 7f, cap: 4),
+        new Foe("X-B3", B, 37f, 1.0f, 0, 0.8f, 7f, cap: 4),
+        new Foe("X-B4", B, 44f, 1.0f, 0, 0.8f, 7f, cap: 4),
+        new Foe("X-B5", B, 51f, 1.0f, 0, 0.8f, 7f, cap: 4),
+        new Foe("X-B6", B, 68f, 11.5f, 0, 0.8f, 7f, cap: 4),
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only the climb + high-run group (E-B8, E-B9, E-B7, S-B1): watching the floor too would force a second descent (Fable review).

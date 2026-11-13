@@ -120,16 +120,19 @@ public static class Stg01Builder
         new Foe("E-B8",  B, 68f, 13.0f, 0, 0.3f,  8f, cap: 4),
         new Foe("E-B9",  B, 74f, 13.0f, 1, 0f,    12f, ranged: true),
         new Foe("ELITE-B1", B, 24f, 1.0f, 0, 0.3f, 8f, cap: 4, elite: true, minNumber: 3), // DECISIONS 22: first elite, 3~4, on the SEG-B street under AW-B3 (not in the spawner list)
-        // Playtest 11-13 (user): ~7 single kills charge the dice (DECISIONS 53), then a PACK of weak enemies (number 2) right ahead, on screen
-        // when the 7th falls, so the auto-rolled skill takes the whole crowd at once.
-        new Foe("P-A1", A, 59.5f, 14.25f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A2", A, 60.5f, 14.25f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A3", A, 62.5f, 14.25f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-A4", A, 63.5f, 14.25f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B1", B, 60f, 13.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B2", B, 61.5f, 13.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B3", B, 63f, 13.0f, 0, 0.2f, 6f, cap: 2),
-        new Foe("P-B4", B, 64f, 13.0f, 0, 0.2f, 6f, cap: 2),
+        // Playtest 11-13 (user): more enemies spread over the whole map (7 kills = an auto dice roll, DECISIONS 53).
+        new Foe("X-A1", A, 22f, 2.25f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-A2", A, 37f, 2.25f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-A3", A, 41f, 2.25f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-A4", A, 52f, 14.25f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-A5", A, 63f, 14.25f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-A6", A, 70.5f, 15.75f, 0, 0.15f, 7f, cap: 4),
+        new Foe("X-B1", B, 14f, 1.0f, 0, 0.3f, 7f, cap: 4),
+        new Foe("X-B2", B, 44f, 1.0f, 0, 0.3f, 7f, cap: 4),
+        new Foe("X-B3", B, 50f, 1.0f, 0, 0.3f, 7f, cap: 4),
+        new Foe("X-B4", B, 28f, 7.5f, 0, 0.3f, 7f, cap: 4),
+        new Foe("X-B5", B, 34f, 7.5f, 0, 0.3f, 7f, cap: 4),
+        new Foe("X-B6", B, 71f, 13.0f, 0, 0.3f, 7f, cap: 4),
     };
 
     // Breakable spawner (DECISIONS 15): one per map, in the LAST segment, watching only that segment's enemies.
