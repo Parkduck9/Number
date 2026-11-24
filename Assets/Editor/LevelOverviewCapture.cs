@@ -19,6 +19,11 @@ public static class LevelOverviewCapture
 
     public static void CaptureBatch()
     {
+        // NUMBER_BUILD = "STG01,STG02": run those Stg0xBuilder.Build() first (scenes are only ever made by the builders).
+        var build = System.Environment.GetEnvironmentVariable("NUMBER_BUILD");
+        if (!string.IsNullOrEmpty(build))
+            foreach (var s in build.Split(','))
+                StageBuildKit.FindType("Stg" + s.Trim().Substring(3) + "Builder")?.GetMethod("Build")?.Invoke(null, null);
         var tag = System.Environment.GetEnvironmentVariable("NUMBER_CAPTURE_TAG");
         Capture(string.IsNullOrEmpty(tag) ? "before" : tag);
     }

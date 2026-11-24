@@ -125,6 +125,7 @@ public static class Stg01Builder
     public static void Build()
     {
         if (!Begin(Tag, ScenePath)) return;
+        UseSkin("STG01");
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         var roots = new Transform[SegX.Length];

@@ -135,6 +135,34 @@ public static class StageBuildKit
     public static Sprite Square;
     public static GameObject Player, Enemy;
 
+    // Platform art of the current stage (Assets/Art/Platforms/<stage>/); null = keep the placeholder squares for that role.
+    public static Sprite SkinLedge, SkinBeam, SkinWall, SkinRoof;
+
+    public static void UseSkin(string stage)
+    {
+        string dir = "Assets/Art/Platforms/" + stage;
+        Sprite Find(string prefix)
+        {
+            if (!AssetDatabase.IsValidFolder(dir)) return null;
+            foreach (var guid in AssetDatabase.FindAssets("t:Sprite", new[] { dir }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetFileName(path).StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+            return null;
+        }
+        SkinLedge = Find("ledge_");
+        SkinBeam = Find("beam_");
+        SkinWall = Find("tower_wall");
+        SkinRoof = Find("tower_roof");
+        var missing = new List<string>();
+        if (SkinLedge == null) missing.Add("ledge_");
+        if (SkinBeam == null) missing.Add("beam_");
+        if (SkinWall == null) missing.Add("tower_wall");
+        if (SkinRoof == null) missing.Add("tower_roof");
+        if (missing.Count > 0) Todo.Add($"Platform art {stage}: missing {string.Join(", ", missing)} (placeholders kept)");
+    }
+
     // Unsaved-scene guard: never raises a modal (runs via MCP/batchmode too). Only the scene being rebuilt is discarded silently.
     public static bool CheckScene(string tag, string scenePath)
     {
@@ -152,6 +180,7 @@ public static class StageBuildKit
     {
         if (!CheckScene(tag, scenePath)) return false;
         Todo.Clear();
+        SkinLedge = SkinBeam = SkinWall = SkinRoof = null;
         SetupLayers();
         Square = AssetDatabase.LoadAssetAtPath<Sprite>(SquarePath);
         Player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefab);
@@ -258,13 +287,43 @@ public static class StageBuildKit
             eff.useSideFriction = false;
             eff.useSideBounce = false;
         }
-        if (visible && b.kind == Kind.Building)
+        float top = col.size.y * 0.5f; // collider top in local space
+        if (visible && b.kind == Kind.OneWay && SkinLedge != null)
+            AddStrip(go.transform, "Visual (ledge)", SkinLedge, top, col.size.x, 0);
+        else if (visible && b.kind == Kind.Solid && col.size.y <= 0.5f && SkinBeam != null)
+            AddStrip(go.transform, "Visual (beam)", SkinBeam, top, col.size.x, 0);
+        else if (visible && b.kind == Kind.Building)
         {
-            AddSquare(go.transform, "Visual (PLACEHOLDER building)", Vector2.zero, col.size, BuildingColor, 0);
-            AddSquare(go.transform, "Visual (PLACEHOLDER roof)", new Vector2(0f, col.size.y * 0.5f - LedgeThick * 0.5f), new Vector2(col.size.x + 0.4f, LedgeThick), OneWayColor, 1);
+            if (SkinWall != null) AddTiled(go.transform, "Visual (wall)", SkinWall, Vector2.zero, col.size, 0);
+            else AddSquare(go.transform, "Visual (PLACEHOLDER building)", Vector2.zero, col.size, BuildingColor, 0);
+            if (SkinRoof != null) AddStrip(go.transform, "Visual (roof)", SkinRoof, top, col.size.x + 0.4f, 1);
+            else AddSquare(go.transform, "Visual (PLACEHOLDER roof)", new Vector2(0f, top - LedgeThick * 0.5f), new Vector2(col.size.x + 0.4f, LedgeThick), OneWayColor, 1);
         }
+        else if (visible && b.kind == Kind.Solid && SkinWall != null)
+            AddTiled(go.transform, "Visual (wall)", SkinWall, Vector2.zero, col.size, 0);
         else if (visible)
             AddSquare(go.transform, "Visual (PLACEHOLDER)", Vector2.zero, col.size, b.kind == Kind.OneWay ? OneWayColor : GroundColor, 0);
+        return go;
+    }
+
+    // Strip art: top edge on the collider top (localTop), hangs below it by the sprite's own height.
+    static GameObject AddStrip(Transform parent, string name, Sprite s, float localTop, float width, int order)
+    {
+        float h = s.bounds.size.y;
+        return AddTiled(parent, name, s, new Vector2(0f, localTop - h * 0.5f), new Vector2(width, h), order);
+    }
+
+    static GameObject AddTiled(Transform parent, string name, Sprite s, Vector2 localCenter, Vector2 size, int order)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localCenter;
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = s;
+        sr.drawMode = SpriteDrawMode.Tiled;
+        sr.tileMode = SpriteTileMode.Continuous;
+        sr.size = size;
+        sr.sortingOrder = order;
         return go;
     }
 
