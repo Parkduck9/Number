@@ -1,0 +1,213 @@
+{
+  "status": "DRAFT - review before importing into Assets",
+  "pixelsPerUnit": 32,
+  "filter": "Point",
+  "mipmaps": false,
+  "compression": "None recommended for pixel fidelity",
+  "coordinateConvention": "Image rectangles and preview positions use top-left origin, x right, y down. Unity normalized pivots use bottom-left origin. Rectangles are x,y,width,height with exclusive right/bottom bounds.",
+  "parts": {
+    "boss_body.png": {
+      "size": [
+        768,
+        448
+      ],
+      "pivotNormalized": [
+        0,
+        0
+      ],
+      "worldSize": [
+        24,
+        14
+      ]
+    },
+    "boss_bug_arm.png": {
+      "size": [
+        200,
+        320
+      ],
+      "pivotNormalized": [
+        0.5,
+        0
+      ],
+      "worldSize": [
+        6.25,
+        10
+      ],
+      "registration": "Lower central edge of palm, image edge coordinate 100,320. Visible palm extends upward from this anchor."
+    },
+    "boss_bug_arm_lit.png": {
+      "size": [
+        200,
+        320
+      ],
+      "pivotNormalized": [
+        0.5,
+        0
+      ],
+      "worldSize": [
+        6.25,
+        10
+      ]
+    },
+    "boss_blade_arm.png": {
+      "size": [
+        288,
+        576
+      ],
+      "pivotNormalized": [
+        0.5,
+        0
+      ],
+      "worldSize": [
+        9,
+        18
+      ],
+      "registration": "Blade tip includes pixel 144,575, directly above bottom-center image edge 144,576. Shoulder is intentionally open at top edge and continues into the body."
+    },
+    "boss_blade_arm_lit.png": {
+      "size": [
+        288,
+        576
+      ],
+      "pivotNormalized": [
+        0.5,
+        0
+      ],
+      "worldSize": [
+        9,
+        18
+      ]
+    },
+    "boss_hatch_half.png": {
+      "size": [
+        64,
+        96
+      ],
+      "pivotNormalized": [
+        0.5,
+        0.5
+      ],
+      "worldSize": [
+        2,
+        3
+      ],
+      "rightHalf": "Flip horizontally"
+    },
+    "boss_hatch_core.png": {
+      "size": [
+        48,
+        48
+      ],
+      "pivotNormalized": [
+        0.5,
+        0.5
+      ],
+      "worldSize": [
+        1.5,
+        1.5
+      ]
+    }
+  },
+  "bodyLocal": {
+    "blankHologramRect": [
+      312,
+      72,
+      144,
+      88
+    ],
+    "hologramCenterFromBodyBottomLeft": [
+      384,
+      332
+    ],
+    "transparentHatchRect": [
+      320,
+      230,
+      128,
+      96
+    ],
+    "hatchCenterFromBodyBottomLeft": [
+      384,
+      170
+    ],
+    "bugArmTopLeft": [
+      45,
+      114
+    ],
+    "bladeArmTopLeft": [
+      524,
+      -126
+    ],
+    "hatchLeftClosedTopLeft": [
+      320,
+      230
+    ],
+    "hatchRightClosedTopLeft": [
+      384,
+      230
+    ],
+    "coreTopLeft": [
+      360,
+      254
+    ]
+  },
+  "preview": {
+    "nativeSize": [
+      960,
+      540
+    ],
+    "preview_1x.png": "Closed hatch, idle arm variants",
+    "preview_2x.png": "1920x1080 nearest-neighbor enlargement. Both tells and open hatch shown together to review all active parts; not a gameplay timing proposal.",
+    "arenaBackground": "#0B0A14",
+    "bodyTopLeft": [
+      96,
+      14
+    ],
+    "bugArmTopLeft": [
+      141,
+      128
+    ],
+    "bladeArmTopLeft": [
+      620,
+      -112
+    ],
+    "leftHatchClosedTopLeft": [
+      416,
+      244
+    ],
+    "rightHatchClosedTopLeft": [
+      480,
+      244
+    ],
+    "hatchOpeningOffsetEachSide": 35,
+    "coreTopLeft": [
+      456,
+      268
+    ],
+    "heroCanvasTopLeft": [
+      449,
+      403
+    ],
+    "heroCanvasSize": [
+      64,
+      64
+    ],
+    "heroVisibleHeight": 59,
+    "bridgeTopY": 466,
+    "drawOrder": [
+      "arena",
+      "body",
+      "core",
+      "hatch halves",
+      "arms",
+      "bridge",
+      "hero silhouette"
+    ],
+    "bladeArmFraming": "Native 1:1 pixels. Upper 112 rows continue off-screen; all 464 remaining rows fit above bridge. Tip bottom edge at y=464; bridge begins y=466."
+  },
+  "limitations": [
+    "PNG cannot apply Unity Sprite pivots or PPU. Set the recorded values when approved for import; no .meta files were created.",
+    "No editor play test, WebGL test, attack animation or collision integration was performed. This is an asset-only draft.",
+    "The hologram recess is intentionally blank; the icon and number are supplied by game code.",
+    "Visual style remains subject to art review against the finer existing DraftSprites; this is a procedural pixel draft, not production approval."
+  ]
+}

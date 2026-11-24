@@ -1,0 +1,44 @@
+NUMBER — SNIPER / SPAWNER DRAFT GENERATION RECORD
+Status: DRAFT ONLY. User approval required before animation or in-game use.
+Tool: built-in image_gen (not the paid API/CLI fallback).
+No Assets/, scripts, scenes, or CREDITS.md were edited.
+
+Reference inputs (style only, not copied):
+docs/design/concept/11_character_lineup.jpg
+docs/design/concept/samples/enemy_citizen_b_ranged_stand_big.png
+Assets/Resources/DraftSprites/citizen_b_ranged_3f.png
+Assets/Resources/DraftSprites/android_walk_2f.png
+
+PROMPT 1 — BIG SNIPER
+Inputs: character lineup and large ranged citizen sample.
+transparent_background: false
+
+Use case: stylized-concept. DRAFT ONLY character design for NUMBER, a Korean Joseon cyberpunk pixel-art game. Create ONE large full-body standing design of a NEW SNIPER enemy, original design, matching reference chunky pixel medium and restrained shading, don't copy reference characters. Square 1024x1024 canvas, perfectly flat navy #0b1026 backdrop. Full body with clear margins, character facing RIGHT in 3/4 side profile, stable firing stance with feet apart, both hands anatomically credible in simplified pixel mitts supporting ONE long horizontal rifle-like precision device at shoulder height aiming RIGHT. The extra-long slender barrel extends far to the right with a small RED laser-emitter pixel block, not a huge laser beam. Narrow Korean gat hat with cylindrical crown and flat wide brim, shadowed natural human face with ONE small red rectangular numeric targeting display in front of face (simple manually-readable block 4 if feasible, no text otherwise); dark navy long durumagi robe with ivory crossed hanbok collar, muted burgundy narrow belt and hanging tie. Slender restrained figure, no armor clutter, no generic tactical suit. Long robe split reveals two legs and grey cloth boots. Large clean color clusters and single consistent pixel grid throughout, sharp stair steps, no antialias, no texture noise, no gradients, top-left light, 3-tone shading maximum per material. Exact subject palette ONLY: #080b14 outline, #1a1d33 deep shadow, #2d3050 navy, #3f4a6e blue grey, #62677d grey, #858a9b pale grey, #b8bec8 highlight, #d6d7d0 ivory, #efd0b6 skin, #d7b4a0 skin shadow, #a37b70 dark skin shadow, #7f1a22 burgundy. Add one bright red from reference lineup #ff0016 for laser emitter and face display only, less than 1 percent image area. Read as JOSEON first, technological details second. Hat and rifle silhouette must be distinct from the hooded ranged citizen. Avoid cyan/magenta, no glowing eyes, no lettering, no labels, no watermark, no floor ellipse or ground shadow. This is a standing design preview, no animation sheet.
+
+PROMPT 2 — AIMING SNIPER
+Inputs: newly generated big sniper, ranged citizen sprite, android sprite.
+transparent_background: true
+
+Use case: stylized-concept. NEW DRAFT sprite for NUMBER. Reference 1 is the NEW SNIPER character identity; references 2/3 show target native game pixel density and scale ONLY. Create exactly ONE native 64 by 64 pixel sprite with TRANSPARENT BACKGROUND. If exported larger, all pixel cells must form a perfectly regular 64x64 grid magnified by integer nearest neighbor, not high-res illustration. Small humanoid in a dark Korean gat hat and navy long split durumagi robe, ivory cross collar, burgundy belt and hanging tie, gray boots. Same NEW SNIPER as reference 1, firing stance facing RIGHT with long horizontal rifle aiming RIGHT. Hat tall cylinder+wide flat brim, distinct silhouette from hooded citizen. Head naturally proportioned for 64 px sprite, compact hat occupying roughly x12..34 y4..20; slim torso x16..33 y23..43; feet apart at x13..22 and x33..42, both soles on native y61; long thin gun x26..61 at native y25..30, tiny red laser-emitter at its right tip. Face display simple 2x3 red pixel at face level, no fake letters, no floating particles. Whole opaque subject must fit x4..61, y3..61, no clipping. TOP-left light. Strong dark outline and simple 2-3 tone color clusters; no gradient, no texture noise, no antialias, no semitransparent pixels, no glow. Exact palette limited to #080b14 #1a1d33 #2d3050 #3f4a6e #62677d #858a9b #b8bec8 #d6d7d0 #efd0b6 #d7b4a0 #a37b70 #7f1a22 and a small bright red emitter matching reference 1. Two arms clearly support the weapon; hands simplified single mitt shapes. No drop shadow, no ground, no grid, no labels, no additional frames. Render actual pixel art at native 64px complexity, not illustration made pixelated.
+
+PROMPT 3 — SPAWNER STATES
+Inputs: character lineup, android sprite, ranged citizen sprite.
+transparent_background: true
+
+Use case: stylized-concept. DRAFT ONLY SPRITE STATE SHEET for NUMBER Korean JOSEON cyberpunk pixel game. Three states of the SAME ONE SMALL ENEMY SPAWNER BROADCAST DEVICE, arranged in exactly one horizontal row, each equally spaced centered in equal third of wide transparent canvas. No text, no labels. TRUE TRANSPARENT BACKGROUND. Target each native cell exactly 51px wide x38px high, all device details on one uniform native pixel grid, deliver nearest-neighbor magnification if necessary. Side scrolling game view mostly front visible with tiny right side, grounded squat machine, 1.6 units wide by1.2 units tall. Left INTACT: dark blue low wide steel relay cabinet on two squat feet, TOP of cabinet has Korean hanok eave curve in a shallow upturned tiled cap (NOT pagoda, NOT Japanese torii); ONE thin antenna rising from right rear; one small red beacon on left; central inset RED broadcast screen with simple blank red rectangle and TWO square slot vents below, burgundy conduits to side. Low wide silhouette. Clear simple color clusters, no lettering or numbers. Middle DAMAGED after ONE hit: preserve exactly same intact silhouette, camera, scale, feet, cabinet and eave cap; one large sharp jagged crack diagonally through screen and casing, a bent antenna, small 2-3 pixel gold spark near screen corner, split red screen with dark flicker band. Right BROKEN after TWO hits: same ground baseline and feet spacing, collapsed smashed cabinet at half height with broken eave cap askew and folded antenna, a few large angular debris pieces within cell width, screen dark empty, all red lights OFF, no sparks. Obvious difference between all three at 51px wide. Ground baseline bottom of each equal cell. No ground plane or cast shadows. Limited exact palette from provided existing sprites only: #080b14 near-black outline; #1a1d33 deep shadow; #2d3050 navy housing; #3f4a6e upper-left edge; #62677d steel; #858a9b gray; #b8bec8 steel highlight; #d6d7d0 ivory used sparingly; #7f1a22 burgundy; #b8862e gold spark; bright red from reference lineup as screen accent. 2-3 discrete shades/material, top-left light. No pink/cyan neon, no gradients, no noisy circuitry or random surface dots, no semitransparency, no antialias, no blur, no glow. SIMPLE disciplined true low-resolution pixel art, same world as supplied citizens and androids, flat large clusters of pixels. Machine should be roughly 4:3 INCLUDING antenna, not a tall tower. Three complete sprites wholly inside respective equally-sized third with clear transparent margins and identical baseline; at left x0-33% intact, middle33-66% damaged, right66-100% broken. Do NOT draw UI panels, borders, or checkerboard transparency.
+
+EXPORT / VALIDATION
+The generator returned larger images with soft alpha and non-exact colors. Final PNGs were exported with deterministic System.Drawing pixel-grid sampling, palette snapping, binary alpha at threshold 128, and preservation of small red/gold accents during reduction. No paid image API was used.
+
+Final subject palette: #080b14 #1a1d33 #2d3050 #3f4a6e #62677d #858a9b #b8bec8 #d6d7d0 #efd0b6 #d7b4a0 #a37b70 #b8862e #7f1a22 #f80312.
+The first prompt's approximate red was replaced at export by #f80312, the most frequent bright-red RGB value in the supplied JPEG lineup. All other subject colors come directly from the supplied PNG sprite palettes. Presentation background: explicitly requested #0b1026.
+
+sniper/sniper_big.png: 1024x1024; regular 4px presentation grid; 14 opaque colors including background.
+sniper/sniper_aim_64.png: 64x64; 13 opaque colors; opaque bounds x4..58, y3..61; binary alpha.
+spawner/spawner_intact.png: 51x38; 8 opaque colors; binary alpha; baseline y37.
+spawner/spawner_damaged.png: 51x38; 9 opaque colors; binary alpha; baseline y37; cracks, dark flicker band and gold sparks.
+spawner/spawner_broken.png: 51x38; 7 opaque colors; binary alpha; baseline y37; no bright red or sparks.
+spawner/spawner_states.png: 684x200; intact / damaged / broken left to right; exact 4x copies on #0b1026.
+
+Visual review: native-size silhouettes compared beside existing citizen/android frames on a 960x540 navy review canvas; sniper at 4x; spawner states at 4x. No Unity import, animation, or gameplay integration performed.
+Git pull failed because .git/FETCH_HEAD is read-only in this session; no commit was created.

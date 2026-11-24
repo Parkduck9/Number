@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "webgl-build",
+      "runtimeExecutable": "C:/Users/User/AppData/Local/Programs/Python/Python312/python.exe",
+      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "C:/Unity/Number/Build/WebGL"],
+      "port": 8765
+    },
+    {
+      "name": "repo-static",
+      "runtimeExecutable": "C:/Users/User/AppData/Local/Programs/Python/Python312/python.exe",
+      "runtimeArgs": ["-m", "http.server", "8766", "--bind", "127.0.0.1", "--directory", "C:/Unity/Number"],
+      "port": 8766
+    }
+  ]
+}
